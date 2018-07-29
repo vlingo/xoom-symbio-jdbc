@@ -1,0 +1,38 @@
+{
+    "package": {
+        "name": "vlingo-symbio-jdbc",
+        "repo": "vlingo-platform-java",
+        "subject": "vlingo",
+        "desc": "Implementation of vlingo-symbio for JDBC.",
+        "website_url": "https://github.com/vlingo/vlingo-symbio-jdbc",
+        "issue_tracker_url": "https://github.com/vlingo/vlingo-symbio-jdbc/issues",
+        "vcs_url": "https://github.com/vlingo/vlingo-symbio-jdbc.git",
+        "licenses": ["MPL-2.0"],
+        "public_download_numbers": true,
+        "public_stats": true
+    },
+
+    "version": {
+        "name": "0.3.3",
+        "gpgSign": true
+    },
+
+    "files": [
+        {
+            "includePattern": "target/(.*).jar",
+            "uploadPattern": "/io/vlingo/vlingo-symbio-jdbc/0.3.3/$1.jar",
+            "matrixParams": {
+                "override": 1
+            }
+        },
+        {
+            "includePattern": "pom.xml",
+            "uploadPattern": "/io/vlingo/vlingo-symbio-jdbc/0.3.3/vlingo-symbio-jdbc-0.3.3.pom",
+            "matrixParams": {
+                "override": 1
+            }
+        }
+    ],
+
+    "publish": true
+}
