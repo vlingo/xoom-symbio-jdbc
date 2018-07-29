@@ -1,6 +1,21 @@
 # vlingo-symbio-jdbc
 Implementation of vlingo-symbio for JDBC.
 
+### State Storage
+The `StateStore` is a simple object storage mechanism that can be run against a number of persistence engines.
+Available JDBC storage implementations:
+
+   - General-purpose JDBC: `JDBCTextStateStoreActor`
+
+The `JDBCTextStateStoreActor` has these database delegate implementations:
+
+   - HSQLDB: `HSQLDBStorageDelegate`
+   - PostgresSQL: `PostgresStorageDelegate`
+
+Adding additional JDBC storage delegates is a straightforward process requiring a few hours of work.
+
+We welcome you to add support for your favorite database!
+
 ### Bintray
 
 ```xml
