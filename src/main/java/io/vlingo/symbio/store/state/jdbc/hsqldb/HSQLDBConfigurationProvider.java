@@ -8,6 +8,7 @@
 package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
 import java.sql.Connection;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hsqldb.server.Server;
 
@@ -19,11 +20,24 @@ import io.vlingo.symbio.store.state.jdbc.Configuration.TestConfiguration;
 public class HSQLDBConfigurationProvider {
   private static final ConfigurationInterest interest = new ConfigurationInterest() {
     private Server databaseSever;
+    private AtomicInteger databaseCount = new AtomicInteger(0);
 
     @Override
-    public void afterConnect(final Connection connection) { }
-    @Override public void createDatabase(final Connection connection, final String databaseName) { }
-    @Override public void dropDatabase(final Connection connection, final String databaseName) { }
+    public void afterConnect(final Connection connection) {
+
+    }
+
+    @Override public void createDatabase(final Connection connection, final String databaseName) {
+      databaseCount.incrementAndGet();
+    }
+
+    @Override public void dropDatabase(final Connection connection, final String databaseName) {
+      boolean isDone = databaseCount.decrementAndGet() == 0;
+      if (isDone) {
+        databaseSever.shutdown();
+        databaseSever = null;
+      }
+    }
 
     @Override
     public void beforeConnect(final Configuration configuration) {
@@ -56,12 +70,16 @@ public class HSQLDBConfigurationProvider {
   }
 
   public static TestConfiguration testConfiguration(final DataFormat format) throws Exception {
+    return testConfiguration(format, "testdb");
+  }
+
+  public static TestConfiguration testConfiguration(final DataFormat format, final String databaseName) throws Exception {
     return new TestConfiguration(
             interest,
             "org.hsqldb.jdbc.JDBCDriver",
             format,
             "jdbc:hsqldb:mem:",
-            "testdb",       // database name
+            databaseName,       // database name
             "SA",           // username
             "",             // password
             false,          // useSSL

@@ -9,8 +9,12 @@ package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
 import io.vlingo.symbio.store.state.StateStore.DataFormat;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
+import io.vlingo.symbio.store.state.jdbc.Configuration;
 import io.vlingo.symbio.store.state.jdbc.Configuration.TestConfiguration;
 import io.vlingo.symbio.store.state.jdbc.JDBCTextStateStoreActorTest;
+import org.junit.*;
+
+import java.util.UUID;
 
 public class HSQLDBJDBCTextStateStoreActorTest extends JDBCTextStateStoreActorTest {
 
@@ -21,6 +25,6 @@ public class HSQLDBJDBCTextStateStoreActorTest extends JDBCTextStateStoreActorTe
 
   @Override
   protected TestConfiguration testConfiguration(final DataFormat format) throws Exception {
-    return HSQLDBConfigurationProvider.testConfiguration(format);
+    return HSQLDBConfigurationProvider.testConfiguration(format, UUID.randomUUID().toString());
   }
 }
