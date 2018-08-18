@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.vlingo</groupId>
   <artifactId>vlingo-symbio-jdbc</artifactId>
-  <version>0.3.8</version>
+  <version>0.3.9</version>
   <name>vlingo-symbio-jdbc</name>
   <description>Implementation of vlingo-symbio for JDBC.</description>
   <url>https://github.com/vlingo/vlingo-symbio-jdbc</url>
@@ -97,12 +97,12 @@
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-actors</artifactId>
-      <version>0.5.6</version>
+      <version>0.5.7</version>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>0.3.8</version>
+      <version>0.3.9</version>
     </dependency>
     <dependency>
       <groupId>org.hsqldb</groupId>
