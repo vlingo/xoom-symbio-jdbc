@@ -16,11 +16,13 @@ public class PostgresJDBCTextStateStoreActorTest extends JDBCTextStateStoreActor
 
   @Override
   protected StorageDelegate delegate() throws Exception {
+    System.out.println("Starting: PostgresJDBCTextStateStoreActorTest: delegate()");
     return new PostgresStorageDelegate(configuration, world.defaultLogger());
   }
 
   @Override
   protected TestConfiguration testConfiguration(DataFormat format) throws Exception {
+    System.out.println("Starting: PostgresJDBCTextStateStoreActorTest: testConfiguration()");
     return PostgresConfigurationProvider.testConfiguration(DataFormat.Text);
   }
 }

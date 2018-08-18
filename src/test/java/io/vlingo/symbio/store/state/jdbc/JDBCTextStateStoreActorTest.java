@@ -112,6 +112,8 @@ public abstract class JDBCTextStateStoreActorTest {
 
   @Before
   public void setUp() throws Exception {
+    System.out.println("Starting: " + getClass().getSimpleName() + ": setUp()");
+
     world = World.startWithDefaults("test-store");
 
     entity1StoreName = Entity1.class.getSimpleName();
@@ -131,6 +133,8 @@ public abstract class JDBCTextStateStoreActorTest {
 
   @After
   public void tearDown() throws Exception {
+    System.out.println("Ending: " + getClass().getSimpleName() + ": tearDown()");
+
     if (configuration == null) return;
     configuration.cleanUp();
     delegate.close();

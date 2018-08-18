@@ -7,24 +7,24 @@
 
 package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
+import java.util.UUID;
+
 import io.vlingo.symbio.store.state.StateStore.DataFormat;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.state.jdbc.Configuration;
 import io.vlingo.symbio.store.state.jdbc.Configuration.TestConfiguration;
 import io.vlingo.symbio.store.state.jdbc.JDBCTextStateStoreActorTest;
-import org.junit.*;
-
-import java.util.UUID;
 
 public class HSQLDBJDBCTextStateStoreActorTest extends JDBCTextStateStoreActorTest {
 
   @Override
   protected StorageDelegate delegate() throws Exception {
+    System.out.println("Starting: HSQLDBJDBCTextStateStoreActorTest: delegate()");
     return new HSQLDBStorageDelegate(configuration, world.defaultLogger());
   }
 
   @Override
   protected TestConfiguration testConfiguration(final DataFormat format) throws Exception {
+    System.out.println("Starting: HSQLDBJDBCTextStateStoreActorTest: testConfiguration()");
     return HSQLDBConfigurationProvider.testConfiguration(format, UUID.randomUUID().toString());
   }
 }
