@@ -1,1 +1,21 @@
-/target/
+# General
+bin/
+target/
+.classpath
+.project
+.settings
+.DS_Store
+*.log
+build/
+
+
+# Intellij
+.idea/
+*.iml
+*.iws
+*.ipr
+.gradle/
+out/
+
+# DynamoDB
+native-libs/
