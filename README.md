@@ -31,13 +31,13 @@ We welcome you to add support for your favorite database!
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>0.3.9</version>
+      <version>0.4.1</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio-jdbc</artifactId>
-      <version>0.3.9</version>
+      <version>0.4.1</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -45,8 +45,8 @@ We welcome you to add support for your favorite database!
 
 ```gradle
 dependencies {
-    compile 'io.vlingo:vlingo-symbio:0.3.9'
-    compile 'io.vlingo:vlingo-symbio-jdbc:0.3.9'
+    compile 'io.vlingo:vlingo-symbio:0.4.1'
+    compile 'io.vlingo:vlingo-symbio-jdbc:0.4.1'
 }
 
 repositories {
