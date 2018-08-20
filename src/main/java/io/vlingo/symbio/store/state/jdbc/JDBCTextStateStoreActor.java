@@ -54,16 +54,21 @@ public class JDBCTextStateStoreActor extends Actor implements TextStateStore, Di
 
   @Override
   public void read(final String id, Class<?> type, final ReadResultInterest<String> interest) {
+    read(id, type, interest, null);
+  }
+
+  @Override
+  public void read(final String id, Class<?> type, final ReadResultInterest<String> interest, final Object object) {
     if (interest != null) {
       if (id == null || type == null) {
-        interest.readResultedIn(Result.Error, new IllegalArgumentException(id == null ? "The id is null." : "The type is null."), id, EmptyState);
+        interest.readResultedIn(Result.Error, new IllegalArgumentException(id == null ? "The id is null." : "The type is null."), id, EmptyState, object);
         return;
       }
 
       final String storeName = StateTypeStateStoreMap.storeNameFrom(type);
 
       if (storeName == null) {
-        interest.readResultedIn(Result.NoTypeStore, id, EmptyState);
+        interest.readResultedIn(Result.NoTypeStore, new IllegalStateException("No type store."), id, EmptyState, object);
         return;
       }
 
@@ -73,15 +78,15 @@ public class JDBCTextStateStoreActor extends Actor implements TextStateStore, Di
         try (final ResultSet result = readStatement.executeQuery()) {
           if (result.first()) {
             final TextState state = delegate.stateFrom(result, id);
-            interest.readResultedIn(Result.Success, id, state);
+            interest.readResultedIn(Result.Success, id, state, object);
           } else {
-            interest.readResultedIn(Result.NotFound, id, EmptyState);
+            interest.readResultedIn(Result.NotFound, id, EmptyState, object);
           }
         }
         delegate.complete();
       } catch (Exception e) {
         delegate.fail();
-        interest.readResultedIn(Result.Failure, id, EmptyState);
+        interest.readResultedIn(Result.Failure, e, id, EmptyState, object);
         logger().log(
                 getClass().getSimpleName() +
                 " readText() failed because: " + e.getMessage() +
@@ -98,15 +103,20 @@ public class JDBCTextStateStoreActor extends Actor implements TextStateStore, Di
 
   @Override
   public void write(final State<String> state, final WriteResultInterest<String> interest) {
+    write(state, interest, null);
+  }
+
+  @Override
+  public void write(final State<String> state, final WriteResultInterest<String> interest, final Object object) {
     if (interest != null) {
       if (state == null) {
-        interest.writeResultedIn(Result.Error, new IllegalArgumentException("The state is null."), null, EmptyState);
+        interest.writeResultedIn(Result.Error, new IllegalArgumentException("The state is null."), null, EmptyState, object);
       } else {
         try {
           final String storeName = StateTypeStateStoreMap.storeNameFrom(state.type);
 
           if (storeName == null) {
-            interest.writeResultedIn(Result.NoTypeStore, state.id, state);
+            interest.writeResultedIn(Result.NoTypeStore, new IllegalStateException("No type store."), state.id, state, object);
             return;
           }
 
@@ -119,11 +129,11 @@ public class JDBCTextStateStoreActor extends Actor implements TextStateStore, Di
           delegate.complete();
           dispatch(dispatchId, state);
 
-          interest.writeResultedIn(Result.Success, state.id, state);
+          interest.writeResultedIn(Result.Success, state.id, state, object);
         } catch (Exception e) {
           logger().log(getClass().getSimpleName() + " writeText() error because: " + e.getMessage(), e);
           delegate.fail();
-          interest.writeResultedIn(Result.Error, e, state.id, state);
+          interest.writeResultedIn(Result.Error, e, state.id, state, object);
         }
       }
     } else {
