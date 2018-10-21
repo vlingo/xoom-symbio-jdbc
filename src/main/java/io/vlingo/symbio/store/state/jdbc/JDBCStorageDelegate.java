@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.vlingo.actors.Logger;
-import io.vlingo.common.fn.Tuple2;
+import io.vlingo.common.Tuple2;
 import io.vlingo.common.serialization.JsonSerialization;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
