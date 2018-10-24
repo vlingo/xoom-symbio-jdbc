@@ -2,7 +2,6 @@ package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
 
 import com.google.gson.Gson;
 import io.vlingo.actors.Actor;
-import io.vlingo.actors.CompletesEventually;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.Event;
 import io.vlingo.symbio.Metadata;
@@ -43,34 +42,42 @@ public class PostgresEventStreamReader<T> extends Actor implements EventStreamRe
 
     @Override
     public Completes<EventStream<T>> streamFor(final String streamName) {
-        final List<Event<String>> events = new ArrayList<>();
+        EventStream<T> result = null;
 
         try {
-            queryEventsStatement.setString(1, streamName);
-            queryEventsStatement.setInt(2, 0);
-            final ResultSet resultSet = queryEventsStatement.executeQuery();
-            while (resultSet.next()) {
-                String id = resultSet.getString(1);
-                String eventData = resultSet.getString(2);
-                String eventMetadata = resultSet.getString(3);
-                String eventType = resultSet.getString(4);
-                int eventTypeVersion = resultSet.getInt(5);
-
-                Class<T> classOfEvent = (Class<T>) Class.forName(eventType);
-                Metadata eventMetadataDeserialized = gson.fromJson(eventMetadata, Metadata.class);
-
-                events.add(new Event.TextEvent(id, classOfEvent, eventTypeVersion, eventData, eventMetadataDeserialized));
-            }
+            final List<Event<T>> events = eventsFromOffset(streamName);
+            result = new EventStream<>(streamName, 1, events, (State<T>) State.NullState.Text);
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgresql: " + e.getMessage(), e);
         }
 
-        EventStream<T> result = (EventStream<T>) new EventStream<>(streamName, 1, events, State.NullState.Text);
         return completes().with(result);
     }
 
     @Override
     public Completes<EventStream<T>> streamFor(final String streamName, final int fromStreamVersion) {
         return null;
+    }
+
+    private List<Event<T>> eventsFromOffset(final String streamName) throws Exception {
+        final List<Event<T>> events = new ArrayList<>();
+
+        queryEventsStatement.setString(1, streamName);
+        queryEventsStatement.setInt(2, 0);
+        final ResultSet resultSet = queryEventsStatement.executeQuery();
+        while (resultSet.next()) {
+            String id = resultSet.getString(1);
+            String eventData = resultSet.getString(2);
+            String eventMetadata = resultSet.getString(3);
+            String eventType = resultSet.getString(4);
+            int eventTypeVersion = resultSet.getInt(5);
+
+            Class<T> classOfEvent = (Class<T>) Class.forName(eventType);
+            Metadata eventMetadataDeserialized = gson.fromJson(eventMetadata, Metadata.class);
+
+            events.add((Event<T>) new Event.TextEvent(id, classOfEvent, eventTypeVersion, eventData, eventMetadataDeserialized));
+        }
+
+        return events;
     }
 }

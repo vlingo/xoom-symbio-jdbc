@@ -9,7 +9,6 @@ import io.vlingo.symbio.store.eventjournal.EventStreamReader;
 import io.vlingo.symbio.store.state.StateStore.DataFormat;
 import io.vlingo.symbio.store.state.jdbc.Configuration;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -20,7 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.vlingo.symbio.store.state.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 
 public class PostgresEventStreamReaderTest {
     private static final String CREATE_TABLE =
