@@ -45,8 +45,8 @@ public class PostgresEventStreamReader<T> extends Actor implements EventStreamRe
         EventStream<T> result = null;
 
         try {
-            final List<Event<T>> events = eventsFromOffset(streamName);
-            result = new EventStream<>(streamName, 1, events, (State<T>) State.NullState.Text);
+            final List<Event<T>> events = eventsFromOffset(streamName, -1);
+            result = new EventStream<>(streamName, events.size() + 1, events, (State<T>) State.NullState.Object);
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgresql: " + e.getMessage(), e);
         }
@@ -56,14 +56,23 @@ public class PostgresEventStreamReader<T> extends Actor implements EventStreamRe
 
     @Override
     public Completes<EventStream<T>> streamFor(final String streamName, final int fromStreamVersion) {
-        return null;
+        EventStream<T> result = null;
+
+        try {
+            final List<Event<T>> events = eventsFromOffset(streamName, fromStreamVersion - 1);
+            result = new EventStream<>(streamName, events.size() + fromStreamVersion, events, (State<T>) State.NullState.Text);
+        } catch (Exception e) {
+            logger().log("vlingo/symbio-postgresql: " + e.getMessage(), e);
+        }
+
+        return completes().with(result);
     }
 
-    private List<Event<T>> eventsFromOffset(final String streamName) throws Exception {
+    private List<Event<T>> eventsFromOffset(final String streamName, final int offset) throws Exception {
         final List<Event<T>> events = new ArrayList<>();
 
         queryEventsStatement.setString(1, streamName);
-        queryEventsStatement.setInt(2, 0);
+        queryEventsStatement.setInt(2, offset);
         final ResultSet resultSet = queryEventsStatement.executeQuery();
         while (resultSet.next()) {
             String id = resultSet.getString(1);
@@ -73,9 +82,11 @@ public class PostgresEventStreamReader<T> extends Actor implements EventStreamRe
             int eventTypeVersion = resultSet.getInt(5);
 
             Class<T> classOfEvent = (Class<T>) Class.forName(eventType);
+            T eventDataDeserialized = gson.fromJson(eventData, classOfEvent);
+
             Metadata eventMetadataDeserialized = gson.fromJson(eventMetadata, Metadata.class);
 
-            events.add((Event<T>) new Event.TextEvent(id, classOfEvent, eventTypeVersion, eventData, eventMetadataDeserialized));
+            events.add((Event<T>) new Event.ObjectEvent<T>(id, classOfEvent, eventTypeVersion, eventDataDeserialized, eventMetadataDeserialized));
         }
 
         return events;

@@ -9,6 +9,7 @@ import io.vlingo.symbio.store.eventjournal.EventStreamReader;
 import io.vlingo.symbio.store.state.StateStore.DataFormat;
 import io.vlingo.symbio.store.state.jdbc.Configuration;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -37,7 +38,7 @@ public class PostgresEventStreamReaderTest {
 
     private static final String INSERT_EVENT =
             "INSERT INTO vlingo_event_journal(event_data, event_metadata, event_type, event_type_version, event_stream, event_offset)" +
-                    "VALUES(?, '', ?, 1, ?, (SELECT MAX(event_offset) + 1 FROM vlingo_event_journal))";
+                    "VALUES(?, '{}', ?, 1, ?, (SELECT COALESCE(MAX(event_offset), 0) + 1 FROM vlingo_event_journal))";
 
     private EventStreamReader<AggregateRoot> eventStreamReader;
     private Configuration configuration;
@@ -49,7 +50,9 @@ public class PostgresEventStreamReaderTest {
     @Before
     @SuppressWarnings("unchecked")
     public void setUp() throws Exception {
-        streamName = AggregateRoot.class.getCanonicalName();
+        aggregateRootId = UUID.randomUUID().toString();
+        streamName = aggregateRootId;
+
         world = World.startWithDefaults("event-stream-tests");
 
         configuration = testConfiguration(DataFormat.Text);
@@ -59,9 +62,12 @@ public class PostgresEventStreamReaderTest {
                 EventStreamReader.class
         );
 
-        aggregateRootId = UUID.randomUUID().toString();
         gson = new Gson();
         setUpDatabase();
+
+        insertEvent(1);
+        insertEvent(2);
+        insertEvent(3);
     }
 
     @After
@@ -72,19 +78,24 @@ public class PostgresEventStreamReaderTest {
 
     @Test
     public void testThatCanReadAllEventsFromJournal() throws Exception {
-        insertEvent(1);
-        insertEvent(2);
-        insertEvent(3);
-
         EventStream<AggregateRoot> stream = eventStreamReader.streamFor(streamName).await();
         assertEquals(State.NullState.Text, stream.snapshot);
-        assertEquals(stream.streamVersion, 1);
+        assertEquals(stream.streamVersion, 4);
         assertEquals(stream.streamName, streamName);
 
         AtomicInteger eventNumber = new AtomicInteger(1);
         stream.events.forEach(event -> {
             assertEquals(eventNumber.getAndIncrement(), event.eventData.number);
         });
+    }
+
+    @Test
+    public void testThatCanReadAllEventsFromJournalBasedOnOffset() throws Exception {
+        EventStream<AggregateRoot> stream = eventStreamReader.streamFor(streamName, 3).await();
+        assertEquals(stream.streamVersion, 4);
+
+        Assert.assertEquals(1, stream.events.size());
+        Assert.assertEquals(3, stream.events.get(0).eventData.number);
     }
 
     private void setUpDatabase() throws SQLException {
@@ -106,20 +117,21 @@ public class PostgresEventStreamReaderTest {
     private void insertEvent(final int number) throws SQLException {
         try (final PreparedStatement stmt = configuration.connection.prepareStatement(INSERT_EVENT)) {
             stmt.setString(1, gson.toJson(new AggregateRoot(aggregateRootId, number)));
-            stmt.setString(2, streamName);
-            stmt.setString(3, aggregateRootId);
+            stmt.setString(2, AggregateRoot.class.getCanonicalName());
+            stmt.setString(3, streamName);
 
             assert stmt.executeUpdate() == 1;
+            configuration.connection.commit();
         }
     }
+}
 
-    public static class AggregateRoot {
-        public final String id;
-        public final int number;
+class AggregateRoot {
+    public final String id;
+    public final int number;
 
-        public AggregateRoot(String id, int number) {
-            this.id = id;
-            this.number = number;
-        }
+    public AggregateRoot(String id, int number) {
+        this.id = id;
+        this.number = number;
     }
 }
