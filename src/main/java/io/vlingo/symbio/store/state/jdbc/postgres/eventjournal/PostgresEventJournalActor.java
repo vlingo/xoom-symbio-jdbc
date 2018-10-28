@@ -119,10 +119,10 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
             insertEvent.setInt(6, eventVersion);
 
             if (insertEvent.executeUpdate() != 1) {
-                logger().log("vlingo/symbio-postgres: Could not insert event with id " + event.id);
+                logger().log("vlingo/symbio-postgres: Could not insert event " + event.toString());
             }
         } catch (SQLException e) {
-            logger().log("vlingo/symbio-postgres: Could not insert event with id " + event.id);
+            logger().log("vlingo/symbio-postgres: Could not insert event " + event.toString());
         }
     }
 

@@ -51,7 +51,7 @@ public class PostgresEventJournalActorTest extends BasePostgresEventJournalTest 
         until.completes();
 
         Event<String> event = journalReader.readNext().await();
-        assertEquals(appendedEvent.id, event.id);
+        assertEquals(appendedEvent, event);
         assertEquals(appendedEvent.eventData, event.eventData.replace(" ", ""));
     }
 
@@ -63,10 +63,10 @@ public class PostgresEventJournalActorTest extends BasePostgresEventJournalTest 
         until.completes();
 
         EventStream<String> eventStream = journalReader.readNext(2).await();
-        assertEquals(appendedEvent1.id, eventStream.events.get(0).id);
+        assertEquals(appendedEvent1, eventStream.events.get(0));
         assertEquals(appendedEvent1.eventData, eventStream.events.get(0).eventData.replace(" ", ""));
 
-        assertEquals(appendedEvent2.id, eventStream.events.get(1).id);
+        assertEquals(appendedEvent2, eventStream.events.get(1));
         assertEquals(appendedEvent2.eventData, eventStream.events.get(1).eventData.replace(" ", ""));
     }
 
