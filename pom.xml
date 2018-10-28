@@ -99,17 +99,17 @@
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-common</artifactId>
-      <version>0.7.2</version>
+      <version>0.7.3</version>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-actors</artifactId>
-      <version>0.7.2</version>
+      <version>0.7.3</version>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>0.7.2</version>
+      <version>0.7.3</version>
     </dependency>
     <dependency>
       <groupId>org.hsqldb</groupId>
