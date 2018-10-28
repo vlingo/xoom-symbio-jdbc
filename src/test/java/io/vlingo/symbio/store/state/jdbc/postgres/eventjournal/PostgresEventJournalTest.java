@@ -5,13 +5,16 @@ import io.vlingo.actors.World;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.jdbc.Configuration;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 
 import static io.vlingo.symbio.store.state.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
+import static org.junit.Assert.assertEquals;
 
 public abstract class PostgresEventJournalTest {
     private static final String EVENT_TABLE =
@@ -56,6 +59,9 @@ public abstract class PostgresEventJournalTest {
     private static final String INSERT_OFFSET =
             "INSERT INTO vlingo_event_journal_offsets(reader_name, reader_offset) VALUES(?, ?)";
 
+    private static final String LATEST_OFFSET_OF =
+            "SELECT reader_offset FROM vlingo_event_journal_offsets WHERE reader_name=?";
+
     protected Configuration configuration;
     protected World world;
     protected String aggregateRootId;
@@ -69,6 +75,7 @@ public abstract class PostgresEventJournalTest {
         streamName = aggregateRootId;
         world = World.startWithDefaults("event-stream-tests");
         configuration = testConfiguration(StateStore.DataFormat.Text);
+
         gson = new Gson();
 
         createDatabase();
@@ -135,5 +142,20 @@ public abstract class PostgresEventJournalTest {
             assert stmt.executeUpdate() == 1;
             configuration.connection.commit();
         }
+    }
+
+    protected final void assertOffsetIs(final String readerName, final int offset) throws SQLException {
+        try (PreparedStatement stmt = configuration.connection.prepareStatement(LATEST_OFFSET_OF)) {
+            stmt.setString(1, readerName);
+
+            ResultSet resultSet = stmt.executeQuery();
+            if (resultSet.next()) {
+                int currentOffset = resultSet.getInt(1);
+                assertEquals(offset, currentOffset);
+                return;
+            }
+        }
+
+        Assert.fail("Could not find offset for " + readerName);
     }
 }

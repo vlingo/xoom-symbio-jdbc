@@ -1,6 +1,7 @@
 package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
 
 import io.vlingo.actors.Definition;
+import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.symbio.Event;
 import io.vlingo.symbio.store.eventjournal.EventJournalReader;
 import io.vlingo.symbio.store.eventjournal.EventStream;
@@ -9,6 +10,8 @@ import org.junit.Test;
 
 import java.util.UUID;
 
+import static io.vlingo.symbio.store.eventjournal.EventJournalReader.Beginning;
+import static io.vlingo.symbio.store.eventjournal.EventJournalReader.End;
 import static org.junit.Assert.assertEquals;
 
 public class PostgresEventJournalReaderTest extends PostgresEventJournalTest {
@@ -72,15 +75,42 @@ public class PostgresEventJournalReaderTest extends PostgresEventJournalTest {
 
     @Test
     public void testThatRewindReadsFromTheBeginning() throws Exception {
+        TestUntil until = TestUntil.happenings(1);
         insertEvent(1);
         insertEvent(2);
 
-        insertOffset(2, readerName);
+        insertOffset(3, readerName);
         EventJournalReader<TestAggregateRoot> journalReader = journalReader();
         journalReader.rewind();
 
+        until.completesWithin(50);
+        assertOffsetIs(readerName, 1);
         Event<TestAggregateRoot> event = journalReader.readNext().await();
         assertEquals(1, event.eventData.number);
+    }
+
+    @Test
+    public void testThatSeekToGoesToTheBeginningWhenSpecified() throws Exception {
+        TestUntil until = TestUntil.happenings(1);
+        EventJournalReader<TestAggregateRoot> journalReader = journalReader();
+        journalReader.seekTo(Beginning).await();
+
+        until.completesWithin(50);
+        assertOffsetIs(readerName, 1);
+    }
+
+    @Test
+    public void testThatSeekToGoesToTheEndWhenSpecified() throws Exception {
+        TestUntil until = TestUntil.happenings(1);
+        insertEvent(1);
+        insertEvent(2);
+        insertEvent(3);
+
+        EventJournalReader<TestAggregateRoot> journalReader = journalReader();
+        journalReader.seekTo(End).await();
+
+        until.completesWithin(50);
+        assertOffsetIs(readerName, 4);
     }
 
     @SuppressWarnings("unchecked")

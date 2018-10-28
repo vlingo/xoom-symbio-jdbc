@@ -22,7 +22,8 @@ public class PostgresEventJournalReader<T> extends Actor implements EventJournal
             "SELECT reader_offset FROM vlingo_event_journal_offsets WHERE reader_name=?";
 
     private static final String UPDATE_CURRENT_OFFSET =
-            "UPDATE vlingo_event_journal_offsets SET reader_offset=? WHERE reader_name=?";
+            "INSERT INTO vlingo_event_journal_offsets(reader_offset, reader_name) VALUES(?, ?) " +
+                    "ON CONFLICT (reader_name) DO UPDATE SET reader_offset=?";
 
     private static final String QUERY_SINGLE =
             "SELECT * FROM vlingo_event_journal WHERE id = ?";
@@ -30,17 +31,23 @@ public class PostgresEventJournalReader<T> extends Actor implements EventJournal
     private static final String QUERY_BATCH =
             "SELECT * FROM vlingo_event_journal WHERE id BETWEEN ? AND ?";
 
+    private static final String QUERY_LAST_OFFSET =
+            "SELECT MAX(id) FROM vlingo_event_journal";
+
+    private final EventJournalReader<T> self;
     private final Connection connection;
     private final String name;
     private final PreparedStatement queryCurrentOffset;
     private final PreparedStatement updateCurrentOffset;
     private final PreparedStatement querySingleEvent;
     private final PreparedStatement queryEventBatch;
+    private final PreparedStatement queryLastOffset;
     private final Gson gson;
 
     private int offset;
 
     public PostgresEventJournalReader(final Configuration configuration, final String name) throws SQLException {
+        this.self = selfAs(EventJournalReader.class);
         this.connection = configuration.connection;
         this.name = name;
 
@@ -48,6 +55,7 @@ public class PostgresEventJournalReader<T> extends Actor implements EventJournal
         this.updateCurrentOffset = this.connection.prepareStatement(UPDATE_CURRENT_OFFSET);
         this.querySingleEvent = this.connection.prepareStatement(QUERY_SINGLE);
         this.queryEventBatch = this.connection.prepareStatement(QUERY_BATCH);
+        this.queryLastOffset = this.connection.prepareStatement(QUERY_LAST_OFFSET);
 
         this.gson = new Gson();
         retrieveCurrentOffset();
@@ -67,8 +75,7 @@ public class PostgresEventJournalReader<T> extends Actor implements EventJournal
             if (resultSet.next()) {
                 offset += 1;
                 updateCurrentOffset();
-                return completes()
-                        .with(eventFromResultSet(resultSet));
+                return completes().with(eventFromResultSet(resultSet));
             }
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
@@ -108,8 +115,26 @@ public class PostgresEventJournalReader<T> extends Actor implements EventJournal
 
     @Override
     public Completes<String> seekTo(String id) {
-        return null;
+        switch (id) {
+            case Beginning:
+                this.offset = 1;
+                updateCurrentOffset();
+                break;
+            case End:
+                this.offset = retrieveLatestOffset() + 1;
+                updateCurrentOffset();
+                break;
+            case Query:
+                break;
+            default:
+                this.offset = Integer.parseInt(id);
+                updateCurrentOffset();
+                break;
+        }
+
+        return completes().with(String.valueOf(offset));
     }
+
 
     private Event<T> eventFromResultSet(ResultSet resultSet) throws SQLException, ClassNotFoundException {
         final String id = resultSet.getString(1);
@@ -144,11 +169,26 @@ public class PostgresEventJournalReader<T> extends Actor implements EventJournal
         try {
             updateCurrentOffset.setInt(1, offset);
             updateCurrentOffset.setString(2, name);
+            updateCurrentOffset.setInt(3, offset);
 
             updateCurrentOffset.executeUpdate();
+            connection.commit();
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgres: Could not persist the offset. Will retry on next read.");
             logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
         }
+    }
+
+    private int retrieveLatestOffset() {
+        try {
+            ResultSet resultSet = queryLastOffset.executeQuery();
+            if (resultSet.next()) {
+                return resultSet.getInt(1);
+            }
+        } catch (Exception e) {
+            logger().log("vlingo/symbio-postgres: Could not retrieve latest offset, using current.");
+        }
+
+        return offset;
     }
 }
