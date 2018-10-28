@@ -1,6 +1,8 @@
 package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.Event;
@@ -10,21 +12,25 @@ import io.vlingo.symbio.store.eventjournal.EventStream;
 import io.vlingo.symbio.store.eventjournal.EventStreamReader;
 import io.vlingo.symbio.store.state.jdbc.Configuration;
 
+import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+
+import static java.util.Collections.emptyList;
 
 public class PostgresEventStreamReader<T> extends Actor implements EventStreamReader<T> {
     private static final String QUERY_EVENTS =
             "SELECT id, event_data, event_metadata, event_type, event_type_version " +
                     "FROM vlingo_event_journal " +
-                    "WHERE event_stream = ? AND event_offset > ?";
+                    "WHERE event_stream = ? AND event_offset >= ?";
 
     private static final String QUERY_SNAPSHOT =
-            "SELECT id, snapshot_state_text, snapshot_state_binary, snapshot_state_type " +
+            "SELECT snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata " +
                     "FROM vlingo_event_journal_snapshots " +
                     "WHERE event_stream = ?";
 
@@ -42,53 +48,67 @@ public class PostgresEventStreamReader<T> extends Actor implements EventStreamRe
 
     @Override
     public Completes<EventStream<T>> streamFor(final String streamName) {
-        EventStream<T> result = null;
-
-        try {
-            final List<Event<T>> events = eventsFromOffset(streamName, -1);
-            result = new EventStream<>(streamName, events.size() + 1, events, (State<T>) State.NullState.Object);
-        } catch (Exception e) {
-            logger().log("vlingo/symbio-postgresql: " + e.getMessage(), e);
-        }
-
-        return completes().with(result);
+        return streamFor(streamName, 1);
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Completes<EventStream<T>> streamFor(final String streamName, final int fromStreamVersion) {
-        EventStream<T> result = null;
-
         try {
-            final List<Event<T>> events = eventsFromOffset(streamName, fromStreamVersion - 1);
-            result = new EventStream<>(streamName, events.size() + fromStreamVersion, events, (State<T>) State.NullState.Text);
+            return completes().with(eventsFromOffset(streamName, fromStreamVersion));
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgresql: " + e.getMessage(), e);
+            return completes().with(new EventStream<>(streamName, 1, emptyList(), (State<T>) State.NullState.Object));
         }
-
-        return completes().with(result);
     }
 
-    private List<Event<T>> eventsFromOffset(final String streamName, final int offset) throws Exception {
+    @SuppressWarnings("unchecked")
+    private EventStream<T> eventsFromOffset(final String streamName, final int offset) throws Exception {
+        final State<T> snapshot = latestSnapshotOf(streamName);
+        final int dataVersion = snapshot != State.NullState.Object ? (snapshot.dataVersion + 1) : offset;
+
         final List<Event<T>> events = new ArrayList<>();
 
         queryEventsStatement.setString(1, streamName);
-        queryEventsStatement.setInt(2, offset);
+        queryEventsStatement.setInt(2, dataVersion);
         final ResultSet resultSet = queryEventsStatement.executeQuery();
         while (resultSet.next()) {
-            String id = resultSet.getString(1);
-            String eventData = resultSet.getString(2);
-            String eventMetadata = resultSet.getString(3);
-            String eventType = resultSet.getString(4);
-            int eventTypeVersion = resultSet.getInt(5);
+            final String id = resultSet.getString(1);
+            final String eventData = resultSet.getString(2);
+            final String eventMetadata = resultSet.getString(3);
+            final String eventType = resultSet.getString(4);
+            final int eventTypeVersion = resultSet.getInt(5);
 
-            Class<T> classOfEvent = (Class<T>) Class.forName(eventType);
-            T eventDataDeserialized = gson.fromJson(eventData, classOfEvent);
+            final Class<T> classOfEvent = (Class<T>) Class.forName(eventType);
+            final T eventDataDeserialized = gson.fromJson(eventData, classOfEvent);
 
-            Metadata eventMetadataDeserialized = gson.fromJson(eventMetadata, Metadata.class);
+            final Metadata eventMetadataDeserialized = gson.fromJson(eventMetadata, Metadata.class);
 
-            events.add((Event<T>) new Event.ObjectEvent<T>(id, classOfEvent, eventTypeVersion, eventDataDeserialized, eventMetadataDeserialized));
+            events.add((Event<T>) new Event.ObjectEvent<>(id, classOfEvent, eventTypeVersion, eventDataDeserialized, eventMetadataDeserialized));
         }
 
-        return events;
+        return new EventStream<>(streamName, dataVersion + events.size(), events, snapshot);
+    }
+
+    @SuppressWarnings("unchecked")
+    private State<T> latestSnapshotOf(final String streamName) throws Exception {
+        queryLatestSnapshotStatement.setString(1, streamName);
+        final ResultSet resultSet = queryLatestSnapshotStatement.executeQuery();
+        if (resultSet.next()) {
+            final String snapshotDataType = resultSet.getString(1);
+            final int snapshotTypeVersion = resultSet.getInt(2);
+            final String snapshotData = resultSet.getString(3);
+            final int snapshotDataVersion = resultSet.getInt(4);
+            final String metadataJson = resultSet.getString(5);
+
+            final Class<T> classOfEvent = (Class<T>) Class.forName(snapshotDataType);
+            final T eventDataDeserialized = gson.fromJson(snapshotData, classOfEvent);
+
+            final Metadata eventMetadataDeserialized = gson.fromJson(metadataJson, Metadata.class);
+
+            return (State<T>) new State.ObjectState<>(streamName, classOfEvent, snapshotTypeVersion, eventDataDeserialized, snapshotDataVersion, eventMetadataDeserialized);
+        }
+
+        return (State<T>) State.NullState.Object;
     }
 }
