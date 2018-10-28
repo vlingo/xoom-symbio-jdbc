@@ -1,8 +1,6 @@
 package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.reflect.TypeToken;
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.Event;
@@ -12,13 +10,11 @@ import io.vlingo.symbio.store.eventjournal.EventStream;
 import io.vlingo.symbio.store.eventjournal.EventStreamReader;
 import io.vlingo.symbio.store.state.jdbc.Configuration;
 
-import java.lang.reflect.Type;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static java.util.Collections.emptyList;
