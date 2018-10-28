@@ -51,7 +51,7 @@ public class PostgresEventJournal<T> extends Actor implements EventJournal<T> {
         Address address = stage().world().addressFactory().from("eventJournalReader-" + name);
         EventJournalReader<T>  reader = stage().actorFor(
                 Definition.has(
-                        PostgresEventJournalReader.class,
+                        PostgresEventJournalReaderActor.class,
                         Definition.parameters(configuration, name)
                 ),
                 EventJournalReader.class,
@@ -67,7 +67,7 @@ public class PostgresEventJournal<T> extends Actor implements EventJournal<T> {
         Address address = stage().world().addressFactory().from("eventStreamReader-" + name);
         EventStreamReader<T> reader = stage().actorFor(
                 Definition.has(
-                        PostgresEventStreamReader.class,
+                        PostgresEventStreamReaderActor.class,
                         Definition.parameters(configuration)),
                 EventStreamReader.class,
                 address

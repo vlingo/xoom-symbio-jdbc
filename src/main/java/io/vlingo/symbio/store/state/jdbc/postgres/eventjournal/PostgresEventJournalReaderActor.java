@@ -17,7 +17,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PostgresEventJournalReader<T> extends Actor implements EventJournalReader<T> {
+public class PostgresEventJournalReaderActor<T> extends Actor implements EventJournalReader<T> {
     private static final String QUERY_CURRENT_OFFSET =
             "SELECT reader_offset FROM vlingo_event_journal_offsets WHERE reader_name=?";
 
@@ -46,7 +46,7 @@ public class PostgresEventJournalReader<T> extends Actor implements EventJournal
 
     private int offset;
 
-    public PostgresEventJournalReader(final Configuration configuration, final String name) throws SQLException {
+    public PostgresEventJournalReaderActor(final Configuration configuration, final String name) throws SQLException {
         this.self = selfAs(EventJournalReader.class);
         this.connection = configuration.connection;
         this.name = name;

@@ -12,14 +12,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 
-public class PostgresEventStreamReaderTest extends PostgresEventJournalTest {
+public class PostgresEventStreamReaderActorTest extends BasePostgresEventJournalTest {
     private EventStreamReader<TestAggregateRoot> eventStreamReader;
 
     @Before
     @SuppressWarnings("unchecked")
     public void setUp() throws Exception {
         eventStreamReader = world.actorFor(
-                Definition.has(PostgresEventStreamReader.class,
+                Definition.has(PostgresEventStreamReaderActor.class,
                         Definition.parameters(configuration)),
                 EventStreamReader.class
         );

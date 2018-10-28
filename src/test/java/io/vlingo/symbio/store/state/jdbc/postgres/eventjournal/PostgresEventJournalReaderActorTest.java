@@ -14,7 +14,7 @@ import static io.vlingo.symbio.store.eventjournal.EventJournalReader.Beginning;
 import static io.vlingo.symbio.store.eventjournal.EventJournalReader.End;
 import static org.junit.Assert.assertEquals;
 
-public class PostgresEventJournalReaderTest extends PostgresEventJournalTest {
+public class PostgresEventJournalReaderActorTest extends BasePostgresEventJournalTest {
     private String readerName;
 
     @Before
@@ -116,7 +116,7 @@ public class PostgresEventJournalReaderTest extends PostgresEventJournalTest {
     @SuppressWarnings("unchecked")
     private EventJournalReader<TestAggregateRoot> journalReader() {
         return world.actorFor(
-                Definition.has(PostgresEventJournalReader.class,
+                Definition.has(PostgresEventJournalReaderActor.class,
                         Definition.parameters(configuration, readerName)),
                 EventJournalReader.class
         );

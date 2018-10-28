@@ -16,7 +16,7 @@ import java.util.UUID;
 import static io.vlingo.symbio.store.state.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
 import static org.junit.Assert.assertEquals;
 
-public abstract class PostgresEventJournalTest {
+public abstract class BasePostgresEventJournalTest {
     private static final String EVENT_TABLE =
             "CREATE TABLE vlingo_event_journal(" +
                     "id BIGSERIAL PRIMARY KEY," +

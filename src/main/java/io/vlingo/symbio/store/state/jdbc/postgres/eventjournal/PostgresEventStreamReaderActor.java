@@ -19,7 +19,7 @@ import java.util.List;
 
 import static java.util.Collections.emptyList;
 
-public class PostgresEventStreamReader<T> extends Actor implements EventStreamReader<T> {
+public class PostgresEventStreamReaderActor<T> extends Actor implements EventStreamReader<T> {
     private static final String QUERY_EVENTS =
             "SELECT id, event_data, event_metadata, event_type, event_type_version " +
                     "FROM vlingo_event_journal " +
@@ -35,7 +35,7 @@ public class PostgresEventStreamReader<T> extends Actor implements EventStreamRe
     private final PreparedStatement queryLatestSnapshotStatement;
     private final Gson gson;
 
-    public PostgresEventStreamReader(final Configuration configuration) throws SQLException {
+    public PostgresEventStreamReaderActor(final Configuration configuration) throws SQLException {
         this.connection = configuration.connection;
         this.queryEventsStatement = this.connection.prepareStatement(QUERY_EVENTS);
         this.queryLatestSnapshotStatement = this.connection.prepareStatement(QUERY_SNAPSHOT);
