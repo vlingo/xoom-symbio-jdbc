@@ -63,16 +63,20 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
 
     @Override
     public void appendAll(String streamName, int fromStreamVersion, List<Event<String>> events) {
-        AtomicInteger version = new AtomicInteger(fromStreamVersion);
-        events.forEach(event -> insertEvent(streamName, version.getAndIncrement(), event));
+        int version = fromStreamVersion;
+        for (Event<String> event : events) {
+            insertEvent(streamName, version++, event);
+        }
         doCommit();
         listener.appendedAll(events);
     }
 
     @Override
     public void appendAllWith(String streamName, int fromStreamVersion, List<Event<String>> events, State<String> snapshot) {
-        AtomicInteger version = new AtomicInteger(fromStreamVersion);
-        events.forEach(event -> insertEvent(streamName, version.getAndIncrement(), event));
+        int version = fromStreamVersion;
+        for (Event<String> event : events) {
+            insertEvent(streamName, version++, event);
+        }
         insertSnapshot(streamName, snapshot);
         doCommit();
         listener.appendedAllWith(events, snapshot);
