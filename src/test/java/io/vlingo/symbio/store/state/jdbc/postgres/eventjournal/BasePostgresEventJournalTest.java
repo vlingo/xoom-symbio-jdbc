@@ -21,8 +21,8 @@ public abstract class BasePostgresEventJournalTest {
     private static final String EVENT_TABLE =
             "CREATE TABLE vlingo_event_journal(" +
                     "id BIGSERIAL PRIMARY KEY," +
-                    "event_data JSON NOT NULL," +
-                    "event_metadata JSON NOT NULL," +
+                    "event_data JSONB NOT NULL," +
+                    "event_metadata JSONB NOT NULL," +
                     "event_type VARCHAR(256) NOT NULL," +
                     "event_type_version INTEGER NOT NULL," +
                     "event_stream VARCHAR(128) NOT NULL," +
@@ -34,7 +34,7 @@ public abstract class BasePostgresEventJournalTest {
                     "event_stream VARCHAR(128) PRIMARY KEY," +
                     "snapshot_type VARCHAR(256) NOT NULL," +
                     "snapshot_type_version INTEGER NOT NULL," +
-                    "snapshot_data JSON NOT NULL," +
+                    "snapshot_data JSONB NOT NULL," +
                     "snapshot_data_version INTEGER NOT NULL," +
                     "snapshot_metadata JSON NOT NULL" +
                     ")";
@@ -51,11 +51,11 @@ public abstract class BasePostgresEventJournalTest {
 
     private static final String INSERT_EVENT =
             "INSERT INTO vlingo_event_journal(event_data, event_metadata, event_type, event_type_version, event_stream, event_offset)" +
-                    "VALUES(?::JSON, '{}'::JSON, ?, 1, ?, (SELECT COALESCE(MAX(event_offset), 0) + 1 FROM vlingo_event_journal))";
+                    "VALUES(?::JSONB, '{}'::JSONB, ?, 1, ?, (SELECT COALESCE(MAX(event_offset), 0) + 1 FROM vlingo_event_journal))";
 
     private static final String INSERT_SNAPSHOT =
             "INSERT INTO vlingo_event_journal_snapshots(event_stream, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)" +
-                    "VALUES(?, ?, 1, ?::JSON, ?, '{}'::JSON)";
+                    "VALUES(?, ?, 1, ?::JSONB, ?, '{}'::JSONB)";
 
     private static final String INSERT_OFFSET =
             "INSERT INTO vlingo_event_journal_offsets(reader_name, reader_offset) VALUES(?, ?)";
