@@ -1,6 +1,7 @@
 package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
 
 import io.vlingo.actors.Definition;
+import io.vlingo.symbio.Event;
 import io.vlingo.symbio.store.eventjournal.EventJournalReader;
 import io.vlingo.symbio.store.eventjournal.EventStream;
 import org.junit.Before;
@@ -18,8 +19,6 @@ public class PostgresEventJournalReaderTest extends PostgresEventJournalTest {
     public void setUp() {
         readerName = UUID.randomUUID().toString();
     }
-
-
 
     @Test
     public void testThatReturnsCorrectName() {
@@ -69,6 +68,19 @@ public class PostgresEventJournalReaderTest extends PostgresEventJournalTest {
         assertEquals(2, events.events.size());
         assertEquals(3, events.events.get(0).eventData.number);
         assertEquals(4, events.events.get(1).eventData.number);
+    }
+
+    @Test
+    public void testThatRewindReadsFromTheBeginning() throws Exception {
+        insertEvent(1);
+        insertEvent(2);
+
+        insertOffset(2, readerName);
+        EventJournalReader<TestAggregateRoot> journalReader = journalReader();
+        journalReader.rewind();
+
+        Event<TestAggregateRoot> event = journalReader.readNext().await();
+        assertEquals(1, event.eventData.number);
     }
 
     @SuppressWarnings("unchecked")

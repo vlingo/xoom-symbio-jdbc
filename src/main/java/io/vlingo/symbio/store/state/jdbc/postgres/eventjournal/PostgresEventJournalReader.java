@@ -66,6 +66,7 @@ public class PostgresEventJournalReader<T> extends Actor implements EventJournal
             final ResultSet resultSet = querySingleEvent.executeQuery();
             if (resultSet.next()) {
                 offset += 1;
+                updateCurrentOffset();
                 return completes()
                         .with(eventFromResultSet(resultSet));
             }
@@ -89,7 +90,8 @@ public class PostgresEventJournalReader<T> extends Actor implements EventJournal
                 events.add(eventFromResultSet(resultSet));
             }
 
-            return completes().with(new EventStream<T>(name, offset, events, (State<T>) State.NullState.Text));
+            updateCurrentOffset();
+            return completes().with(new EventStream<>(name, offset, events, (State<T>) State.NullState.Text));
 
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
@@ -100,7 +102,8 @@ public class PostgresEventJournalReader<T> extends Actor implements EventJournal
 
     @Override
     public void rewind() {
-
+        this.offset = 1;
+        updateCurrentOffset();
     }
 
     @Override
@@ -134,6 +137,18 @@ public class PostgresEventJournalReader<T> extends Actor implements EventJournal
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
             logger().log("vlingo/symbio-postgres: Rewinding the offset");
+        }
+    }
+
+    private void updateCurrentOffset() {
+        try {
+            updateCurrentOffset.setInt(1, offset);
+            updateCurrentOffset.setString(2, name);
+
+            updateCurrentOffset.executeUpdate();
+        } catch (Exception e) {
+            logger().log("vlingo/symbio-postgres: Could not persist the offset. Will retry on next read.");
+            logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
         }
     }
 }
