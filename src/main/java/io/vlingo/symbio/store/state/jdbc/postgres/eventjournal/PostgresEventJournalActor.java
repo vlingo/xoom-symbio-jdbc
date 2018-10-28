@@ -16,8 +16,9 @@ import io.vlingo.symbio.store.state.jdbc.Configuration;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
 
 public class PostgresEventJournalActor extends Actor implements EventJournal<String> {
     private static final String INSERT_EVENT =
@@ -34,6 +35,8 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
     private final PreparedStatement insertEvent;
     private final PreparedStatement insertSnapshot;
     private final Gson gson;
+    private final Map<String, EventJournalReader<String>> journalReaders;
+    private final Map<String, EventStreamReader<String>> streamReaders;
 
     public PostgresEventJournalActor(Configuration configuration, EventJournalListener<String> listener) throws SQLException {
         this.configuration = configuration;
@@ -44,6 +47,9 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
         this.insertSnapshot = connection.prepareStatement(INSERT_SNAPSHOT);
 
         this.gson = new Gson();
+
+        this.journalReaders = new HashMap<>();
+        this.streamReaders = new HashMap<>();
     }
 
     @Override
@@ -85,15 +91,17 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
     @Override
     @SuppressWarnings("unchecked")
     public Completes<EventJournalReader<String>> eventJournalReader(String name) {
-        Address address = stage().world().addressFactory().uniquePrefixedWith("eventJournalReader-" + name);
-        EventJournalReader<String> reader = stage().actorFor(
-                Definition.has(
-                        PostgresEventJournalReaderActor.class,
-                        Definition.parameters(configuration, name)
-                ),
-                EventJournalReader.class,
-                address
-        );
+        final EventJournalReader<String> reader = journalReaders.computeIfAbsent(name, (key) -> {
+            Address address = stage().world().addressFactory().uniquePrefixedWith("eventJournalReader-" + name);
+            return stage().actorFor(
+                    Definition.has(
+                            PostgresEventJournalReaderActor.class,
+                            Definition.parameters(configuration, name)
+                    ),
+                    EventJournalReader.class,
+                    address
+            );
+        });
 
         return completes().with(reader);
     }
@@ -101,14 +109,17 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
     @Override
     @SuppressWarnings("unchecked")
     public Completes<EventStreamReader<String>> eventStreamReader(String name) {
-        Address address = stage().world().addressFactory().uniquePrefixedWith("eventStreamReader-" + name);
-        EventStreamReader<String> reader = stage().actorFor(
-                Definition.has(
-                        PostgresEventStreamReaderActor.class,
-                        Definition.parameters(configuration)),
-                EventStreamReader.class,
-                address
-        );
+        final EventStreamReader<String> reader = streamReaders.computeIfAbsent(name, (key) -> {
+            Address address = stage().world().addressFactory().uniquePrefixedWith("eventStreamReader-" + key);
+            return stage().actorFor(
+                    Definition.has(
+                            PostgresEventStreamReaderActor.class,
+                            Definition.parameters(configuration)),
+                    EventStreamReader.class,
+                    address
+            );
+        });
+
 
         return completes().with(reader);
     }

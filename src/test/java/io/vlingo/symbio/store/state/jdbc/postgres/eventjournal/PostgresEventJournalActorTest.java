@@ -11,6 +11,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.Arrays;
+import java.util.UUID;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
@@ -93,6 +94,13 @@ public class PostgresEventJournalActorTest extends BasePostgresEventJournalTest 
 
         EventStream<String> eventStream = streamReader.streamFor(streamName, 1).await();
         assertEquals(snapshot.data, eventStream.snapshot.data);
+    }
+
+    @Test
+    public void testThatReturnsSameReaderForSameName() {
+        final String name = UUID.randomUUID().toString();
+        assertEquals(journal.eventJournalReader(name).await(), journal.eventJournalReader(name).await());
+        assertEquals(journal.eventStreamReader(name).await(), journal.eventStreamReader(name).await());
     }
 
     private Event<String> newEventForData(int number) {
