@@ -58,16 +58,24 @@ public class PostgresEventStreamReader<T> extends Actor implements EventStreamRe
             return completes().with(eventsFromOffset(streamName, fromStreamVersion));
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgresql: " + e.getMessage(), e);
-            return completes().with(new EventStream<>(streamName, 1, emptyList(), (State<T>) State.NullState.Object));
+            return completes().with(new EventStream<>(streamName, 1, emptyList(), (State<T>) State.NullState.Text));
         }
     }
 
     @SuppressWarnings("unchecked")
     private EventStream<T> eventsFromOffset(final String streamName, final int offset) throws Exception {
         final State<T> snapshot = latestSnapshotOf(streamName);
-        final int dataVersion = snapshot != State.NullState.Object ? (snapshot.dataVersion + 1) : offset;
-
         final List<Event<T>> events = new ArrayList<>();
+
+        int dataVersion = offset;
+        State<T> referenceSnapshot = (State<T>) State.NullState.Text;
+
+        if (snapshot != State.NullState.Text) {
+            if (snapshot.dataVersion > offset) {
+                dataVersion = snapshot.dataVersion + 1;
+                referenceSnapshot = snapshot;
+            }
+        }
 
         queryEventsStatement.setString(1, streamName);
         queryEventsStatement.setInt(2, dataVersion);
@@ -87,7 +95,7 @@ public class PostgresEventStreamReader<T> extends Actor implements EventStreamRe
             events.add((Event<T>) new Event.ObjectEvent<>(id, classOfEvent, eventTypeVersion, eventDataDeserialized, eventMetadataDeserialized));
         }
 
-        return new EventStream<>(streamName, dataVersion + events.size(), events, snapshot);
+        return new EventStream<>(streamName, dataVersion + events.size(), events, referenceSnapshot);
     }
 
     @SuppressWarnings("unchecked")
@@ -109,6 +117,6 @@ public class PostgresEventStreamReader<T> extends Actor implements EventStreamRe
             return (State<T>) new State.ObjectState<>(streamName, classOfEvent, snapshotTypeVersion, eventDataDeserialized, snapshotDataVersion, eventMetadataDeserialized);
         }
 
-        return (State<T>) State.NullState.Object;
+        return (State<T>) State.NullState.Text;
     }
 }

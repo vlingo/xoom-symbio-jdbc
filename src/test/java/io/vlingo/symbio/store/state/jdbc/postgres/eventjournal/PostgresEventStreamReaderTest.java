@@ -95,7 +95,7 @@ public class PostgresEventStreamReaderTest {
     @Test
     public void testThatCanReadAllEventsFromJournal() throws Exception {
         EventStream<AggregateRoot> stream = eventStreamReader.streamFor(streamName).await();
-        assertEquals(State.NullState.Object, stream.snapshot);
+        assertEquals(State.NullState.Text, stream.snapshot);
         assertEquals(5, stream.streamVersion);
         assertEquals(stream.streamName, streamName);
 
@@ -104,7 +104,7 @@ public class PostgresEventStreamReaderTest {
     }
 
     @Test
-    public void testThatCanReadAllEventsFromJournalBasedOnOffset() throws Exception {
+    public void testThatCanReadAllEventsFromJournalBasedOnOffsetReturnSnapshot() throws Exception {
         AggregateRoot snapshotState = new AggregateRoot(streamName, 2);
         insertSnapshot(2, snapshotState);
 
@@ -117,6 +117,20 @@ public class PostgresEventStreamReaderTest {
         Assert.assertEquals(2, stream.events.size());
         Assert.assertEquals(3, stream.events.get(0).eventData.number);
         Assert.assertEquals(4, stream.events.get(1).eventData.number);
+    }
+
+    @Test
+    public void testThatCanReadAllEventsFromJournalBasedOnOffsetDoesNotReturnSnapshotIfOffsetIsHigher() throws Exception {
+        AggregateRoot snapshotState = new AggregateRoot(streamName, 1);
+        insertSnapshot(1, snapshotState);
+
+        EventStream<AggregateRoot> stream = eventStreamReader.streamFor(streamName, 4).await();
+        assertEquals(State.NullState.Text, stream.snapshot);
+        assertEquals(stream.streamVersion, 5);
+        assertEquals(stream.streamName, streamName);
+
+        Assert.assertEquals(1, stream.events.size());
+        Assert.assertEquals(4, stream.events.get(0).eventData.number);
     }
 
     private void setUpDatabase() throws SQLException {
