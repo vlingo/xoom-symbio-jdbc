@@ -17,7 +17,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PostgresEventJournalReaderActor<T> extends Actor implements EventJournalReader<T> {
+public class PostgresEventJournalReaderActor extends Actor implements EventJournalReader<String> {
     private static final String QUERY_CURRENT_OFFSET =
             "SELECT reader_offset FROM vlingo_event_journal_offsets WHERE reader_name=?";
 
@@ -34,7 +34,6 @@ public class PostgresEventJournalReaderActor<T> extends Actor implements EventJo
     private static final String QUERY_LAST_OFFSET =
             "SELECT MAX(id) FROM vlingo_event_journal";
 
-    private final EventJournalReader<T> self;
     private final Connection connection;
     private final String name;
     private final PreparedStatement queryCurrentOffset;
@@ -47,7 +46,6 @@ public class PostgresEventJournalReaderActor<T> extends Actor implements EventJo
     private int offset;
 
     public PostgresEventJournalReaderActor(final Configuration configuration, final String name) throws SQLException {
-        this.self = selfAs(EventJournalReader.class);
         this.connection = configuration.connection;
         this.name = name;
 
@@ -68,7 +66,7 @@ public class PostgresEventJournalReaderActor<T> extends Actor implements EventJo
 
     @Override
     @SuppressWarnings("unchecked")
-    public Completes<Event<T>> readNext() {
+    public Completes<Event<String>> readNext() {
         try {
             querySingleEvent.setInt(1, offset);
             final ResultSet resultSet = querySingleEvent.executeQuery();
@@ -85,9 +83,9 @@ public class PostgresEventJournalReaderActor<T> extends Actor implements EventJo
     }
 
     @Override
-    public Completes<EventStream<T>> readNext(int maximumEvents) {
+    public Completes<EventStream<String>> readNext(int maximumEvents) {
         try {
-            List<Event<T>> events = new ArrayList<>(maximumEvents);
+            List<Event<String>> events = new ArrayList<>(maximumEvents);
             queryEventBatch.setInt(1, offset);
             queryEventBatch.setInt(2, offset + maximumEvents - 1);
 
@@ -98,7 +96,7 @@ public class PostgresEventJournalReaderActor<T> extends Actor implements EventJo
             }
 
             updateCurrentOffset();
-            return completes().with(new EventStream<>(name, offset, events, (State<T>) State.NullState.Text));
+            return completes().with(new EventStream<>(name, offset, events, State.NullState.Text));
 
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
@@ -136,18 +134,17 @@ public class PostgresEventJournalReaderActor<T> extends Actor implements EventJo
     }
 
 
-    private Event<T> eventFromResultSet(ResultSet resultSet) throws SQLException, ClassNotFoundException {
+    private Event<String> eventFromResultSet(ResultSet resultSet) throws SQLException, ClassNotFoundException {
         final String id = resultSet.getString(1);
         final String eventData = resultSet.getString(2);
         final String eventMetadata = resultSet.getString(3);
         final String eventType = resultSet.getString(4);
         final int eventTypeVersion = resultSet.getInt(5);
 
-        final Class<T> classOfEvent = (Class<T>) Class.forName(eventType);
-        final T eventDataDeserialized = gson.fromJson(eventData, classOfEvent);
+        final Class<?> classOfEvent = Class.forName(eventType);
 
         final Metadata eventMetadataDeserialized = gson.fromJson(eventMetadata, Metadata.class);
-        return (Event<T>) new Event.ObjectEvent<>(id, classOfEvent, eventTypeVersion, eventDataDeserialized, eventMetadataDeserialized);
+        return new Event.TextEvent(id, classOfEvent, eventTypeVersion, eventData, eventMetadataDeserialized);
     }
 
     private void retrieveCurrentOffset() {

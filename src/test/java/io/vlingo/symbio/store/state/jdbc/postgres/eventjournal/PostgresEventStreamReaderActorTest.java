@@ -13,7 +13,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.assertEquals;
 
 public class PostgresEventStreamReaderActorTest extends BasePostgresEventJournalTest {
-    private EventStreamReader<TestAggregateRoot> eventStreamReader;
+    private EventStreamReader<String> eventStreamReader;
 
     @Before
     @SuppressWarnings("unchecked")
@@ -32,43 +32,43 @@ public class PostgresEventStreamReaderActorTest extends BasePostgresEventJournal
 
     @Test
     public void testThatCanReadAllEventsFromJournal() throws Exception {
-        EventStream<TestAggregateRoot> stream = eventStreamReader.streamFor(streamName).await();
+        EventStream<String> stream = eventStreamReader.streamFor(streamName).await();
         assertEquals(State.NullState.Text, stream.snapshot);
         assertEquals(5, stream.streamVersion);
         assertEquals(stream.streamName, streamName);
 
         AtomicInteger eventNumber = new AtomicInteger(1);
-        stream.events.forEach(event -> assertEquals(eventNumber.getAndIncrement(), event.eventData.number));
+        stream.events.forEach(event -> assertEquals(eventNumber.getAndIncrement(), parse(event).number));
     }
 
     @Test
     public void testThatCanReadAllEventsFromJournalBasedOnOffsetReturnSnapshot() throws Exception {
-        TestAggregateRoot snapshotState = new TestAggregateRoot(streamName, 2);
+        TestEvent snapshotState = new TestEvent(streamName, 2);
         insertSnapshot(2, snapshotState);
 
-        EventStream<TestAggregateRoot> stream = eventStreamReader.streamFor(streamName, 1).await();
+        EventStream<String> stream = eventStreamReader.streamFor(streamName, 1).await();
         assertEquals(2, stream.snapshot.dataVersion);
-        assertEquals(snapshotState, stream.snapshot.data);
+        assertEquals(snapshotState, gson.fromJson(stream.snapshot.data, TestEvent.class));
         assertEquals(stream.streamVersion, 5);
         assertEquals(stream.streamName, streamName);
 
         Assert.assertEquals(2, stream.events.size());
-        Assert.assertEquals(3, stream.events.get(0).eventData.number);
-        Assert.assertEquals(4, stream.events.get(1).eventData.number);
+        Assert.assertEquals(3, parse(stream.events.get(0)).number);
+        Assert.assertEquals(4, parse(stream.events.get(1)).number);
     }
 
     @Test
     public void testThatCanReadAllEventsFromJournalBasedOnOffsetDoesNotReturnSnapshotIfOffsetIsHigher() throws Exception {
-        TestAggregateRoot snapshotState = new TestAggregateRoot(streamName, 1);
+        TestEvent snapshotState = new TestEvent(streamName, 1);
         insertSnapshot(1, snapshotState);
 
-        EventStream<TestAggregateRoot> stream = eventStreamReader.streamFor(streamName, 4).await();
+        EventStream<String> stream = eventStreamReader.streamFor(streamName, 4).await();
         assertEquals(State.NullState.Text, stream.snapshot);
         assertEquals(stream.streamVersion, 5);
         assertEquals(stream.streamName, streamName);
 
         Assert.assertEquals(1, stream.events.size());
-        Assert.assertEquals(4, stream.events.get(0).eventData.number);
+        Assert.assertEquals(4, parse(stream.events.get(0)).number);
     }
 }
 

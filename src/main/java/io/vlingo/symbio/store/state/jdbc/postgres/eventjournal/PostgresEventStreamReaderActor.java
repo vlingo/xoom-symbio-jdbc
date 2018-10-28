@@ -19,7 +19,7 @@ import java.util.List;
 
 import static java.util.Collections.emptyList;
 
-public class PostgresEventStreamReaderActor<T> extends Actor implements EventStreamReader<T> {
+public class PostgresEventStreamReaderActor extends Actor implements EventStreamReader<String> {
     private static final String QUERY_EVENTS =
             "SELECT id, event_data, event_metadata, event_type, event_type_version " +
                     "FROM vlingo_event_journal " +
@@ -43,28 +43,28 @@ public class PostgresEventStreamReaderActor<T> extends Actor implements EventStr
     }
 
     @Override
-    public Completes<EventStream<T>> streamFor(final String streamName) {
+    public Completes<EventStream<String>> streamFor(final String streamName) {
         return streamFor(streamName, 1);
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public Completes<EventStream<T>> streamFor(final String streamName, final int fromStreamVersion) {
+    public Completes<EventStream<String>> streamFor(final String streamName, final int fromStreamVersion) {
         try {
             return completes().with(eventsFromOffset(streamName, fromStreamVersion));
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgresql: " + e.getMessage(), e);
-            return completes().with(new EventStream<>(streamName, 1, emptyList(), (State<T>) State.NullState.Text));
+            return completes().with(new EventStream<>(streamName, 1, emptyList(), State.NullState.Text));
         }
     }
 
     @SuppressWarnings("unchecked")
-    private EventStream<T> eventsFromOffset(final String streamName, final int offset) throws Exception {
-        final State<T> snapshot = latestSnapshotOf(streamName);
-        final List<Event<T>> events = new ArrayList<>();
+    private EventStream<String> eventsFromOffset(final String streamName, final int offset) throws Exception {
+        final State<String> snapshot = latestSnapshotOf(streamName);
+        final List<Event<String>> events = new ArrayList<>();
 
         int dataVersion = offset;
-        State<T> referenceSnapshot = (State<T>) State.NullState.Text;
+        State<String> referenceSnapshot = State.NullState.Text;
 
         if (snapshot != State.NullState.Text) {
             if (snapshot.dataVersion > offset) {
@@ -83,19 +83,17 @@ public class PostgresEventStreamReaderActor<T> extends Actor implements EventStr
             final String eventType = resultSet.getString(4);
             final int eventTypeVersion = resultSet.getInt(5);
 
-            final Class<T> classOfEvent = (Class<T>) Class.forName(eventType);
-            final T eventDataDeserialized = gson.fromJson(eventData, classOfEvent);
-
+            final Class<?> classOfEvent = Class.forName(eventType);
             final Metadata eventMetadataDeserialized = gson.fromJson(eventMetadata, Metadata.class);
 
-            events.add((Event<T>) new Event.ObjectEvent<>(id, classOfEvent, eventTypeVersion, eventDataDeserialized, eventMetadataDeserialized));
+            events.add(new Event.TextEvent(id, classOfEvent, eventTypeVersion, eventData, eventMetadataDeserialized));
         }
 
         return new EventStream<>(streamName, dataVersion + events.size(), events, referenceSnapshot);
     }
 
     @SuppressWarnings("unchecked")
-    private State<T> latestSnapshotOf(final String streamName) throws Exception {
+    private State<String> latestSnapshotOf(final String streamName) throws Exception {
         queryLatestSnapshotStatement.setString(1, streamName);
         final ResultSet resultSet = queryLatestSnapshotStatement.executeQuery();
         if (resultSet.next()) {
@@ -105,14 +103,12 @@ public class PostgresEventStreamReaderActor<T> extends Actor implements EventStr
             final int snapshotDataVersion = resultSet.getInt(4);
             final String metadataJson = resultSet.getString(5);
 
-            final Class<T> classOfEvent = (Class<T>) Class.forName(snapshotDataType);
-            final T eventDataDeserialized = gson.fromJson(snapshotData, classOfEvent);
-
+            final Class<?> classOfEvent = Class.forName(snapshotDataType);
             final Metadata eventMetadataDeserialized = gson.fromJson(metadataJson, Metadata.class);
 
-            return (State<T>) new State.ObjectState<>(streamName, classOfEvent, snapshotTypeVersion, eventDataDeserialized, snapshotDataVersion, eventMetadataDeserialized);
+            return new State.TextState(streamName, classOfEvent, snapshotTypeVersion, snapshotData, snapshotDataVersion, eventMetadataDeserialized);
         }
 
-        return (State<T>) State.NullState.Text;
+        return State.NullState.Text;
     }
 }

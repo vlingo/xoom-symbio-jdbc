@@ -31,13 +31,13 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
 
     @Test
     public void testThatRetrievesNextEvents() throws Exception {
-        EventJournalReader<TestAggregateRoot> journalReader = journalReader();
+        EventJournalReader<String> journalReader = journalReader();
 
         insertEvent(1);
         insertEvent(2);
 
-        assertEquals(1, journalReader.readNext().await().eventData.number);
-        assertEquals(2, journalReader.readNext().await().eventData.number);
+        assertEquals(1, parse(journalReader.readNext().await()).number);
+        assertEquals(2, parse(journalReader.readNext().await()).number);
     }
 
     @Test
@@ -48,10 +48,10 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
         insertEvent(4);
 
         insertOffset(3, readerName);
-        EventJournalReader<TestAggregateRoot> journalReader = journalReader();
+        EventJournalReader<String> journalReader = journalReader();
 
-        assertEquals(3, journalReader.readNext().await().eventData.number);
-        assertEquals(4, journalReader.readNext().await().eventData.number);
+        assertEquals(3, parse(journalReader.readNext().await()).number);
+        assertEquals(4, parse(journalReader.readNext().await()).number);
     }
 
     @Test
@@ -61,16 +61,16 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
         insertEvent(3);
         insertEvent(4);
 
-        EventJournalReader<TestAggregateRoot> journalReader = journalReader();
-        EventStream<TestAggregateRoot> events = journalReader.readNext(2).await();
+        EventJournalReader<String> journalReader = journalReader();
+        EventStream<String> events = journalReader.readNext(2).await();
         assertEquals(2, events.events.size());
-        assertEquals(1, events.events.get(0).eventData.number);
-        assertEquals(2, events.events.get(1).eventData.number);
+        assertEquals(1, parse(events.events.get(0)).number);
+        assertEquals(2, parse(events.events.get(1)).number);
 
         events = journalReader.readNext(2).await();
         assertEquals(2, events.events.size());
-        assertEquals(3, events.events.get(0).eventData.number);
-        assertEquals(4, events.events.get(1).eventData.number);
+        assertEquals(3, parse(events.events.get(0)).number);
+        assertEquals(4, parse(events.events.get(1)).number);
     }
 
     @Test
@@ -80,19 +80,19 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
         insertEvent(2);
 
         insertOffset(3, readerName);
-        EventJournalReader<TestAggregateRoot> journalReader = journalReader();
+        EventJournalReader<String> journalReader = journalReader();
         journalReader.rewind();
 
         until.completesWithin(50);
         assertOffsetIs(readerName, 1);
-        Event<TestAggregateRoot> event = journalReader.readNext().await();
-        assertEquals(1, event.eventData.number);
+        Event<String> event = journalReader.readNext().await();
+        assertEquals(1, parse(event).number);
     }
 
     @Test
     public void testThatSeekToGoesToTheBeginningWhenSpecified() throws Exception {
         TestUntil until = TestUntil.happenings(1);
-        EventJournalReader<TestAggregateRoot> journalReader = journalReader();
+        EventJournalReader<String> journalReader = journalReader();
         journalReader.seekTo(Beginning).await();
 
         until.completesWithin(50);
@@ -106,7 +106,7 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
         insertEvent(2);
         insertEvent(3);
 
-        EventJournalReader<TestAggregateRoot> journalReader = journalReader();
+        EventJournalReader<String> journalReader = journalReader();
         journalReader.seekTo(End).await();
 
         until.completesWithin(50);
@@ -114,7 +114,7 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
     }
 
     @SuppressWarnings("unchecked")
-    private EventJournalReader<TestAggregateRoot> journalReader() {
+    private EventJournalReader<String> journalReader() {
         return world.actorFor(
                 Definition.has(PostgresEventJournalReaderActor.class,
                         Definition.parameters(configuration, readerName)),

@@ -2,6 +2,7 @@ package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
 
 import com.google.gson.Gson;
 import io.vlingo.actors.World;
+import io.vlingo.symbio.Event;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.jdbc.Configuration;
 import org.junit.After;
@@ -113,8 +114,8 @@ public abstract class BasePostgresEventJournalTest {
 
     protected final void insertEvent(final int dataVersion) throws SQLException {
         try (final PreparedStatement stmt = configuration.connection.prepareStatement(INSERT_EVENT)) {
-            stmt.setString(1, gson.toJson(new TestAggregateRoot(aggregateRootId, dataVersion)));
-            stmt.setString(2, TestAggregateRoot.class.getCanonicalName());
+            stmt.setString(1, gson.toJson(new TestEvent(aggregateRootId, dataVersion)));
+            stmt.setString(2, TestEvent.class.getCanonicalName());
             stmt.setString(3, streamName);
 
             assert stmt.executeUpdate() == 1;
@@ -132,10 +133,10 @@ public abstract class BasePostgresEventJournalTest {
         }
     }
 
-    protected final void insertSnapshot(final int dataVersion, final TestAggregateRoot state) throws SQLException {
+    protected final void insertSnapshot(final int dataVersion, final TestEvent state) throws SQLException {
         try (final PreparedStatement stmt = configuration.connection.prepareStatement(INSERT_SNAPSHOT)) {
             stmt.setString(1, streamName);
-            stmt.setString(2, TestAggregateRoot.class.getCanonicalName());
+            stmt.setString(2, TestEvent.class.getCanonicalName());
             stmt.setString(3, gson.toJson(state));
             stmt.setInt(4, dataVersion);
 
@@ -158,4 +159,10 @@ public abstract class BasePostgresEventJournalTest {
 
         Assert.fail("Could not find offset for " + readerName);
     }
+
+
+    protected final TestEvent parse(Event<String> event) {
+        return gson.fromJson(event.eventData, TestEvent.class);
+    }
+
 }

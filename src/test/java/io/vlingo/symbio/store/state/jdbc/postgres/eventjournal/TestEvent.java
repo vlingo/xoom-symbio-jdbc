@@ -2,11 +2,11 @@ package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
 
 import java.util.Objects;
 
-public class TestAggregateRoot {
+public class TestEvent {
     public final String id;
     public final int number;
 
-    public TestAggregateRoot(String id, int number) {
+    public TestEvent(String id, int number) {
         this.id = id;
         this.number = number;
     }
@@ -15,7 +15,7 @@ public class TestAggregateRoot {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
-        TestAggregateRoot that = (TestAggregateRoot) o;
+        TestEvent that = (TestEvent) o;
         return number == that.number &&
                 Objects.equals(id, that.id);
     }
@@ -27,7 +27,7 @@ public class TestAggregateRoot {
 
     @Override
     public String toString() {
-        return "TestAggregateRoot{" +
+        return "TestEvent{" +
                 "id='" + id + '\'' +
                 ", number=" + number +
                 '}';
