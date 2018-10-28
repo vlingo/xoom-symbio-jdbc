@@ -22,11 +22,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PostgresEventJournalActor extends Actor implements EventJournal<String> {
     private static final String INSERT_EVENT =
             "INSERT INTO vlingo_event_journal(event_data, event_metadata, event_type, event_type_version, event_stream, event_offset)" +
-                    "VALUES(?::JSON, ?::JSON, ?, ?, ?, ?)";
+                    "VALUES(?::JSONB, ?::JSONB, ?, ?, ?, ?)";
 
     private static final String INSERT_SNAPSHOT =
             "INSERT INTO vlingo_event_journal_snapshots(event_stream, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)" +
-                    "VALUES(?, ?, ?, ?::JSON, ?, ?::JSON)";
+                    "VALUES(?, ?, ?, ?::JSONB, ?, ?::JSONB)";
 
     private final Configuration configuration;
     private final Connection connection;
