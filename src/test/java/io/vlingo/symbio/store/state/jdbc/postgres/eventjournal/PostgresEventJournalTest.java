@@ -35,8 +35,15 @@ public abstract class PostgresEventJournalTest {
                     "snapshot_metadata JSON NOT NULL" +
                     ")";
 
+    private static final String OFFSET_TABLE =
+            "CREATE TABLE vlingo_event_journal_offsets(" +
+                    "reader_name VARCHAR(128) PRIMARY KEY," +
+                    "reader_offset INTEGER NOT NULL" +
+                    ")";
+
     private static final String DROP_EVENT_TABLE = "DROP TABLE vlingo_event_journal";
     private static final String DROP_SNAPSHOT_TABLE = "DROP TABLE vlingo_event_journal_snapshots";
+    private static final String DROP_OFFSET_TABLE = "DROP TABLE vlingo_event_journal_offsets";
 
     private static final String INSERT_EVENT =
             "INSERT INTO vlingo_event_journal(event_data, event_metadata, event_type, event_type_version, event_stream, event_offset)" +
@@ -45,6 +52,9 @@ public abstract class PostgresEventJournalTest {
     private static final String INSERT_SNAPSHOT =
             "INSERT INTO vlingo_event_journal_snapshots(event_stream, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)" +
                     "VALUES(?, ?, 1, ?::JSON, ?, '{}'::JSON)";
+
+    private static final String INSERT_OFFSET =
+            "INSERT INTO vlingo_event_journal_offsets(reader_name, reader_offset) VALUES(?, ?)";
 
     protected Configuration configuration;
     protected World world;
@@ -73,20 +83,24 @@ public abstract class PostgresEventJournalTest {
     private void createDatabase() throws SQLException {
         try (
                 final PreparedStatement createEventTable = configuration.connection.prepareStatement(EVENT_TABLE);
-                final PreparedStatement createSnapshotTable = configuration.connection.prepareStatement(SNAPSHOT_TABLE)
+                final PreparedStatement createSnapshotTable = configuration.connection.prepareStatement(SNAPSHOT_TABLE);
+                final PreparedStatement createOffsetTable = configuration.connection.prepareStatement(OFFSET_TABLE)
         ) {
             assert createEventTable.executeUpdate() == 0;
             assert createSnapshotTable.executeUpdate() == 0;
+            assert createOffsetTable.executeUpdate() == 0;
         }
     }
 
     private void dropDatabase() throws SQLException {
         try (
                 final PreparedStatement dropEventTable = configuration.connection.prepareStatement(DROP_EVENT_TABLE);
-                final PreparedStatement dropSnapshotTable = configuration.connection.prepareStatement(DROP_SNAPSHOT_TABLE)
+                final PreparedStatement dropSnapshotTable = configuration.connection.prepareStatement(DROP_SNAPSHOT_TABLE);
+                final PreparedStatement dropOffsetTable = configuration.connection.prepareStatement(DROP_OFFSET_TABLE)
         ) {
             assert dropEventTable.executeUpdate() == 0;
             assert dropSnapshotTable.executeUpdate() == 0;
+            assert dropOffsetTable.executeUpdate() == 0;
         }
     }
 
@@ -95,6 +109,16 @@ public abstract class PostgresEventJournalTest {
             stmt.setString(1, gson.toJson(new TestAggregateRoot(aggregateRootId, dataVersion)));
             stmt.setString(2, TestAggregateRoot.class.getCanonicalName());
             stmt.setString(3, streamName);
+
+            assert stmt.executeUpdate() == 1;
+            configuration.connection.commit();
+        }
+    }
+
+    protected final void insertOffset(final int offset, final String readerName) throws SQLException {
+        try (final PreparedStatement stmt = configuration.connection.prepareStatement(INSERT_OFFSET)) {
+            stmt.setString(1, readerName);
+            stmt.setInt(2, offset);
 
             assert stmt.executeUpdate() == 1;
             configuration.connection.commit();
