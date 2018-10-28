@@ -49,24 +49,24 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
     @Override
     public void append(String streamName, int streamVersion, Event<String> event) {
         insertEvent(streamName, streamVersion, event);
-        listener.appended(event);
         doCommit();
+        listener.appended(event);
     }
 
     @Override
     public void appendWith(String streamName, int streamVersion, Event<String> event, State<String> snapshot) {
         insertEvent(streamName, streamVersion, event);
         insertSnapshot(streamName, snapshot);
-        listener.appendedWith(event, snapshot);
         doCommit();
+        listener.appendedWith(event, snapshot);
     }
 
     @Override
     public void appendAll(String streamName, int fromStreamVersion, List<Event<String>> events) {
         AtomicInteger version = new AtomicInteger(fromStreamVersion);
         events.forEach(event -> insertEvent(streamName, version.getAndIncrement(), event));
-        listener.appendedAll(events);
         doCommit();
+        listener.appendedAll(events);
     }
 
     @Override
@@ -74,8 +74,8 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
         AtomicInteger version = new AtomicInteger(fromStreamVersion);
         events.forEach(event -> insertEvent(streamName, version.getAndIncrement(), event));
         insertSnapshot(streamName, snapshot);
-        listener.appendedAllWith(events, snapshot);
         doCommit();
+        listener.appendedAllWith(events, snapshot);
     }
 
     @Override
@@ -120,9 +120,11 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
 
             if (insertEvent.executeUpdate() != 1) {
                 logger().log("vlingo/symbio-postgres: Could not insert event " + event.toString());
+                throw new IllegalStateException("vlingo/symbio-postgres: Could not insert event");
             }
         } catch (SQLException e) {
-            logger().log("vlingo/symbio-postgres: Could not insert event " + event.toString());
+            logger().log("vlingo/symbio-postgres: Could not insert event " + event.toString(), e);
+            throw new IllegalStateException(e);
         }
     }
 
@@ -137,9 +139,11 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
 
             if (insertSnapshot.executeUpdate() != 1) {
                 logger().log("vlingo/symbio-postgres: Could not insert event with id " + snapshot.id);
+                throw new IllegalStateException("vlingo/symbio-postgres: Could not insert event");
             }
         } catch (SQLException e) {
-            logger().log("vlingo/symbio-postgres: Could not insert event with id " + snapshot.id);
+            logger().log("vlingo/symbio-postgres: Could not insert event with id " + snapshot.id, e);
+            throw new IllegalStateException(e);
         }
     }
 
@@ -148,6 +152,7 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
             connection.commit();
         } catch (SQLException e) {
             logger().log("vlingo/symbio-postgres: Could not complete transaction", e);
+            throw new IllegalStateException(e);
         }
     }
 }
