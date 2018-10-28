@@ -109,7 +109,7 @@
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>0.7.3</version>
+      <version>0.7.2</version>
     </dependency>
     <dependency>
       <groupId>org.hsqldb</groupId>
