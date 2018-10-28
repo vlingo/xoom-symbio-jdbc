@@ -15,12 +15,12 @@ import io.vlingo.symbio.store.state.jdbc.Configuration;
 import java.sql.Connection;
 import java.util.List;
 
-public class PostgresEventJournal<T> extends Actor implements EventJournal<T> {
+public class PostgresEventJournalActor<T> extends Actor implements EventJournal<T> {
     private final Configuration configuration;
     private final Connection connection;
     private final EventJournalListener<T> listener;
 
-    public PostgresEventJournal(Configuration configuration, Connection connection, EventJournalListener<T> listener) {
+    public PostgresEventJournalActor(Configuration configuration, Connection connection, EventJournalListener<T> listener) {
         this.configuration = configuration;
         this.connection = connection;
         this.listener = listener;
