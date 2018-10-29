@@ -26,13 +26,15 @@ public class PostgresEventJournalReaderActor extends Actor implements EventJourn
                     "ON CONFLICT (reader_name) DO UPDATE SET reader_offset=?";
 
     private static final String QUERY_SINGLE =
-            "SELECT * FROM vlingo_event_journal WHERE id = ?";
+            "SELECT id, event_data, event_metadata, event_type, event_type_version, event_timestamp FROM " +
+                    "vlingo_event_journal WHERE event_timestamp >= ?";
 
     private static final String QUERY_BATCH =
-            "SELECT * FROM vlingo_event_journal WHERE id BETWEEN ? AND ?";
+            "SELECT id, event_data, event_metadata, event_type, event_type_version, event_timestamp FROM " +
+                    "vlingo_event_journal WHERE event_timestamp > ?";
 
     private static final String QUERY_LAST_OFFSET =
-            "SELECT MAX(id) FROM vlingo_event_journal";
+            "SELECT MAX(event_timestamp) FROM vlingo_event_journal";
 
     private final Connection connection;
     private final String name;
@@ -43,7 +45,7 @@ public class PostgresEventJournalReaderActor extends Actor implements EventJourn
     private final PreparedStatement queryLastOffset;
     private final Gson gson;
 
-    private int offset;
+    private long offset;
 
     public PostgresEventJournalReaderActor(final Configuration configuration, final String name) throws SQLException {
         this.connection = configuration.connection;
@@ -68,10 +70,10 @@ public class PostgresEventJournalReaderActor extends Actor implements EventJourn
     @SuppressWarnings("unchecked")
     public Completes<Event<String>> readNext() {
         try {
-            querySingleEvent.setInt(1, offset);
+            querySingleEvent.setLong(1, offset);
             final ResultSet resultSet = querySingleEvent.executeQuery();
             if (resultSet.next()) {
-                offset += 1;
+                offset = nextOffsetFromResultSet(resultSet);
                 updateCurrentOffset();
                 return completes().with(eventFromResultSet(resultSet));
             }
@@ -86,17 +88,19 @@ public class PostgresEventJournalReaderActor extends Actor implements EventJourn
     public Completes<EventStream<String>> readNext(int maximumEvents) {
         try {
             List<Event<String>> events = new ArrayList<>(maximumEvents);
-            queryEventBatch.setInt(1, offset);
-            queryEventBatch.setInt(2, offset + maximumEvents - 1);
+            queryEventBatch.setLong(1, offset);
+            queryEventBatch.setMaxRows(maximumEvents);
 
             final ResultSet resultSet = queryEventBatch.executeQuery();
             while (resultSet.next()) {
-                offset += 1;
                 events.add(eventFromResultSet(resultSet));
+                if (resultSet.isLast()) {
+                    offset = nextOffsetFromResultSet(resultSet);
+                }
             }
 
             updateCurrentOffset();
-            return completes().with(new EventStream<>(name, offset, events, State.NullState.Text));
+            return completes().with(new EventStream<>(name, (int) offset, events, State.NullState.Text));
 
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
@@ -154,7 +158,7 @@ public class PostgresEventJournalReaderActor extends Actor implements EventJourn
             queryCurrentOffset.setString(1, name);
             final ResultSet resultSet = queryCurrentOffset.executeQuery();
             if (resultSet.next()) {
-                this.offset = resultSet.getInt(1);
+                this.offset = resultSet.getLong(1);
             }
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
@@ -164,9 +168,9 @@ public class PostgresEventJournalReaderActor extends Actor implements EventJourn
 
     private void updateCurrentOffset() {
         try {
-            updateCurrentOffset.setInt(1, offset);
+            updateCurrentOffset.setLong(1, offset);
             updateCurrentOffset.setString(2, name);
-            updateCurrentOffset.setInt(3, offset);
+            updateCurrentOffset.setLong(3, offset);
 
             updateCurrentOffset.executeUpdate();
             connection.commit();
@@ -176,16 +180,20 @@ public class PostgresEventJournalReaderActor extends Actor implements EventJourn
         }
     }
 
-    private int retrieveLatestOffset() {
+    private long retrieveLatestOffset() {
         try {
             ResultSet resultSet = queryLastOffset.executeQuery();
             if (resultSet.next()) {
-                return resultSet.getInt(1);
+                return resultSet.getLong(1);
             }
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgres: Could not retrieve latest offset, using current.");
         }
 
         return offset;
+    }
+
+    private long nextOffsetFromResultSet(ResultSet resultSet) throws SQLException {
+        return resultSet.getLong(6) + 1;
     }
 }

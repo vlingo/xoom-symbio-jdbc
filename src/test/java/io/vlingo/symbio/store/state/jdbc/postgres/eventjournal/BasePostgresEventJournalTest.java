@@ -2,6 +2,7 @@ package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
 
 import com.google.gson.Gson;
 import io.vlingo.actors.World;
+import io.vlingo.common.identity.IdentityGenerator;
 import io.vlingo.symbio.Event;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.jdbc.Configuration;
@@ -20,7 +21,8 @@ import static org.junit.Assert.assertEquals;
 public abstract class BasePostgresEventJournalTest {
     private static final String EVENT_TABLE =
             "CREATE TABLE vlingo_event_journal(" +
-                    "id BIGSERIAL PRIMARY KEY," +
+                    "id UUID PRIMARY KEY," +
+                    "event_timestamp BIGINT NOT NULL," +
                     "event_data JSONB NOT NULL," +
                     "event_metadata JSONB NOT NULL," +
                     "event_type VARCHAR(256) NOT NULL," +
@@ -42,7 +44,7 @@ public abstract class BasePostgresEventJournalTest {
     private static final String OFFSET_TABLE =
             "CREATE TABLE vlingo_event_journal_offsets(" +
                     "reader_name VARCHAR(128) PRIMARY KEY," +
-                    "reader_offset INTEGER NOT NULL" +
+                    "reader_offset BIGINT NOT NULL" +
                     ")";
 
     private static final String DROP_EVENT_TABLE = "DROP TABLE vlingo_event_journal";
@@ -50,8 +52,8 @@ public abstract class BasePostgresEventJournalTest {
     private static final String DROP_OFFSET_TABLE = "DROP TABLE vlingo_event_journal_offsets";
 
     private static final String INSERT_EVENT =
-            "INSERT INTO vlingo_event_journal(event_data, event_metadata, event_type, event_type_version, event_stream, event_offset)" +
-                    "VALUES(?::JSONB, '{}'::JSONB, ?, 1, ?, (SELECT COALESCE(MAX(event_offset), 0) + 1 FROM vlingo_event_journal))";
+            "INSERT INTO vlingo_event_journal(id, event_timestamp, event_data, event_metadata, event_type, event_type_version, event_stream, event_offset)" +
+                    "VALUES(?, ?, ?::JSONB, '{}'::JSONB, ?, 1, ?, (SELECT COALESCE(MAX(event_offset), 0) + 1 FROM vlingo_event_journal))";
 
     private static final String INSERT_SNAPSHOT =
             "INSERT INTO vlingo_event_journal_snapshots(event_stream, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)" +
@@ -68,6 +70,7 @@ public abstract class BasePostgresEventJournalTest {
     protected String aggregateRootId;
     protected Gson gson;
     protected String streamName;
+    protected IdentityGenerator identityGenerator;
 
     @Before
     @SuppressWarnings("unchecked")
@@ -78,6 +81,7 @@ public abstract class BasePostgresEventJournalTest {
         configuration = testConfiguration(StateStore.DataFormat.Text);
 
         gson = new Gson();
+        identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
 
         createDatabase();
     }
@@ -112,21 +116,29 @@ public abstract class BasePostgresEventJournalTest {
         }
     }
 
-    protected final void insertEvent(final int dataVersion) throws SQLException {
+    protected final long insertEvent(final int dataVersion) throws SQLException, InterruptedException {
+        Thread.sleep(2);
+        final UUID id = identityGenerator.generate();
+        final long timestamp = id.timestamp();
+
         try (final PreparedStatement stmt = configuration.connection.prepareStatement(INSERT_EVENT)) {
-            stmt.setString(1, gson.toJson(new TestEvent(aggregateRootId, dataVersion)));
-            stmt.setString(2, TestEvent.class.getCanonicalName());
-            stmt.setString(3, streamName);
+            stmt.setObject(1, id);
+            stmt.setLong(2, timestamp);
+            stmt.setString(3, gson.toJson(new TestEvent(aggregateRootId, dataVersion)));
+            stmt.setString(4, TestEvent.class.getCanonicalName());
+            stmt.setString(5, streamName);
 
             assert stmt.executeUpdate() == 1;
             configuration.connection.commit();
         }
+
+        return timestamp;
     }
 
-    protected final void insertOffset(final int offset, final String readerName) throws SQLException {
+    protected final void insertOffset(final long offset, final String readerName) throws SQLException {
         try (final PreparedStatement stmt = configuration.connection.prepareStatement(INSERT_OFFSET)) {
             stmt.setString(1, readerName);
-            stmt.setInt(2, offset);
+            stmt.setLong(2, offset);
 
             assert stmt.executeUpdate() == 1;
             configuration.connection.commit();
@@ -145,13 +157,13 @@ public abstract class BasePostgresEventJournalTest {
         }
     }
 
-    protected final void assertOffsetIs(final String readerName, final int offset) throws SQLException {
+    protected final void assertOffsetIs(final String readerName, final long offset) throws SQLException {
         try (PreparedStatement stmt = configuration.connection.prepareStatement(LATEST_OFFSET_OF)) {
             stmt.setString(1, readerName);
 
             ResultSet resultSet = stmt.executeQuery();
             if (resultSet.next()) {
-                int currentOffset = resultSet.getInt(1);
+                long currentOffset = resultSet.getLong(1);
                 assertEquals(offset, currentOffset);
                 return;
             }

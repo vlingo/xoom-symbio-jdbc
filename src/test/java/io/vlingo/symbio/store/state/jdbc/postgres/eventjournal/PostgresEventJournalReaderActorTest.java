@@ -44,10 +44,10 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
     public void testThatRetrievesFromSavedOffset() throws Exception {
         insertEvent(1);
         insertEvent(2);
-        insertEvent(3);
-        insertEvent(4);
+        long offset = insertEvent(3);
+        long lastOffset = insertEvent(4);
 
-        insertOffset(3, readerName);
+        insertOffset(offset, readerName);
         EventJournalReader<String> journalReader = journalReader();
 
         assertEquals(3, parse(journalReader.readNext().await()).number);
@@ -77,9 +77,9 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
     public void testThatRewindReadsFromTheBeginning() throws Exception {
         TestUntil until = TestUntil.happenings(1);
         insertEvent(1);
-        insertEvent(2);
+        long offset = insertEvent(2);
 
-        insertOffset(3, readerName);
+        insertOffset(offset, readerName);
         EventJournalReader<String> journalReader = journalReader();
         journalReader.rewind();
 
@@ -104,13 +104,13 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
         TestUntil until = TestUntil.happenings(1);
         insertEvent(1);
         insertEvent(2);
-        insertEvent(3);
+        long lastOffset = insertEvent(3);
 
         EventJournalReader<String> journalReader = journalReader();
         journalReader.seekTo(End).await();
 
         until.completesWithin(50);
-        assertOffsetIs(readerName, 4);
+        assertOffsetIs(readerName, lastOffset + 1);
     }
 
     @SuppressWarnings("unchecked")

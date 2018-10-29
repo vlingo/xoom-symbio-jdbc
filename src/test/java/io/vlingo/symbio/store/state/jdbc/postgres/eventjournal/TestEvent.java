@@ -4,9 +4,9 @@ import java.util.Objects;
 
 public class TestEvent {
     public final String id;
-    public final int number;
+    public final long number;
 
-    public TestEvent(String id, int number) {
+    public TestEvent(String id, long number) {
         this.id = id;
         this.number = number;
     }
