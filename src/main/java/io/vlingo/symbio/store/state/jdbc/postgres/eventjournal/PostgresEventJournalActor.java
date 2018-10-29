@@ -5,6 +5,7 @@ import io.vlingo.actors.Actor;
 import io.vlingo.actors.Address;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
+import io.vlingo.common.identity.IdentityGenerator;
 import io.vlingo.symbio.Event;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.eventjournal.EventJournal;
@@ -19,11 +20,12 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class PostgresEventJournalActor extends Actor implements EventJournal<String> {
     private static final String INSERT_EVENT =
-            "INSERT INTO vlingo_event_journal(event_data, event_metadata, event_type, event_type_version, event_stream, event_offset)" +
-                    "VALUES(?::JSONB, ?::JSONB, ?, ?, ?, ?)";
+            "INSERT INTO vlingo_event_journal(event_data, event_metadata, event_type, event_type_version, event_stream, event_offset, id, event_timestamp)" +
+                    "VALUES(?::JSONB, ?::JSONB, ?, ?, ?, ?, ?, ?)";
 
     private static final String INSERT_SNAPSHOT =
             "INSERT INTO vlingo_event_journal_snapshots(event_stream, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)" +
@@ -37,6 +39,7 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
     private final Gson gson;
     private final Map<String, EventJournalReader<String>> journalReaders;
     private final Map<String, EventStreamReader<String>> streamReaders;
+    private final IdentityGenerator identityGenerator;
 
     public PostgresEventJournalActor(Configuration configuration, EventJournalListener<String> listener) throws SQLException {
         this.configuration = configuration;
@@ -50,6 +53,8 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
 
         this.journalReaders = new HashMap<>();
         this.streamReaders = new HashMap<>();
+
+        this.identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
     }
 
     @Override
@@ -126,17 +131,24 @@ public class PostgresEventJournalActor extends Actor implements EventJournal<Str
 
     protected final void insertEvent(final String eventStream, final int eventVersion, final Event<String> event) {
         try {
+            final UUID id = identityGenerator.generate();
+            final long timestamp = id.timestamp();
+
             insertEvent.setString(1, event.eventData);
             insertEvent.setString(2, gson.toJson(event.metadata));
             insertEvent.setString(3, event.type);
             insertEvent.setInt(4, event.typeVersion);
             insertEvent.setString(5, eventStream);
             insertEvent.setInt(6, eventVersion);
+            insertEvent.setObject(7, id);
+            insertEvent.setLong(8, timestamp);
 
             if (insertEvent.executeUpdate() != 1) {
                 logger().log("vlingo/symbio-postgres: Could not insert event " + event.toString());
                 throw new IllegalStateException("vlingo/symbio-postgres: Could not insert event");
             }
+
+            event.__internal__setId(id.toString());
         } catch (SQLException e) {
             logger().log("vlingo/symbio-postgres: Could not insert event " + event.toString(), e);
             throw new IllegalStateException(e);
