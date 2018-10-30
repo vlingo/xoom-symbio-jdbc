@@ -18,6 +18,8 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 
 public class PostgresEventJournalActorTest extends BasePostgresEventJournalTest {
+    private Object object = new Object();
+    private MockAppendResultInterest interest;
     private EventJournal<String> journal;
     private EventJournalListener<String> listener;
     private EventJournalReader<String> journalReader;
@@ -25,7 +27,9 @@ public class PostgresEventJournalActorTest extends BasePostgresEventJournalTest 
     private TestUntil until;
 
     @Before
+    @SuppressWarnings("unchecked")
     public void setUp() throws Exception {
+        interest = new MockAppendResultInterest();
         until = TestUntil.happenings(1);
         listener = Mockito.mock(EventJournalListener.class);
         journal = world.actorFor(
@@ -48,7 +52,7 @@ public class PostgresEventJournalActorTest extends BasePostgresEventJournalTest 
     @Test
     public void testThatInsertsANewEvent() {
         Event<String> appendedEvent = newEventForData(1);
-        journal.append(streamName, 1, appendedEvent);
+        journal.append(streamName, 1, appendedEvent, interest, object);
         until.completes();
 
         Event<String> event = journalReader.readNext().await();
@@ -60,7 +64,7 @@ public class PostgresEventJournalActorTest extends BasePostgresEventJournalTest 
     public void testThatInsertsANewListOfEvents() {
         Event<String> appendedEvent1 = newEventForData(1);
         Event<String> appendedEvent2 = newEventForData(2);
-        journal.appendAll(streamName, 1, asList(appendedEvent1, appendedEvent2));
+        journal.appendAll(streamName, 1, asList(appendedEvent1, appendedEvent2), interest, object);
         until.completes();
 
         EventStream<String> eventStream = journalReader.readNext(2).await();
@@ -76,7 +80,7 @@ public class PostgresEventJournalActorTest extends BasePostgresEventJournalTest 
         Event<String> appendedEvent = newEventForData(1);
         State<String> snapshot = newSnapshotForData(2);
 
-        journal.appendWith(streamName, 1, appendedEvent, snapshot);
+        journal.appendWith(streamName, 1, appendedEvent, snapshot, interest, object);
         until.completes();
 
         EventStream<String> eventStream = streamReader.streamFor(streamName, 1).await();
@@ -89,7 +93,7 @@ public class PostgresEventJournalActorTest extends BasePostgresEventJournalTest 
         Event<String> appendedEvent2 = newEventForData(2);
         State<String> snapshot = newSnapshotForData(2);
 
-        journal.appendAllWith(streamName, 1, Arrays.asList(appendedEvent1, appendedEvent2), snapshot);
+        journal.appendAllWith(streamName, 1, Arrays.asList(appendedEvent1, appendedEvent2), snapshot, interest, object);
         until.completes();
 
         EventStream<String> eventStream = streamReader.streamFor(streamName, 1).await();
