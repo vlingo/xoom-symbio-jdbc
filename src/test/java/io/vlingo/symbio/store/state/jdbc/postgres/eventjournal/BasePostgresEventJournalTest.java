@@ -73,7 +73,6 @@ public abstract class BasePostgresEventJournalTest {
     protected IdentityGenerator identityGenerator;
 
     @Before
-    @SuppressWarnings("unchecked")
     public void setUpDatabase() throws Exception {
         aggregateRootId = UUID.randomUUID().toString();
         streamName = aggregateRootId;
