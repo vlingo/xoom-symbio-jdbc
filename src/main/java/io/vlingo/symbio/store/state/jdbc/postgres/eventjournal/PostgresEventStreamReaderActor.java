@@ -1,3 +1,10 @@
+// Copyright © 2012-2018 Vaughn Vernon. All rights reserved.
+//
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL
+// was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
 package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
 
 import com.google.gson.Gson;
@@ -48,7 +55,6 @@ public class PostgresEventStreamReaderActor extends Actor implements EventStream
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public Completes<EventStream<String>> streamFor(final String streamName, final int fromStreamVersion) {
         try {
             return completes().with(eventsFromOffset(streamName, fromStreamVersion));
@@ -58,7 +64,6 @@ public class PostgresEventStreamReaderActor extends Actor implements EventStream
         }
     }
 
-    @SuppressWarnings("unchecked")
     private EventStream<String> eventsFromOffset(final String streamName, final int offset) throws Exception {
         final State<String> snapshot = latestSnapshotOf(streamName);
         final List<Event<String>> events = new ArrayList<>();
@@ -92,7 +97,6 @@ public class PostgresEventStreamReaderActor extends Actor implements EventStream
         return new EventStream<>(streamName, dataVersion + events.size(), events, referenceSnapshot);
     }
 
-    @SuppressWarnings("unchecked")
     private State<String> latestSnapshotOf(final String streamName) throws Exception {
         queryLatestSnapshotStatement.setString(1, streamName);
         final ResultSet resultSet = queryLatestSnapshotStatement.executeQuery();
