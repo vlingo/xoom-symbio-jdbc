@@ -13,12 +13,12 @@ import java.util.UUID;
 import static io.vlingo.symbio.store.eventjournal.EventJournalReader.Beginning;
 import static io.vlingo.symbio.store.eventjournal.EventJournalReader.End;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 
 public class PostgresEventJournalReaderActorTest extends BasePostgresEventJournalTest {
     private String readerName;
 
     @Before
-    @SuppressWarnings("unchecked")
     public void setUp() {
         readerName = UUID.randomUUID().toString();
     }
@@ -52,6 +52,7 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
 
         assertEquals(3, parse(journalReader.readNext().await()).number);
         assertEquals(4, parse(journalReader.readNext().await()).number);
+        assertNotEquals(offset, lastOffset);
     }
 
     @Test
