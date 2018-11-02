@@ -34,11 +34,11 @@ import io.vlingo.symbio.store.state.jdbc.Configuration;
 
 public class PostgresEventJournalActor extends Actor implements EventJournal<String> {
     private static final String INSERT_EVENT =
-            "INSERT INTO vlingo_event_journal(event_data, event_metadata, event_type, event_type_version, event_stream, event_offset, id, event_timestamp)" +
+            "INSERT INTO vlingo_event_journal(event_data, event_metadata, event_type, event_type_version, stream_name, stream_version, id, event_timestamp)" +
                     "VALUES(?::JSONB, ?::JSONB, ?, ?, ?, ?, ?, ?)";
 
     private static final String INSERT_SNAPSHOT =
-            "INSERT INTO vlingo_event_journal_snapshots(event_stream, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)" +
+            "INSERT INTO vlingo_event_journal_snapshots(stream_name, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)" +
                     "VALUES(?, ?, ?, ?::JSONB, ?, ?::JSONB)";
 
     private final Configuration configuration;

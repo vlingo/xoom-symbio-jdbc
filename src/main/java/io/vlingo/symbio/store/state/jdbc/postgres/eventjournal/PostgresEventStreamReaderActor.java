@@ -30,12 +30,12 @@ public class PostgresEventStreamReaderActor extends Actor implements EventStream
     private static final String QUERY_EVENTS =
             "SELECT id, event_data, event_metadata, event_type, event_type_version " +
                     "FROM vlingo_event_journal " +
-                    "WHERE event_stream = ? AND event_offset >= ?";
+                    "WHERE stream_name = ? AND stream_version >= ?";
 
     private static final String QUERY_SNAPSHOT =
             "SELECT snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata " +
                     "FROM vlingo_event_journal_snapshots " +
-                    "WHERE event_stream = ?";
+                    "WHERE stream_name = ?";
 
     private final Connection connection;
     private final PreparedStatement queryEventsStatement;
