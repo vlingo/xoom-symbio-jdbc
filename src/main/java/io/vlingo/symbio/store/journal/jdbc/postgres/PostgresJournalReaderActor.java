@@ -5,16 +5,16 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
+package io.vlingo.symbio.store.journal.jdbc.postgres;
 
 import com.google.gson.Gson;
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
-import io.vlingo.symbio.Event;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.eventjournal.EventJournalReader;
-import io.vlingo.symbio.store.eventjournal.EventStream;
+import io.vlingo.symbio.store.journal.JournalReader;
+import io.vlingo.symbio.store.journal.Stream;
 import io.vlingo.symbio.store.state.jdbc.Configuration;
 
 import java.sql.Connection;
@@ -24,24 +24,24 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PostgresEventJournalReaderActor extends Actor implements EventJournalReader<String> {
+public class PostgresJournalReaderActor extends Actor implements JournalReader<String> {
     private static final String QUERY_CURRENT_OFFSET =
-            "SELECT reader_offset FROM vlingo_event_journal_offsets WHERE reader_name=?";
+            "SELECT reader_offset FROM vlingo_symbio_journal_offsets WHERE reader_name=?";
 
     private static final String UPDATE_CURRENT_OFFSET =
-            "INSERT INTO vlingo_event_journal_offsets(reader_offset, reader_name) VALUES(?, ?) " +
+            "INSERT INTO vlingo_symbio_journal_offsets(reader_offset, reader_name) VALUES(?, ?) " +
                     "ON CONFLICT (reader_name) DO UPDATE SET reader_offset=?";
 
     private static final String QUERY_SINGLE =
-            "SELECT id, event_data, event_metadata, event_type, event_type_version, event_timestamp FROM " +
-                    "vlingo_event_journal WHERE event_timestamp >= ?";
+            "SELECT id, entry_data, entry_metadata, entry_type, entry_type_version, entry_timestamp FROM " +
+                    "vlingo_symbio_journal WHERE entry_timestamp >= ?";
 
     private static final String QUERY_BATCH =
-            "SELECT id, event_data, event_metadata, event_type, event_type_version, event_timestamp FROM " +
-                    "vlingo_event_journal WHERE event_timestamp > ?";
+            "SELECT id, entry_data, entry_metadata, entry_type, entry_type_version, entry_timestamp FROM " +
+                    "vlingo_symbio_journal WHERE entry_timestamp > ?";
 
     private static final String QUERY_LAST_OFFSET =
-            "SELECT MAX(event_timestamp) FROM vlingo_event_journal";
+            "SELECT MAX(entry_timestamp) FROM vlingo_symbio_journal";
 
     private final Connection connection;
     private final String name;
@@ -54,7 +54,7 @@ public class PostgresEventJournalReaderActor extends Actor implements EventJourn
 
     private long offset;
 
-    public PostgresEventJournalReaderActor(final Configuration configuration, final String name) throws SQLException {
+    public PostgresJournalReaderActor(final Configuration configuration, final String name) throws SQLException {
         this.connection = configuration.connection;
         this.name = name;
 
@@ -74,7 +74,7 @@ public class PostgresEventJournalReaderActor extends Actor implements EventJourn
     }
 
     @Override
-    public Completes<Event<String>> readNext() {
+    public Completes<Entry<String>> readNext() {
         try {
             querySingleEvent.setLong(1, offset);
             final ResultSet resultSet = querySingleEvent.executeQuery();
@@ -91,9 +91,9 @@ public class PostgresEventJournalReaderActor extends Actor implements EventJourn
     }
 
     @Override
-    public Completes<EventStream<String>> readNext(int maximumEvents) {
+    public Completes<Stream<String>> readNext(int maximumEvents) {
         try {
-            List<Event<String>> events = new ArrayList<>(maximumEvents);
+            List<Entry<String>> events = new ArrayList<>(maximumEvents);
             queryEventBatch.setLong(1, offset);
             queryEventBatch.setMaxRows(maximumEvents);
 
@@ -106,7 +106,7 @@ public class PostgresEventJournalReaderActor extends Actor implements EventJourn
             }
 
             updateCurrentOffset();
-            return completes().with(new EventStream<>(name, (int) offset, events, State.NullState.Text));
+            return completes().with(new Stream<>(name, (int) offset, events, State.NullState.Text));
 
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
@@ -144,17 +144,17 @@ public class PostgresEventJournalReaderActor extends Actor implements EventJourn
     }
 
 
-    private Event<String> eventFromResultSet(ResultSet resultSet) throws SQLException, ClassNotFoundException {
+    private Entry<String> eventFromResultSet(ResultSet resultSet) throws SQLException, ClassNotFoundException {
         final String id = resultSet.getString(1);
-        final String eventData = resultSet.getString(2);
-        final String eventMetadata = resultSet.getString(3);
-        final String eventType = resultSet.getString(4);
+        final String entryData = resultSet.getString(2);
+        final String entryMetadata = resultSet.getString(3);
+        final String entryType = resultSet.getString(4);
         final int eventTypeVersion = resultSet.getInt(5);
 
-        final Class<?> classOfEvent = Class.forName(eventType);
+        final Class<?> classOfEvent = Class.forName(entryType);
 
-        final Metadata eventMetadataDeserialized = gson.fromJson(eventMetadata, Metadata.class);
-        return new Event.TextEvent(id, classOfEvent, eventTypeVersion, eventData, eventMetadataDeserialized);
+        final Metadata eventMetadataDeserialized = gson.fromJson(entryMetadata, Metadata.class);
+        return new Entry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, eventMetadataDeserialized);
     }
 
     private void retrieveCurrentOffset() {

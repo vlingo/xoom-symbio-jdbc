@@ -5,16 +5,16 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
+package io.vlingo.symbio.store.journal.jdbc.postgres;
 
 import com.google.gson.Gson;
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
-import io.vlingo.symbio.Event;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.eventjournal.EventStream;
-import io.vlingo.symbio.store.eventjournal.EventStreamReader;
+import io.vlingo.symbio.store.journal.Stream;
+import io.vlingo.symbio.store.journal.StreamReader;
 import io.vlingo.symbio.store.state.jdbc.Configuration;
 
 import java.sql.Connection;
@@ -26,15 +26,15 @@ import java.util.List;
 
 import static java.util.Collections.emptyList;
 
-public class PostgresEventStreamReaderActor extends Actor implements EventStreamReader<String> {
+public class PostgresStreamReaderActor extends Actor implements StreamReader<String> {
     private static final String QUERY_EVENTS =
-            "SELECT id, event_data, event_metadata, event_type, event_type_version " +
-                    "FROM vlingo_event_journal " +
+            "SELECT id, entry_data, entry_metadata, entry_type, entry_type_version " +
+                    "FROM vlingo_symbio_journal " +
                     "WHERE stream_name = ? AND stream_version >= ?";
 
     private static final String QUERY_SNAPSHOT =
             "SELECT snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata " +
-                    "FROM vlingo_event_journal_snapshots " +
+                    "FROM vlingo_symbio_journal_snapshots " +
                     "WHERE stream_name = ?";
 
     private final Connection connection;
@@ -42,7 +42,7 @@ public class PostgresEventStreamReaderActor extends Actor implements EventStream
     private final PreparedStatement queryLatestSnapshotStatement;
     private final Gson gson;
 
-    public PostgresEventStreamReaderActor(final Configuration configuration) throws SQLException {
+    public PostgresStreamReaderActor(final Configuration configuration) throws SQLException {
         this.connection = configuration.connection;
         this.queryEventsStatement = this.connection.prepareStatement(QUERY_EVENTS);
         this.queryLatestSnapshotStatement = this.connection.prepareStatement(QUERY_SNAPSHOT);
@@ -50,23 +50,23 @@ public class PostgresEventStreamReaderActor extends Actor implements EventStream
     }
 
     @Override
-    public Completes<EventStream<String>> streamFor(final String streamName) {
+    public Completes<Stream<String>> streamFor(final String streamName) {
         return streamFor(streamName, 1);
     }
 
     @Override
-    public Completes<EventStream<String>> streamFor(final String streamName, final int fromStreamVersion) {
+    public Completes<Stream<String>> streamFor(final String streamName, final int fromStreamVersion) {
         try {
             return completes().with(eventsFromOffset(streamName, fromStreamVersion));
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgresql: " + e.getMessage(), e);
-            return completes().with(new EventStream<>(streamName, 1, emptyList(), State.NullState.Text));
+            return completes().with(new Stream<>(streamName, 1, emptyList(), State.NullState.Text));
         }
     }
 
-    private EventStream<String> eventsFromOffset(final String streamName, final int offset) throws Exception {
+    private Stream<String> eventsFromOffset(final String streamName, final int offset) throws Exception {
         final State<String> snapshot = latestSnapshotOf(streamName);
-        final List<Event<String>> events = new ArrayList<>();
+        final List<Entry<String>> events = new ArrayList<>();
 
         int dataVersion = offset;
         State<String> referenceSnapshot = State.NullState.Text;
@@ -91,10 +91,10 @@ public class PostgresEventStreamReaderActor extends Actor implements EventStream
             final Class<?> classOfEvent = Class.forName(eventType);
             final Metadata eventMetadataDeserialized = gson.fromJson(eventMetadata, Metadata.class);
 
-            events.add(new Event.TextEvent(id, classOfEvent, eventTypeVersion, eventData, eventMetadataDeserialized));
+            events.add(new Entry.TextEntry(id, classOfEvent, eventTypeVersion, eventData, eventMetadataDeserialized));
         }
 
-        return new EventStream<>(streamName, dataVersion + events.size(), events, referenceSnapshot);
+        return new Stream<>(streamName, dataVersion + events.size(), events, referenceSnapshot);
     }
 
     private State<String> latestSnapshotOf(final String streamName) throws Exception {
