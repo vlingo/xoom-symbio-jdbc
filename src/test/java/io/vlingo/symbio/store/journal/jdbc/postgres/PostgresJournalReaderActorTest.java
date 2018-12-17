@@ -1,21 +1,23 @@
-package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
+package io.vlingo.symbio.store.journal.jdbc.postgres;
 
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.testkit.TestUntil;
-import io.vlingo.symbio.Event;
-import io.vlingo.symbio.store.eventjournal.EventJournalReader;
-import io.vlingo.symbio.store.eventjournal.EventStream;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.store.journal.JournalReader;
+import io.vlingo.symbio.store.journal.Stream;
+import io.vlingo.symbio.store.journal.jdbc.postgres.PostgresJournalReaderActor;
+
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.UUID;
 
-import static io.vlingo.symbio.store.eventjournal.EventJournalReader.Beginning;
-import static io.vlingo.symbio.store.eventjournal.EventJournalReader.End;
+import static io.vlingo.symbio.store.journal.JournalReader.Beginning;
+import static io.vlingo.symbio.store.journal.JournalReader.End;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
-public class PostgresEventJournalReaderActorTest extends BasePostgresEventJournalTest {
+public class PostgresJournalReaderActorTest extends BasePostgresJournalTest {
     private String readerName;
 
     @Before
@@ -31,7 +33,7 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
 
     @Test
     public void testThatRetrievesNextEvents() throws Exception {
-        EventJournalReader<String> journalReader = journalReader();
+        JournalReader<String> journalReader = journalReader();
 
         insertEvent(1);
         insertEvent(2);
@@ -48,7 +50,7 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
         long lastOffset = insertEvent(4);
 
         insertOffset(offset, readerName);
-        EventJournalReader<String> journalReader = journalReader();
+        JournalReader<String> journalReader = journalReader();
 
         assertEquals(3, parse(journalReader.readNext().await()).number);
         assertEquals(4, parse(journalReader.readNext().await()).number);
@@ -62,16 +64,16 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
         insertEvent(3);
         insertEvent(4);
 
-        EventJournalReader<String> journalReader = journalReader();
-        EventStream<String> events = journalReader.readNext(2).await();
-        assertEquals(2, events.events.size());
-        assertEquals(1, parse(events.events.get(0)).number);
-        assertEquals(2, parse(events.events.get(1)).number);
+        JournalReader<String> journalReader = journalReader();
+        Stream<String> events = journalReader.readNext(2).await();
+        assertEquals(2, events.entries.size());
+        assertEquals(1, parse(events.entries.get(0)).number);
+        assertEquals(2, parse(events.entries.get(1)).number);
 
         events = journalReader.readNext(2).await();
-        assertEquals(2, events.events.size());
-        assertEquals(3, parse(events.events.get(0)).number);
-        assertEquals(4, parse(events.events.get(1)).number);
+        assertEquals(2, events.entries.size());
+        assertEquals(3, parse(events.entries.get(0)).number);
+        assertEquals(4, parse(events.entries.get(1)).number);
     }
 
     @Test
@@ -81,19 +83,19 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
         long offset = insertEvent(2);
 
         insertOffset(offset, readerName);
-        EventJournalReader<String> journalReader = journalReader();
+        JournalReader<String> journalReader = journalReader();
         journalReader.rewind();
 
         until.completesWithin(50);
         assertOffsetIs(readerName, 1);
-        Event<String> event = journalReader.readNext().await();
+        Entry<String> event = journalReader.readNext().await();
         assertEquals(1, parse(event).number);
     }
 
     @Test
     public void testThatSeekToGoesToTheBeginningWhenSpecified() throws Exception {
         TestUntil until = TestUntil.happenings(1);
-        EventJournalReader<String> journalReader = journalReader();
+        JournalReader<String> journalReader = journalReader();
         journalReader.seekTo(Beginning).await();
 
         until.completesWithin(50);
@@ -107,7 +109,7 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
         insertEvent(2);
         long lastOffset = insertEvent(3);
 
-        EventJournalReader<String> journalReader = journalReader();
+        JournalReader<String> journalReader = journalReader();
         journalReader.seekTo(End).await();
 
         until.completesWithin(50);
@@ -115,11 +117,11 @@ public class PostgresEventJournalReaderActorTest extends BasePostgresEventJourna
     }
 
     @SuppressWarnings("unchecked")
-    private EventJournalReader<String> journalReader() {
+    private JournalReader<String> journalReader() {
         return world.actorFor(
-                Definition.has(PostgresEventJournalReaderActor.class,
+                Definition.has(PostgresJournalReaderActor.class,
                         Definition.parameters(configuration, readerName)),
-                EventJournalReader.class
+                JournalReader.class
         );
     }
 }

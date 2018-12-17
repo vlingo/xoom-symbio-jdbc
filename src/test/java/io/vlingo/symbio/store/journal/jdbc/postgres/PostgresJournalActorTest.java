@@ -1,29 +1,33 @@
-package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
-
-import io.vlingo.actors.Definition;
-import io.vlingo.actors.testkit.TestUntil;
-import io.vlingo.symbio.Event;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.eventjournal.*;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
-
-import java.util.Arrays;
-import java.util.UUID;
+package io.vlingo.symbio.store.journal.jdbc.postgres;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 
-public class PostgresEventJournalActorTest extends BasePostgresEventJournalTest {
+import java.util.Arrays;
+import java.util.UUID;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+
+import io.vlingo.actors.Definition;
+import io.vlingo.actors.testkit.TestUntil;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.journal.Journal;
+import io.vlingo.symbio.store.journal.JournalListener;
+import io.vlingo.symbio.store.journal.JournalReader;
+import io.vlingo.symbio.store.journal.Stream;
+import io.vlingo.symbio.store.journal.StreamReader;
+
+public class PostgresJournalActorTest extends BasePostgresJournalTest {
     private Object object = new Object();
     private MockAppendResultInterest interest;
-    private EventJournal<String> journal;
-    private EventJournalListener<String> listener;
-    private EventJournalReader<String> journalReader;
-    private EventStreamReader<String> streamReader;
+    private Journal<String> journal;
+    private JournalListener<String> listener;
+    private JournalReader<String> journalReader;
+    private StreamReader<String> streamReader;
     private TestUntil until;
 
     @Before
@@ -31,85 +35,88 @@ public class PostgresEventJournalActorTest extends BasePostgresEventJournalTest 
     public void setUp() throws Exception {
         interest = new MockAppendResultInterest();
         until = TestUntil.happenings(1);
-        listener = Mockito.mock(EventJournalListener.class);
+        listener = Mockito.mock(JournalListener.class);
         journal = world.actorFor(
                 Definition.has(
-                        PostgresEventJournalActor.class,
+                        PostgresJournalActor.class,
                         Definition.parameters(configuration, listener)
                 ),
-                EventJournal.class
+                Journal.class
         );
+        journal.registerAdapter(TestEvent.class, new TestEventAdapter());
 
         Mockito.doAnswer(x -> until.happened()).when(listener).appended(any());
         Mockito.doAnswer(x -> until.happened()).when(listener).appendedAll(any());
         Mockito.doAnswer(x -> until.happened()).when(listener).appendedWith(any(), any());
         Mockito.doAnswer(x -> until.happened()).when(listener).appendedAllWith(any(), any());
 
-        journalReader = journal.eventJournalReader(streamName).await();
-        streamReader = journal.eventStreamReader(streamName).await();
+        journalReader = journal.journalReader(streamName).await();
+        streamReader = journal.streamReader(streamName).await();
     }
 
     @Test
     public void testThatInsertsANewEvent() {
-        Event<String> appendedEvent = newEventForData(1);
+        TestEvent appendedEvent = newEventForData(1);
         journal.append(streamName, 1, appendedEvent, interest, object);
         until.completes();
 
-        Event<String> event = journalReader.readNext().await();
+        Entry<String> entry = journalReader.readNext().await();
+        TestEvent event = gson.fromJson(entry.entryData, TestEvent.class);
         assertEquals(appendedEvent, event);
-        assertEquals(appendedEvent.eventData, event.eventData.replace(" ", ""));
     }
 
     @Test
     public void testThatInsertsANewListOfEvents() {
-        Event<String> appendedEvent1 = newEventForData(1);
-        Event<String> appendedEvent2 = newEventForData(2);
+        TestEvent appendedEvent1 = newEventForData(1);
+        TestEvent appendedEvent2 = newEventForData(2);
         journal.appendAll(streamName, 1, asList(appendedEvent1, appendedEvent2), interest, object);
         until.completes();
 
-        EventStream<String> eventStream = journalReader.readNext(2).await();
-        assertEquals(appendedEvent1, eventStream.events.get(0));
-        assertEquals(appendedEvent1.eventData, eventStream.events.get(0).eventData.replace(" ", ""));
+        Stream<String> eventStream = journalReader.readNext(2).await();
+        Entry<String> entry1 = eventStream.entries.get(0);
+        TestEvent event1 = gson.fromJson(entry1.entryData, TestEvent.class);
+        assertEquals(appendedEvent1, event1);
 
-        assertEquals(appendedEvent2, eventStream.events.get(1));
-        assertEquals(appendedEvent2.eventData, eventStream.events.get(1).eventData.replace(" ", ""));
+        Entry<String> entry2 = eventStream.entries.get(1);
+        TestEvent event2 = gson.fromJson(entry2.entryData, TestEvent.class);
+        assertEquals(appendedEvent2, event2);
     }
 
     @Test
     public void testThatInsertsANewEventWithASnapshot() {
-        Event<String> appendedEvent = newEventForData(1);
+        TestEvent appendedEvent = newEventForData(1);
         State<String> snapshot = newSnapshotForData(2);
 
         journal.appendWith(streamName, 1, appendedEvent, snapshot, interest, object);
         until.completes();
 
-        EventStream<String> eventStream = streamReader.streamFor(streamName, 1).await();
+        Stream<String> eventStream = streamReader.streamFor(streamName, 1).await();
         assertEquals(snapshot.data, eventStream.snapshot.data);
     }
 
     @Test
     public void testThatInsertsANewListOfEventsWithASnapshot() {
-        Event<String> appendedEvent1 = newEventForData(1);
-        Event<String> appendedEvent2 = newEventForData(2);
+        TestEvent appendedEvent1 = newEventForData(1);
+        TestEvent appendedEvent2 = newEventForData(2);
         State<String> snapshot = newSnapshotForData(2);
 
         journal.appendAllWith(streamName, 1, Arrays.asList(appendedEvent1, appendedEvent2), snapshot, interest, object);
         until.completes();
 
-        EventStream<String> eventStream = streamReader.streamFor(streamName, 1).await();
+        Stream<String> eventStream = streamReader.streamFor(streamName, 1).await();
         assertEquals(snapshot.data, eventStream.snapshot.data);
     }
 
     @Test
     public void testThatReturnsSameReaderForSameName() {
         final String name = UUID.randomUUID().toString();
-        assertEquals(journal.eventJournalReader(name).await(), journal.eventJournalReader(name).await());
-        assertEquals(journal.eventStreamReader(name).await(), journal.eventStreamReader(name).await());
+        assertEquals(journal.journalReader(name).await(), journal.journalReader(name).await());
+        assertEquals(journal.streamReader(name).await(), journal.streamReader(name).await());
     }
 
-    private Event<String> newEventForData(int number) {
+    private TestEvent newEventForData(int number) {
         final TestEvent event = new TestEvent(String.valueOf(number), number);
-        return new Event.TextEvent(String.valueOf(number), TestEvent.class, 1, gson.toJson(event), new Metadata());
+        return event;
     }
 
     private State<String> newSnapshotForData(int number) {

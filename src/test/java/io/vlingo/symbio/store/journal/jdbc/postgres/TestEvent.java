@@ -1,8 +1,10 @@
-package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
+package io.vlingo.symbio.store.journal.jdbc.postgres;
 
 import java.util.Objects;
 
-public class TestEvent {
+import io.vlingo.symbio.Source;
+
+public class TestEvent extends Source<String> {
     public final String id;
     public final long number;
 

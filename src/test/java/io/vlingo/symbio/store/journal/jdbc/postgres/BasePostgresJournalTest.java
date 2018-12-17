@@ -1,9 +1,9 @@
-package io.vlingo.symbio.store.state.jdbc.postgres.eventjournal;
+package io.vlingo.symbio.store.journal.jdbc.postgres;
 
 import com.google.gson.Gson;
 import io.vlingo.actors.World;
 import io.vlingo.common.identity.IdentityGenerator;
-import io.vlingo.symbio.Event;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.jdbc.Configuration;
 import org.junit.After;
@@ -18,21 +18,21 @@ import java.util.UUID;
 import static io.vlingo.symbio.store.state.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
 import static org.junit.Assert.assertEquals;
 
-public abstract class BasePostgresEventJournalTest {
+public abstract class BasePostgresJournalTest {
     private static final String EVENT_TABLE =
-            "CREATE TABLE vlingo_event_journal(" +
+            "CREATE TABLE vlingo_symbio_journal(" +
                     "id UUID PRIMARY KEY," +
-                    "event_timestamp BIGINT NOT NULL," +
-                    "event_data JSONB NOT NULL," +
-                    "event_metadata JSONB NOT NULL," +
-                    "event_type VARCHAR(256) NOT NULL," +
-                    "event_type_version INTEGER NOT NULL," +
+                    "entry_timestamp BIGINT NOT NULL," +
+                    "entry_data JSONB NOT NULL," +
+                    "entry_metadata JSONB NOT NULL," +
+                    "entry_type VARCHAR(256) NOT NULL," +
+                    "entry_type_version INTEGER NOT NULL," +
                     "stream_name VARCHAR(128) NOT NULL," +
                     "stream_version INTEGER NOT NULL" +
                     ")";
 
     private static final String SNAPSHOT_TABLE =
-            "CREATE TABLE vlingo_event_journal_snapshots(" +
+            "CREATE TABLE vlingo_symbio_journal_snapshots(" +
                     "stream_name VARCHAR(128) PRIMARY KEY," +
                     "snapshot_type VARCHAR(256) NOT NULL," +
                     "snapshot_type_version INTEGER NOT NULL," +
@@ -42,28 +42,28 @@ public abstract class BasePostgresEventJournalTest {
                     ")";
 
     private static final String OFFSET_TABLE =
-            "CREATE TABLE vlingo_event_journal_offsets(" +
+            "CREATE TABLE vlingo_symbio_journal_offsets(" +
                     "reader_name VARCHAR(128) PRIMARY KEY," +
                     "reader_offset BIGINT NOT NULL" +
                     ")";
 
-    private static final String DROP_EVENT_TABLE = "DROP TABLE vlingo_event_journal";
-    private static final String DROP_SNAPSHOT_TABLE = "DROP TABLE vlingo_event_journal_snapshots";
-    private static final String DROP_OFFSET_TABLE = "DROP TABLE vlingo_event_journal_offsets";
+    private static final String DROP_EVENT_TABLE = "DROP TABLE vlingo_symbio_journal";
+    private static final String DROP_SNAPSHOT_TABLE = "DROP TABLE vlingo_symbio_journal_snapshots";
+    private static final String DROP_OFFSET_TABLE = "DROP TABLE vlingo_symbio_journal_offsets";
 
     private static final String INSERT_EVENT =
-            "INSERT INTO vlingo_event_journal(id, event_timestamp, event_data, event_metadata, event_type, event_type_version, stream_name, stream_version)" +
-                    "VALUES(?, ?, ?::JSONB, '{}'::JSONB, ?, 1, ?, (SELECT COALESCE(MAX(stream_version), 0) + 1 FROM vlingo_event_journal))";
+            "INSERT INTO vlingo_symbio_journal(id, entry_timestamp, entry_data, entry_metadata, entry_type, entry_type_version, stream_name, stream_version)" +
+                    "VALUES(?, ?, ?::JSONB, '{}'::JSONB, ?, 1, ?, (SELECT COALESCE(MAX(stream_version), 0) + 1 FROM vlingo_symbio_journal))";
 
     private static final String INSERT_SNAPSHOT =
-            "INSERT INTO vlingo_event_journal_snapshots(stream_name, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)" +
+            "INSERT INTO vlingo_symbio_journal_snapshots(stream_name, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)" +
                     "VALUES(?, ?, 1, ?::JSONB, ?, '{}'::JSONB)";
 
     private static final String INSERT_OFFSET =
-            "INSERT INTO vlingo_event_journal_offsets(reader_name, reader_offset) VALUES(?, ?)";
+            "INSERT INTO vlingo_symbio_journal_offsets(reader_name, reader_offset) VALUES(?, ?)";
 
     private static final String LATEST_OFFSET_OF =
-            "SELECT reader_offset FROM vlingo_event_journal_offsets WHERE reader_name=?";
+            "SELECT reader_offset FROM vlingo_symbio_journal_offsets WHERE reader_name=?";
 
     protected Configuration configuration;
     protected World world;
@@ -172,8 +172,8 @@ public abstract class BasePostgresEventJournalTest {
     }
 
 
-    protected final TestEvent parse(Event<String> event) {
-        return gson.fromJson(event.eventData, TestEvent.class);
+    protected final TestEvent parse(Entry<String> event) {
+        return gson.fromJson(event.entryData, TestEvent.class);
     }
 
 }
