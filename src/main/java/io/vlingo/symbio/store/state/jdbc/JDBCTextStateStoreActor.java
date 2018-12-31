@@ -15,7 +15,6 @@ import io.vlingo.actors.Actor;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.State;
-import io.vlingo.symbio.State.NullState;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -24,7 +23,7 @@ import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 import io.vlingo.symbio.store.state.TextStateStore;
 
 public class JDBCTextStateStoreActor extends Actor implements TextStateStore, DispatcherControl {
-  private final static NullState<String> EmptyState = NullState.Text;
+  private final static TextState EmptyState = TextState.Null;
 
   private final StorageDelegate delegate;
   private final Dispatcher dispatcher;
@@ -47,8 +46,8 @@ public class JDBCTextStateStoreActor extends Actor implements TextStateStore, Di
   @Override
   public void dispatchUnconfirmed() {
     try {
-      Collection<Dispatchable<String>> all = delegate.allUnconfirmedDispatchableStates();
-      for (final Dispatchable<String> dispatchable : all) {
+      Collection<Dispatchable<TextState>> all = delegate.allUnconfirmedDispatchableStates();
+      for (final Dispatchable<TextState> dispatchable : all) {
         dispatch(dispatchable.id, dispatchable.state);
       }
     } catch (Exception e) {
@@ -57,12 +56,12 @@ public class JDBCTextStateStoreActor extends Actor implements TextStateStore, Di
   }
 
   @Override
-  public void read(final String id, Class<?> type, final ReadResultInterest<String> interest) {
+  public void read(final String id, Class<?> type, final ReadResultInterest<TextState> interest) {
     read(id, type, interest, null);
   }
 
   @Override
-  public void read(final String id, Class<?> type, final ReadResultInterest<String> interest, final Object object) {
+  public void read(final String id, Class<?> type, final ReadResultInterest<TextState> interest, final Object object) {
     if (interest != null) {
       if (id == null || type == null) {
         interest.readResultedIn(Failure.of(new StorageException(Result.Error, id == null ? "The id is null." : "The type is null.")), id, EmptyState, object);
@@ -106,12 +105,12 @@ public class JDBCTextStateStoreActor extends Actor implements TextStateStore, Di
   }
 
   @Override
-  public void write(final State<String> state, final WriteResultInterest<String> interest) {
+  public void write(final TextState state, final WriteResultInterest<TextState> interest) {
     write(state, interest, null);
   }
 
   @Override
-  public void write(final State<String> state, final WriteResultInterest<String> interest, final Object object) {
+  public void write(final TextState state, final WriteResultInterest<TextState> interest, final Object object) {
     if (interest != null) {
       if (state == null) {
         interest.writeResultedIn(Failure.of(new StorageException(Result.Error, "The state is null.")), null, EmptyState, object);

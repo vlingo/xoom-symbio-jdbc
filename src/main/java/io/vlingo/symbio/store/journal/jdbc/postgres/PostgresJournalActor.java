@@ -26,11 +26,14 @@ import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.common.Tuple2;
 import io.vlingo.common.identity.IdentityGenerator;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapter;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
+import io.vlingo.symbio.State.TextState;
+import io.vlingo.symbio.StateAdapter;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.journal.Journal;
@@ -48,7 +51,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
             "INSERT INTO vlingo_symbio_journal_snapshots(stream_name, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)" +
                     "VALUES(?, ?, ?, ?::JSONB, ?, ?::JSONB)";
 
-    private final Map<Class<?>,EntryAdapter<? extends Source<?>,? extends Entry<?>>> adapters;
+    private final Map<Class<?>,EntryAdapter<? extends Source<?>,? extends Entry<?>>> sourceAdapters;
+    private final Map<Class<?>,StateAdapter<?,?>> stateAdapters;
     private final Configuration configuration;
     private final Connection connection;
     private final JournalListener<String> listener;
@@ -69,7 +73,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
         this.gson = new Gson();
 
-        this.adapters = new HashMap<>();
+        this.sourceAdapters = new HashMap<>();
+        this.stateAdapters = new HashMap<>();
         this.journalReaders = new HashMap<>();
         this.streamReaders = new HashMap<>();
 
@@ -77,7 +82,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
 
     @Override
-    public <S> void append(final String streamName, final int streamVersion, final Source<S> source, final AppendResultInterest<String> interest, final Object object) {
+    public <S,ST> void append(final String streamName, final int streamVersion, final Source<S> source, final AppendResultInterest<ST> interest, final Object object) {
       final Entry<String> entry = asEntry(source);
       final Consumer<Exception> whenFailed =
               (e) -> interest.appendResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, streamVersion, source, Optional.empty(), object);
@@ -88,20 +93,21 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
 
     @Override
-    public <S> void appendWith(final String streamName, final int streamVersion, final Source<S> source, final State<String> snapshot, final AppendResultInterest<String> interest, final Object object) {
+    public <S,ST> void appendWith(final String streamName, final int streamVersion, final Source<S> source, final ST snapshot, final AppendResultInterest<ST> interest, final Object object) {
       final Entry<String> entry = asEntry(source);
       final Consumer<Exception> whenFailed =
               (e) -> interest.appendResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, streamVersion, source, Optional.of(snapshot), object);
       insertEntry(streamName, streamVersion, entry, whenFailed);
-      insertSnapshot(streamName, snapshot, whenFailed);
+      final Tuple2<Optional<ST>,Optional<TextState>> snapshotState = toState(snapshot, streamVersion);
+      snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
       doCommit(whenFailed);
-      listener.appendedWith(entry, snapshot);
-      interest.appendResultedIn(Success.of(Result.Success), streamName, streamVersion, source, Optional.of(snapshot), object);
+      listener.appendedWith(entry, snapshotState._2.orElseGet(() -> null));
+      interest.appendResultedIn(Success.of(Result.Success), streamName, streamVersion, source, snapshotState._1, object);
     }
 
 
     @Override
-    public <S> void appendAll(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final AppendResultInterest<String> interest, final Object object) {
+    public <S,ST> void appendAll(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final AppendResultInterest<ST> interest, final Object object) {
       final List<Entry<String>> entries = asEntries(sources);
       final Consumer<Exception> whenFailed =
               (e) -> interest.appendAllResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, fromStreamVersion, sources, Optional.empty(), object);
@@ -115,28 +121,34 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
 
     @Override
-    public <S> void appendAllWith(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final State<String> snapshot, final AppendResultInterest<String> interest, final Object object) {
+    public <S,ST> void appendAllWith(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final ST snapshot, final AppendResultInterest<ST> interest, final Object object) {
       final List<Entry<String>> entries = asEntries(sources);
       final Consumer<Exception> whenFailed =
               (e) -> interest.appendAllResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, fromStreamVersion, sources, Optional.of(snapshot), object);
       int version = fromStreamVersion;
       for (Entry<String> entry : entries) {
         insertEntry(streamName, version++, entry, whenFailed);
-    }
-      insertSnapshot(streamName, snapshot, whenFailed);
+      }
+      final Tuple2<Optional<ST>,Optional<TextState>> snapshotState = toState(snapshot, fromStreamVersion);
+      snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
       doCommit(whenFailed);
-      listener.appendedAllWith(entries, snapshot);
-      interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, Optional.of(snapshot), object);
+      listener.appendedAllWith(entries, snapshotState._2.orElseGet(() -> null));
+      interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, snapshotState._1, object);
     }
 
     @Override
     public <S extends Source<?>,E extends Entry<?>> void registerAdapter(final Class<S> sourceType, final EntryAdapter<S,E> adapter) {
-      adapters.put(sourceType, adapter);
+      sourceAdapters.put(sourceType, adapter);
+    }
+
+    @Override
+    public <S,R extends State<?>> void registerAdapter(Class<S> stateType, StateAdapter<S,R> adapter) {
+      stateAdapters.put(stateType, adapter);
     }
 
     @SuppressWarnings("unchecked")
     private <S extends Source<?>,E extends Entry<?>> EntryAdapter<S,E> adapter(final Class<S> sourceType) {
-      final EntryAdapter<S,E> adapter = (EntryAdapter<S,E>) adapters.get(sourceType);
+      final EntryAdapter<S,E> adapter = (EntryAdapter<S,E>) sourceAdapters.get(sourceType);
       if (adapter != null) {
         return adapter;
       }
@@ -213,37 +225,37 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
             insertEvent.setLong(8, timestamp);
 
             if (insertEvent.executeUpdate() != 1) {
-                logger().log("vlingo/symbio-postgres: Could not insert event " + entry.toString());
-                throw new IllegalStateException("vlingo/symbio-postgres: Could not insert event");
+                logger().log("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString());
+                throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert event");
             }
 
             entry.__internal__setId(id.toString());
         } catch (SQLException e) {
             whenFailed.accept(e);
-            logger().log("vlingo/symbio-postgres: Could not insert event " + entry.toString(), e);
+            logger().log("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString(), e);
             throw new IllegalStateException(e);
         }
     }
 
     protected final void insertSnapshot(
             final String eventStream,
-            final State<String> snapshot,
+            final TextState snapshotState,
             final Consumer<Exception> whenFailed) {
         try {
             insertSnapshot.setString(1, eventStream);
-            insertSnapshot.setString(2, snapshot.type);
-            insertSnapshot.setInt(3, snapshot.typeVersion);
-            insertSnapshot.setString(4, snapshot.data);
-            insertSnapshot.setInt(5, snapshot.dataVersion);
-            insertSnapshot.setString(6, gson.toJson(snapshot.metadata));
+            insertSnapshot.setString(2, snapshotState.type);
+            insertSnapshot.setInt(3, snapshotState.typeVersion);
+            insertSnapshot.setString(4, snapshotState.data);
+            insertSnapshot.setInt(5, snapshotState.dataVersion);
+            insertSnapshot.setString(6, gson.toJson(snapshotState.metadata));
 
             if (insertSnapshot.executeUpdate() != 1) {
-                logger().log("vlingo/symbio-postgres: Could not insert event with id " + snapshot.id);
-                throw new IllegalStateException("vlingo/symbio-postgres: Could not insert event");
+                logger().log("vlingo/symbio-jdbc-postgres: Could not insert snapshot with id " + snapshotState.id);
+                throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert snapshot");
             }
         } catch (SQLException e) {
             whenFailed.accept(e);
-            logger().log("vlingo/symbio-postgres: Could not insert event with id " + snapshot.id, e);
+            logger().log("vlingo/symbio-jdbc-postgres: Could not insert event with id " + snapshotState.id, e);
             throw new IllegalStateException(e);
         }
     }
@@ -253,8 +265,18 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
             connection.commit();
         } catch (SQLException e) {
             whenFailed.accept(e);
-            logger().log("vlingo/symbio-postgres: Could not complete transaction", e);
+            logger().log("vlingo/symbio-jdbc-postgres: Could not complete transaction", e);
             throw new IllegalStateException(e);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <ST> Tuple2<Optional<ST>,Optional<TextState>> toState(final ST snapshot, final int streamVersion) {
+        if (snapshot != null) {
+            final StateAdapter<ST,TextState> adapter = (StateAdapter<ST,TextState>) stateAdapters.get(snapshot.getClass());
+            return Tuple2.from(Optional.of(snapshot), Optional.of(adapter.toRawState(snapshot, streamVersion)));
+        } else {
+            return Tuple2.from(Optional.empty(), Optional.empty());
         }
     }
 }

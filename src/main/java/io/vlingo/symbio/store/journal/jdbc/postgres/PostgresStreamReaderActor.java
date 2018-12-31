@@ -13,6 +13,7 @@ import io.vlingo.common.Completes;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
+import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.store.journal.Stream;
 import io.vlingo.symbio.store.journal.StreamReader;
 import io.vlingo.symbio.store.state.jdbc.Configuration;
@@ -60,7 +61,7 @@ public class PostgresStreamReaderActor extends Actor implements StreamReader<Str
             return completes().with(eventsFromOffset(streamName, fromStreamVersion));
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgresql: " + e.getMessage(), e);
-            return completes().with(new Stream<>(streamName, 1, emptyList(), State.NullState.Text));
+            return completes().with(new Stream<>(streamName, 1, emptyList(), TextState.Null));
         }
     }
 
@@ -69,11 +70,11 @@ public class PostgresStreamReaderActor extends Actor implements StreamReader<Str
         final List<Entry<String>> events = new ArrayList<>();
 
         int dataVersion = offset;
-        State<String> referenceSnapshot = State.NullState.Text;
+        State<String> referenceSnapshot = TextState.Null;
 
-        if (snapshot != State.NullState.Text) {
+        if (snapshot != TextState.Null) {
             if (snapshot.dataVersion > offset) {
-                dataVersion = snapshot.dataVersion + 1;
+                dataVersion = snapshot.dataVersion;
                 referenceSnapshot = snapshot;
             }
         }
@@ -100,6 +101,7 @@ public class PostgresStreamReaderActor extends Actor implements StreamReader<Str
     private State<String> latestSnapshotOf(final String streamName) throws Exception {
         queryLatestSnapshotStatement.setString(1, streamName);
         final ResultSet resultSet = queryLatestSnapshotStatement.executeQuery();
+
         if (resultSet.next()) {
             final String snapshotDataType = resultSet.getString(1);
             final int snapshotTypeVersion = resultSet.getInt(2);
@@ -113,6 +115,6 @@ public class PostgresStreamReaderActor extends Actor implements StreamReader<Str
             return new State.TextState(streamName, classOfEvent, snapshotTypeVersion, snapshotData, snapshotDataVersion, eventMetadataDeserialized);
         }
 
-        return State.NullState.Text;
+        return TextState.Null;
     }
 }

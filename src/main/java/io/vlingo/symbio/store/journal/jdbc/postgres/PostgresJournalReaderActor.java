@@ -7,22 +7,23 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import com.google.gson.Gson;
-import io.vlingo.actors.Actor;
-import io.vlingo.common.Completes;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.journal.JournalReader;
-import io.vlingo.symbio.store.journal.Stream;
-import io.vlingo.symbio.store.state.jdbc.Configuration;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+
+import com.google.gson.Gson;
+
+import io.vlingo.actors.Actor;
+import io.vlingo.common.Completes;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.State.TextState;
+import io.vlingo.symbio.store.journal.JournalReader;
+import io.vlingo.symbio.store.journal.Stream;
+import io.vlingo.symbio.store.state.jdbc.Configuration;
 
 public class PostgresJournalReaderActor extends Actor implements JournalReader<String> {
     private static final String QUERY_CURRENT_OFFSET =
@@ -106,7 +107,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<S
             }
 
             updateCurrentOffset();
-            return completes().with(new Stream<>(name, (int) offset, events, State.NullState.Text));
+            return completes().with(new Stream<>(name, (int) offset, events, TextState.Null));
 
         } catch (Exception e) {
             logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);

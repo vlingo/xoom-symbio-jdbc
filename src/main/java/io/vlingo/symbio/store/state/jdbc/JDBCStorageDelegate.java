@@ -59,7 +59,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   }
 
   @Override
-  public <S> Collection<Dispatchable<S>> allUnconfirmedDispatchableStates() throws Exception {
+  public <S extends State<?>> Collection<Dispatchable<S>> allUnconfirmedDispatchableStates() throws Exception {
     final List<Dispatchable<S>> dispatchables = new ArrayList<>();
 
     try (final ResultSet result = dispatchableCachedStatements.queryAllStatement().preparedStatement.executeQuery()) {
@@ -329,7 +329,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  private <S> Dispatchable<S> stateFrom(final ResultSet resultSet) throws Exception {
+  private <S extends State<?>> Dispatchable<S> stateFrom(final ResultSet resultSet) throws Exception {
     final String dispatchId = resultSet.getString(1);
     final String id = resultSet.getString(2);
     final Class<?> type = Class.forName(resultSet.getString(3));
