@@ -1,10 +1,15 @@
+// Copyright © 2012-2018 Vaughn Vernon. All rights reserved.
+//
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL
+// was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
 import java.util.Objects;
 
-import io.vlingo.symbio.Source;
-
-public class TestEvent extends Source<String> {
+public class TestEvent extends Event {
     public final String id;
     public final long number;
 

@@ -1,18 +1,17 @@
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import io.vlingo.actors.Definition;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.journal.Stream;
-import io.vlingo.symbio.store.journal.StreamReader;
-import io.vlingo.symbio.store.journal.jdbc.postgres.PostgresStreamReaderActor;
+import static org.junit.Assert.assertEquals;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.Assert.assertEquals;
+import io.vlingo.actors.Definition;
+import io.vlingo.symbio.State.TextState;
+import io.vlingo.symbio.store.journal.Stream;
+import io.vlingo.symbio.store.journal.StreamReader;
 
 public class PostgresStreamReaderActorTest extends BasePostgresJournalTest {
     private StreamReader<String> eventStreamReader;
@@ -35,7 +34,7 @@ public class PostgresStreamReaderActorTest extends BasePostgresJournalTest {
     @Test
     public void testThatCanReadAllEventsFromJournal() throws Exception {
         Stream<String> stream = eventStreamReader.streamFor(streamName).await();
-        assertEquals(State.NullState.Text, stream.snapshot);
+        assertEquals(TextState.Null, stream.snapshot);
         assertEquals(5, stream.streamVersion);
         assertEquals(stream.streamName, streamName);
 
@@ -54,9 +53,10 @@ public class PostgresStreamReaderActorTest extends BasePostgresJournalTest {
         assertEquals(stream.streamVersion, 5);
         assertEquals(stream.streamName, streamName);
 
-        Assert.assertEquals(2, stream.entries.size());
-        Assert.assertEquals(3, parse(stream.entries.get(0)).number);
-        Assert.assertEquals(4, parse(stream.entries.get(1)).number);
+        Assert.assertEquals(3, stream.entries.size());
+        Assert.assertEquals(2, parse(stream.entries.get(0)).number);
+        Assert.assertEquals(3, parse(stream.entries.get(1)).number);
+        Assert.assertEquals(4, parse(stream.entries.get(2)).number);
     }
 
     @Test
@@ -65,7 +65,7 @@ public class PostgresStreamReaderActorTest extends BasePostgresJournalTest {
         insertSnapshot(1, snapshotState);
 
         Stream<String> stream = eventStreamReader.streamFor(streamName, 4).await();
-        assertEquals(State.NullState.Text, stream.snapshot);
+        assertEquals(TextState.Null, stream.snapshot);
         assertEquals(stream.streamVersion, 5);
         assertEquals(stream.streamName, streamName);
 
