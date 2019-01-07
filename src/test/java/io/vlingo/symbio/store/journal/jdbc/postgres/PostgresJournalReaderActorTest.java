@@ -119,9 +119,9 @@ public class PostgresJournalReaderActorTest extends BasePostgresJournalTest {
     @SuppressWarnings("unchecked")
     private JournalReader<String> journalReader() {
         return world.actorFor(
+                JournalReader.class,
                 Definition.has(PostgresJournalReaderActor.class,
-                        Definition.parameters(configuration, readerName)),
-                JournalReader.class
+                        Definition.parameters(configuration, readerName))
         );
     }
 }

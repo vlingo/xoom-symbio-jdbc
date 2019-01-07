@@ -48,11 +48,11 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
         until = TestUntil.happenings(1);
         listener = Mockito.mock(JournalListener.class);
         journal = world.actorFor(
+                Journal.class,
                 Definition.has(
                         PostgresJournalActor.class,
                         Definition.parameters(configuration, listener)
-                ),
-                Journal.class
+                )
         );
         journal.registerAdapter(TestEvent.class, new TestEventAdapter());
         journal.registerAdapter(Entity1.class, entity1Adapter);

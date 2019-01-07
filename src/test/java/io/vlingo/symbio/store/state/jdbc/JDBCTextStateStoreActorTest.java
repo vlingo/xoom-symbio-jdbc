@@ -127,8 +127,8 @@ public abstract class JDBCTextStateStoreActorTest {
     dispatcher = new MockTextDispatcher(0, interest);
 
     store = world.actorFor(
-            Definition.has(JDBCStateStoreActor.class, Definition.parameters(dispatcher, delegate)),
-            StateStore.class);
+            StateStore.class,
+            Definition.has(JDBCStateStoreActor.class, Definition.parameters(dispatcher, delegate)));
     store.registerAdapter(Entity1.class, new Entity1StateAdapter());
   }
 

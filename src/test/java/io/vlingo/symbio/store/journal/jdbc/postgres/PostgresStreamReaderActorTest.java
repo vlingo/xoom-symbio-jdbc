@@ -20,9 +20,9 @@ public class PostgresStreamReaderActorTest extends BasePostgresJournalTest {
     @SuppressWarnings("unchecked")
     public void setUp() throws Exception {
         eventStreamReader = world.actorFor(
+                StreamReader.class,
                 Definition.has(PostgresStreamReaderActor.class,
-                        Definition.parameters(configuration)),
-                StreamReader.class
+                        Definition.parameters(configuration))
         );
 
         insertEvent(1);

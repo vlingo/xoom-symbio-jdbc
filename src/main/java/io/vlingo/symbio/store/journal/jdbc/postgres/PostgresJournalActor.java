@@ -176,11 +176,11 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
         final JournalReader<String> reader = journalReaders.computeIfAbsent(name, (key) -> {
             Address address = stage().world().addressFactory().uniquePrefixedWith("eventJournalReader-" + name);
             return stage().actorFor(
+                    JournalReader.class,
                     Definition.has(
                             PostgresJournalReaderActor.class,
                             Definition.parameters(configuration, name)
                     ),
-                    JournalReader.class,
                     address
             );
         });
@@ -194,10 +194,10 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
         final StreamReader<String> reader = streamReaders.computeIfAbsent(name, (key) -> {
             Address address = stage().world().addressFactory().uniquePrefixedWith("eventStreamReader-" + key);
             return stage().actorFor(
+                    StreamReader.class,
                     Definition.has(
                             PostgresStreamReaderActor.class,
                             Definition.parameters(configuration)),
-                    StreamReader.class,
                     address
             );
         });
