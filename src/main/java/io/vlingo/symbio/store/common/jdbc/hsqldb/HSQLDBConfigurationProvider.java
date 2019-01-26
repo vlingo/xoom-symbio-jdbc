@@ -5,17 +5,17 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.state.jdbc.hsqldb;
+package io.vlingo.symbio.store.common.jdbc.hsqldb;
 
 import java.sql.Connection;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hsqldb.server.Server;
 
-import io.vlingo.symbio.store.state.StateStore.DataFormat;
-import io.vlingo.symbio.store.state.jdbc.Configuration;
-import io.vlingo.symbio.store.state.jdbc.Configuration.ConfigurationInterest;
-import io.vlingo.symbio.store.state.jdbc.Configuration.TestConfiguration;
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.common.jdbc.Configuration.ConfigurationInterest;
+import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
 
 public class HSQLDBConfigurationProvider {
   private static final ConfigurationInterest interest = new ConfigurationInterest() {
