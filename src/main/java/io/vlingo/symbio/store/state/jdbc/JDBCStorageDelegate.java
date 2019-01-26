@@ -25,7 +25,7 @@ import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.BinaryState;
 import io.vlingo.symbio.State.TextState;
-import io.vlingo.symbio.store.state.StateStore.DataFormat;
+import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.state.StateStore.Dispatchable;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;

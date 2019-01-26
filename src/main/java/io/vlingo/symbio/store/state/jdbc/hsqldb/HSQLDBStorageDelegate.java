@@ -15,10 +15,10 @@ import java.text.MessageFormat;
 
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.state.StateStore.DataFormat;
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.jdbc.CachedStatement;
-import io.vlingo.symbio.store.state.jdbc.Configuration;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 

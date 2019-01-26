@@ -11,7 +11,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 
 import io.vlingo.actors.Logger;
-import io.vlingo.symbio.store.state.StateStore.DataFormat;
+import io.vlingo.symbio.store.DataFormat;
 
 public abstract class JDBCDispatchableCachedStatements<T> {
   private final CachedStatement<T> append;
