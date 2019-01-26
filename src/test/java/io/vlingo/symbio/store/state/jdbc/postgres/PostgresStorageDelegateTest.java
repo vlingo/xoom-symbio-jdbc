@@ -7,7 +7,7 @@
 
 package io.vlingo.symbio.store.state.jdbc.postgres;
 
-import static io.vlingo.symbio.store.state.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
+import static io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
@@ -23,10 +23,10 @@ import io.vlingo.actors.World;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State.BinaryState;
 import io.vlingo.symbio.State.TextState;
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
 import io.vlingo.symbio.store.state.Entity1;
-import io.vlingo.symbio.store.state.StateStore.DataFormat;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
-import io.vlingo.symbio.store.state.jdbc.Configuration.TestConfiguration;
 
 public class PostgresStorageDelegateTest {
   private TestConfiguration configuration;
