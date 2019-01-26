@@ -36,11 +36,11 @@ import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.StateAdapter;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalListener;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.StreamReader;
-import io.vlingo.symbio.store.state.jdbc.Configuration;
 
 public class PostgresJournalActor extends Actor implements Journal<String> {
     private static final String INSERT_EVENT =
@@ -82,7 +82,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
 
     @Override
-    public <S,ST> void append(final String streamName, final int streamVersion, final Source<S> source, final AppendResultInterest<ST> interest, final Object object) {
+    public <S,ST> void append(final String streamName, final int streamVersion, final Source<S> source, final AppendResultInterest interest, final Object object) {
       final Entry<String> entry = asEntry(source);
       final Consumer<Exception> whenFailed =
               (e) -> interest.appendResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, streamVersion, source, Optional.empty(), object);
@@ -93,7 +93,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
 
     @Override
-    public <S,ST> void appendWith(final String streamName, final int streamVersion, final Source<S> source, final ST snapshot, final AppendResultInterest<ST> interest, final Object object) {
+    public <S,ST> void appendWith(final String streamName, final int streamVersion, final Source<S> source, final ST snapshot, final AppendResultInterest interest, final Object object) {
       final Entry<String> entry = asEntry(source);
       final Consumer<Exception> whenFailed =
               (e) -> interest.appendResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, streamVersion, source, Optional.of(snapshot), object);
@@ -107,7 +107,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
 
     @Override
-    public <S,ST> void appendAll(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final AppendResultInterest<ST> interest, final Object object) {
+    public <S,ST> void appendAll(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final AppendResultInterest interest, final Object object) {
       final List<Entry<String>> entries = asEntries(sources);
       final Consumer<Exception> whenFailed =
               (e) -> interest.appendAllResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, fromStreamVersion, sources, Optional.empty(), object);
@@ -121,7 +121,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
 
     @Override
-    public <S,ST> void appendAllWith(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final ST snapshot, final AppendResultInterest<ST> interest, final Object object) {
+    public <S,ST> void appendAllWith(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final ST snapshot, final AppendResultInterest interest, final Object object) {
       final List<Entry<String>> entries = asEntries(sources);
       final Consumer<Exception> whenFailed =
               (e) -> interest.appendAllResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, fromStreamVersion, sources, Optional.of(snapshot), object);
@@ -137,12 +137,12 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
 
     @Override
-    public <S extends Source<?>,E extends Entry<?>> void registerAdapter(final Class<S> sourceType, final EntryAdapter<S,E> adapter) {
+    public <S extends Source<?>,E extends Entry<?>> void registerEntryAdapter(final Class<S> sourceType, final EntryAdapter<S,E> adapter) {
       sourceAdapters.put(sourceType, adapter);
     }
 
     @Override
-    public <S,R extends State<?>> void registerAdapter(Class<S> stateType, StateAdapter<S,R> adapter) {
+    public <S,R extends State<?>> void registerStateAdapter(Class<S> stateType, StateAdapter<S,R> adapter) {
       stateAdapters.put(stateType, adapter);
     }
 
