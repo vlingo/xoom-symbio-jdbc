@@ -54,8 +54,8 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
                         Definition.parameters(configuration, listener)
                 )
         );
-        journal.registerAdapter(TestEvent.class, new TestEventAdapter());
-        journal.registerAdapter(Entity1.class, entity1Adapter);
+        journal.registerEntryAdapter(TestEvent.class, new TestEventAdapter());
+        journal.registerStateAdapter(Entity1.class, entity1Adapter);
 
         Mockito.doAnswer(x -> until.happened()).when(listener).appended(any());
         Mockito.doAnswer(x -> until.happened()).when(listener).appendedAll(any());

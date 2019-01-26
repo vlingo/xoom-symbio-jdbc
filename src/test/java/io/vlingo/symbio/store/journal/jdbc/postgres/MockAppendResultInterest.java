@@ -15,19 +15,18 @@ import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.journal.Journal.AppendResultInterest;
-import io.vlingo.symbio.store.journal.jdbc.postgres.PostgresJournalActorTest.Entity1;
 
-public class MockAppendResultInterest implements AppendResultInterest<Entity1> {
+public class MockAppendResultInterest implements AppendResultInterest {
 
   @Override
-  public <S> void appendResultedIn(Outcome<StorageException, Result> outcome, String streamName, int streamVersion,
-          Source<S> source, Optional<Entity1> snapshot, Object object) {
+  public <S,ST> void appendResultedIn(Outcome<StorageException, Result> outcome, String streamName, int streamVersion,
+          Source<S> source, Optional<ST> snapshot, Object object) {
     
   }
 
   @Override
-  public <S> void appendAllResultedIn(Outcome<StorageException, Result> outcome, String streamName, int streamVersion,
-          List<Source<S>> sources, Optional<Entity1> snapshot, Object object) {
+  public <S,ST> void appendAllResultedIn(Outcome<StorageException, Result> outcome, String streamName, int streamVersion,
+          List<Source<S>> sources, Optional<ST> snapshot, Object object) {
     
   }
 }
