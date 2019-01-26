@@ -1,22 +1,31 @@
+// Copyright © 2012-2018 Vaughn Vernon. All rights reserved.
+//
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL
+// was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import com.google.gson.Gson;
-import io.vlingo.actors.World;
-import io.vlingo.common.identity.IdentityGenerator;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.jdbc.Configuration;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import static io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
+import static org.junit.Assert.assertEquals;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 
-import static io.vlingo.symbio.store.state.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
-import static org.junit.Assert.assertEquals;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+
+import com.google.gson.Gson;
+
+import io.vlingo.actors.World;
+import io.vlingo.common.identity.IdentityGenerator;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
 
 public abstract class BasePostgresJournalTest {
     private static final String EVENT_TABLE =
@@ -77,7 +86,7 @@ public abstract class BasePostgresJournalTest {
         aggregateRootId = UUID.randomUUID().toString();
         streamName = aggregateRootId;
         world = World.startWithDefaults("event-stream-tests");
-        configuration = testConfiguration(StateStore.DataFormat.Text);
+        configuration = testConfiguration(DataFormat.Text);
 
         gson = new Gson();
         identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
