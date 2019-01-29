@@ -18,7 +18,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import io.vlingo.actors.Definition;
 import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.common.serialization.JsonSerialization;
 import io.vlingo.symbio.Entry;
@@ -47,13 +46,7 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
         interest = new MockAppendResultInterest();
         until = TestUntil.happenings(1);
         listener = Mockito.mock(JournalListener.class);
-        journal = world.actorFor(
-                Journal.class,
-                Definition.has(
-                        PostgresJournalActor.class,
-                        Definition.parameters(configuration, listener)
-                )
-        );
+        journal = Journal.using(world.stage(), PostgresJournalActor.class, listener, configuration);
         journal.registerEntryAdapter(TestEvent.class, new TestEventAdapter());
         journal.registerStateAdapter(Entity1.class, entity1Adapter);
 
