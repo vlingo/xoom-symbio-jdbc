@@ -63,7 +63,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     private final Map<String, StreamReader<String>> streamReaders;
     private final IdentityGenerator identityGenerator;
 
-    public PostgresJournalActor(Configuration configuration, JournalListener<String> listener) throws SQLException {
+    public PostgresJournalActor(JournalListener<String> listener, Configuration configuration) throws SQLException {
         this.configuration = configuration;
         this.connection = configuration.connection;
         this.listener = listener;
