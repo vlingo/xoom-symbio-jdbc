@@ -9,22 +9,35 @@ package io.vlingo.symbio.store.object.jdbc.jpa;
 
 import java.util.Collection;
 
-import io.vlingo.symbio.store.common.jdbc.Configuration;
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.Persistence;
+
+import io.vlingo.actors.Logger;
+import io.vlingo.actors.Stage;
+import io.vlingo.common.Failure;
+import io.vlingo.common.Success;
+import io.vlingo.symbio.store.Result;
+import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
-import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreDelegate;
 
 /**
  * The {@code JDBCObjectStoreDelegate} for JPA.
  */
-public class JPAObjectStoreDelegate extends JDBCObjectStoreDelegate {
+public class JPAObjectStoreDelegate implements ObjectStore {
+  
+  private final EntityManagerFactory emf = Persistence.createEntityManagerFactory( "JpaService" );
+  private final EntityManager em = emf.createEntityManager();
+  private final Logger logger;
 
   /**
    * Constructs my default state.
    * @param configuration the Configuration used to configure my concrete subclasses
    */
-  public JPAObjectStoreDelegate(final Configuration configuration) {
-    super(configuration);
+  public JPAObjectStoreDelegate(final Stage stage) {
+    logger = stage.world().defaultLogger();
   }
 
   /*
@@ -32,7 +45,11 @@ public class JPAObjectStoreDelegate extends JDBCObjectStoreDelegate {
    */
   @Override
   public void close() {
-    // TODO: implementation
+    try {
+        em.close();
+    } catch (Exception e) {
+        logger.log("Close failed because: " + e.getMessage(), e);
+    }
   }
 
   /*
@@ -40,7 +57,25 @@ public class JPAObjectStoreDelegate extends JDBCObjectStoreDelegate {
    */
   @Override
   public void persist(final Object persistentObject, final long updateId, final PersistResultInterest interest, final Object object) {
-    // TODO: implementation
+    final boolean create = ObjectStore.isNoId( updateId );
+    try {
+        em.getTransaction().begin();
+        em.persist( persistentObject );
+        em.getTransaction().commit();
+        interest.persistResultedIn( Success.of( Result.Success ), persistentObject, 1, 1, object);
+    } catch (Exception e)
+    {
+        /*
+         * TODO: how to retry?
+         * TODO: how to use intervalSignal() for timeout-based removal?
+         */
+        logger.log("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e );
+        
+        interest.persistResultedIn( 
+            Failure.of( new StorageException( Result.Failure, e.getMessage(), e)), 
+            persistentObject, 1, 0, 
+            object);
+    }
   }
 
   /*
@@ -75,11 +110,11 @@ public class JPAObjectStoreDelegate extends JDBCObjectStoreDelegate {
     // TODO: implementation
   }
 
-  /*
-   * @see io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreDelegate#timeoutCheck()
-   */
-  @Override
-  public void timeoutCheck() {
-    // TODO: implementation
-  }
+//  /*
+//   * @see io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreDelegate#timeoutCheck()
+//   */
+//  @Override
+//  public void timeoutCheck() {
+//    // TODO: implementation
+//  }
 }

@@ -141,6 +141,16 @@
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-core</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.openjpa</groupId>
+      <artifactId>openjpa</artifactId>
+      <version>3.0.0</version>
+    </dependency>
+	<dependency>
+      <groupId>mysql</groupId>
+      <artifactId>mysql-connector-java</artifactId>
+      <version>8.0.13</version>
+	</dependency>
   </dependencies>
   <distributionManagement>
     <repository>

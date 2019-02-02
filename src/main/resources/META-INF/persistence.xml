@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="1.0" xmlns="http://java.sun.com/xml/ns/persistence"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_1_0.xsd">
+    <persistence-unit name="JpaService" transaction-type="RESOURCE_LOCAL">
+        <!--  Only one JPA provider is on the classpath, which will be found automatically
+        <provider>org.apache.openjpa.persistence.PersistenceProviderImpl</provider>
+        -->
+        <mapping-file>META-INF/orm.xml</mapping-file>
+        <properties>
+        <!-- HSQLDB
+        	<property name="javax.persistence.jdbc.driver" value="org.hsqldb.jdbc.JDBCDriver"/>
+        	<property name="javax.persistence.jdbc.url" value="jdbc:hsqldb:mem"/>
+        	<property name="javax.persistence.jdbc.user" value="SA"/>
+        	<property name="javax.persistence.jdbc.password" value=""/>
+         -->
+         	<property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/>
+        	<property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost/test"/>
+        	<property name="javax.persistence.jdbc.user" value="test"/>
+        	<property name="javax.persistence.jdbc.password" value="test"/>
+        	<property name="openjpa.jdbc.SynchronizeMappings" value="buildSchema(ForeignKeys=true)"/>
+        </properties>
+    </persistence-unit>
+</persistence>
