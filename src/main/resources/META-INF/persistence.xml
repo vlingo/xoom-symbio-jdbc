@@ -8,17 +8,19 @@
         -->
         <mapping-file>META-INF/orm.xml</mapping-file>
         <properties>
-        <!-- HSQLDB
+        <!-- HSQLDB 
         	<property name="javax.persistence.jdbc.driver" value="org.hsqldb.jdbc.JDBCDriver"/>
         	<property name="javax.persistence.jdbc.url" value="jdbc:hsqldb:mem"/>
         	<property name="javax.persistence.jdbc.user" value="SA"/>
         	<property name="javax.persistence.jdbc.password" value=""/>
          -->
+         <!--  MySQL -->
          	<property name="javax.persistence.jdbc.driver" value="com.mysql.jdbc.Driver"/>
         	<property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost/test"/>
         	<property name="javax.persistence.jdbc.user" value="test"/>
         	<property name="javax.persistence.jdbc.password" value="test"/>
         	<property name="openjpa.jdbc.SynchronizeMappings" value="buildSchema(ForeignKeys=true)"/>
+        	 
         </properties>
     </persistence-unit>
 </persistence>

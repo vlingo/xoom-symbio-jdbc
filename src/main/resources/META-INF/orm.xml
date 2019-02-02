@@ -10,6 +10,9 @@
 	</persistence-unit-metadata>
 	<entity class="io.vlingo.symbio.store.object.jdbc.jpa.Person">
 		<table name="PERSON" />
+		<named-query name="Person.allPersons">
+			<query>SELECT p FROM Person p</query>
+		</named-query>
  		<attributes>
 			<id name="id" />
 			<basic name="age">

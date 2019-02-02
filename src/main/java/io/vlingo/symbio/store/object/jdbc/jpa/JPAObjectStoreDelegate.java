@@ -8,10 +8,12 @@
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
 import java.util.Collection;
+import java.util.List;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
 import javax.persistence.Persistence;
+import javax.persistence.TypedQuery;
 
 import io.vlingo.actors.Logger;
 import io.vlingo.actors.Stage;
@@ -19,6 +21,7 @@ import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.object.MapQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
@@ -26,7 +29,9 @@ import io.vlingo.symbio.store.object.QueryExpression;
 /**
  * The {@code JDBCObjectStoreDelegate} for JPA.
  */
-public class JPAObjectStoreDelegate implements ObjectStore {
+public class JPAObjectStoreDelegate 
+implements ObjectStore 
+{
   
   private final EntityManagerFactory emf = Persistence.createEntityManagerFactory( "JpaService" );
   private final EntityManager em = emf.createEntityManager();
@@ -57,7 +62,6 @@ public class JPAObjectStoreDelegate implements ObjectStore {
    */
   @Override
   public void persist(final Object persistentObject, final long updateId, final PersistResultInterest interest, final Object object) {
-    final boolean create = ObjectStore.isNoId( updateId );
     try {
         em.getTransaction().begin();
         em.persist( persistentObject );
@@ -65,11 +69,8 @@ public class JPAObjectStoreDelegate implements ObjectStore {
         interest.persistResultedIn( Success.of( Result.Success ), persistentObject, 1, 1, object);
     } catch (Exception e)
     {
-        /*
-         * TODO: how to retry?
-         * TODO: how to use intervalSignal() for timeout-based removal?
-         */
         logger.log("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e );
+        em.getTransaction().rollback(); // TODO: is this necessary?
         
         interest.persistResultedIn( 
             Failure.of( new StorageException( Result.Failure, e.getMessage(), e)), 
@@ -83,7 +84,30 @@ public class JPAObjectStoreDelegate implements ObjectStore {
    */
   @Override
   public void persistAll(final Collection<Object> persistentObjects, final long updateId, final PersistResultInterest interest, final Object object) {
-    // TODO: implementation
+    try
+    {
+        int count = 0;
+        em.getTransaction().begin();
+        for ( final Object o : persistentObjects )
+        {
+            em.persist( o );
+            count++;
+        }
+        em.getTransaction().commit();
+        interest.persistResultedIn( 
+            Success.of( Result.Success ), 
+            persistentObjects, persistentObjects.size(), count, 
+            object);
+    }
+    catch ( Exception e )
+    {
+        logger.log( "Persist all of: " + persistentObjects + "failed because: " + e.getMessage(), e);
+        
+        interest.persistResultedIn(
+            Failure.of( new StorageException( Result.Failure, e.getMessage(), e)), 
+            persistentObjects, persistentObjects.size(), 0,
+            object );
+    }
   }
 
   /*
@@ -91,7 +115,16 @@ public class JPAObjectStoreDelegate implements ObjectStore {
    */
   @Override
   public void queryAll(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
-    // TODO: implementation
+    List<?> results = null;
+    
+    TypedQuery<?> query = em.createNamedQuery( expression.query, expression.type );
+    results = query.getResultList();
+    
+    interest.queryAllResultedIn(
+        Success.of( Result.Success ), 
+        QueryMultiResults.of( results ), 
+        object);
+    
   }
 
   /*
@@ -99,7 +132,23 @@ public class JPAObjectStoreDelegate implements ObjectStore {
    */
   @Override
   public void queryObject(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
-    // TODO: implementation
+    Object obj = null;
+    if ( expression.isMapQueryExpression() )
+    {
+        MapQueryExpression mapExpression = expression.asMapQueryExpression();
+        Object idObj = mapExpression.parameters.get( "id" );
+        obj = em.find( mapExpression.type, idObj );
+    }
+    else
+    {
+        // TODO: IllegalArgumentException?
+        logger.log( "Unsupported query expression: " + expression.getClass().getName() );
+//        interest.queryObjectResultedIn( Failure.of( Result.Failure, "" ),  null, 1, 0, object);
+    }
+    interest.queryObjectResultedIn( 
+        Success.of( Result.Success ), 
+        QuerySingleResult.of( obj ), 
+        object);
   }
 
   /*
@@ -110,11 +159,10 @@ public class JPAObjectStoreDelegate implements ObjectStore {
     // TODO: implementation
   }
 
-//  /*
-//   * @see io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreDelegate#timeoutCheck()
-//   */
-//  @Override
-//  public void timeoutCheck() {
-//    // TODO: implementation
-//  }
+  /**
+   * Check for timed out transaction
+   */
+  public void timeoutCheck() {
+     // TODO: implementation
+  }
 }

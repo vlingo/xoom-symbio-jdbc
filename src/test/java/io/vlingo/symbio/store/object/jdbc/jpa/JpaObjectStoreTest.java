@@ -1,8 +1,15 @@
-/* Copyright (c) 2005-2019 - Blue River Systems Group, LLC - All Rights Reserved */
+// Copyright © 2012-2018 Vaughn Vernon. All rights reserved.
+//
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL
+// was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
 import static org.junit.Assert.*;
 
+import java.util.Arrays;
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.After;
@@ -14,34 +21,71 @@ import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.common.Outcome;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.object.MapQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest;
 import io.vlingo.symbio.store.object.ObjectStore.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStore.QueryResultInterest;
 import io.vlingo.symbio.store.object.ObjectStore.QuerySingleResult;
+import io.vlingo.symbio.store.object.QueryExpression;
 
 /**
  * JpaObjectStoreTest
  *
- * <p>Copyright (c) 2005-2019 - Blue River Systems Group, LLC - All Rights Reserved</p>
- *
- * @author mas
- * @since Feb 1, 2019
  */
 public class JpaObjectStoreTest
 {
     private JPAObjectStoreDelegate delegate;
+    private ObjectStore objectStore;
     private World world;
 
-    @Test
+//    @Test
     public void testThatObjectStoreInsertsOneAndQuerys()
     {
         final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
         persistInterest.until = TestUntil.happenings( 1 );
-        Person person = new Person( 1L, 10, "Jonny" );
-        delegate.persist( person, person.id, persistInterest );
+        Person person = new Person( 1L, 21, "Jody Jones" );
+        objectStore.persist( person, person.id, persistInterest );
         persistInterest.until.completes();
-        assertEquals( Result.Success, persistInterest.outcome.get().andThen( success -> success ).get() ); 
+        assertEquals( Result.Success, persistInterest.outcome.get().andThen( success -> success ).get() );
+        
+        final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
+        
+        queryInterest.until = TestUntil.happenings( 1 );
+        MapQueryExpression expression = MapQueryExpression.using( Person.class, null, MapQueryExpression.map( "id", 1L ));
+        objectStore.queryObject( expression, queryInterest );
+        queryInterest.until.completes();
+        assertNotNull( queryInterest.singleResult.get() );
+        assertEquals( person, queryInterest.singleResult.get().persistentObject );
+    }
+    
+    @Test
+    public void testThatObjectStoreInsertsMultipleAndQueries()
+    {
+        final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
+        persistInterest.until = TestUntil.happenings( 1 );
+        Person person1 = new Person( 1L, 21, "Jody Jones" );
+        Person person2 = new Person( 2L, 21, "Joey Jones" );
+        Person person3 = new Person( 3L, 25, "Mira Jones" );
+        objectStore.persistAll( Arrays.asList( person1, person2, person3), persistInterest);
+        persistInterest.until.completes();
+        assertEquals( Result.Success, persistInterest.outcome.get().andThen( success -> success ).get());
+        
+        final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
+        queryInterest.multiResults.set( null );
+        queryInterest.until = TestUntil.happenings( 1 );
+        QueryExpression queryExpression = 
+            QueryExpression.using( Person.class, "Person.allPersons" );
+        objectStore.queryAll( queryExpression, queryInterest );
+        queryInterest.until.completes();
+        final QueryMultiResults multiResults = queryInterest.multiResults.get();
+        assertNotNull( multiResults );
+        assertEquals( 3, multiResults.persistentObjects.size() );
+        @SuppressWarnings("unchecked")
+        final Iterator<Person> iterator = (Iterator<Person>) multiResults.persistentObjects.iterator();
+        assertEquals( person1, iterator.next() );
+        assertEquals( person2, iterator.next() );
+        assertEquals( person3, iterator.next() );
     }
 
     /**
@@ -53,6 +97,8 @@ public class JpaObjectStoreTest
         world = World.startWithDefaults( "jpa-test" );
         
         delegate = new JPAObjectStoreDelegate( world.stage() );
+        
+        objectStore = world.actorFor( ObjectStore.class, JPAObjectStoreActor.class, delegate );
     }
 
     /**
@@ -80,9 +126,9 @@ public class JpaObjectStoreTest
           singleResult.set(result);
           until.happened();
         }
-      }
+    }
 
-      private static class TestPersistResultInterest implements PersistResultInterest {
+    private static class TestPersistResultInterest implements PersistResultInterest {
         public AtomicReference<Outcome<StorageException, Result>> outcome = new AtomicReference<>();
         public TestUntil until;
 
@@ -96,5 +142,5 @@ public class JpaObjectStoreTest
           this.outcome.set(outcome);
           until.happened();
         }
-      }
+    }
 }
