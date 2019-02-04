@@ -43,7 +43,6 @@ public class JpaObjectStoreTest
     private JPAObjectStoreDelegate delegate;
     private JPAObjectStore objectStore;
     private World world;
-    
 
     @Test
     public void testThatObjectStoreInsertsOneAndQuerys()

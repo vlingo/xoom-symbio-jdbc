@@ -9,8 +9,6 @@ package io.vlingo.symbio.store.object.jdbc.jpa;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -36,8 +34,11 @@ import io.vlingo.symbio.store.object.QueryExpression;
 public class JPAObjectStoreDelegate 
 implements JPAObjectStore 
 {
+  // Persistence Units defined in persistence.xml
+  public static final String JPA_MYSQL_PERSISTENCE_UNIT = "JpaMySqlService";
+  public static final String JPA_HSQLDB_PERSISTENCE_UNIT = "JpaHsqldbService";
   
-  private final EntityManagerFactory emf = Persistence.createEntityManagerFactory( "JpaMySqlService" );
+  private final EntityManagerFactory emf = Persistence.createEntityManagerFactory( JPA_HSQLDB_PERSISTENCE_UNIT );
   private final EntityManager em = emf.createEntityManager();
   private final Logger logger;
 
@@ -52,11 +53,6 @@ implements JPAObjectStore
         em.setFlushMode( FlushModeType.COMMIT );
     flushMode = em.getFlushMode();
     assert flushMode.equals( FlushModeType.COMMIT );
-    Map<String,Object> props = em.getProperties();
-    for ( Entry<String, Object> e : props.entrySet() )
-    {
-        logger.log( e.toString() );
-    }
   }
 
   /*
@@ -155,7 +151,8 @@ implements JPAObjectStore
         MapQueryExpression mapExpression = expression.asMapQueryExpression();
         Object idObj = mapExpression.parameters.get( "id" );
         obj = findObject( mapExpression.type, idObj );
-        em.detach( obj );
+        if ( obj != null )
+            em.detach( obj );
     }
     else
     {
