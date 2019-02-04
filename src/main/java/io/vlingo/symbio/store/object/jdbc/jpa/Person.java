@@ -22,8 +22,6 @@ extends PersistentObject
     protected long id;
     protected String name;
     
-    public Person() {}
-    
     public Person( long persistentId )
     {
         super( persistentId );
@@ -36,7 +34,17 @@ extends PersistentObject
         this.age = anAge;
         this.name = aName;
     }
-
+    
+    public Person newPersonWithAge( final int _age )
+    {
+        return new Person( this.id, _age, name );
+    }
+    
+    public Person newPersonWithName( final String _name )
+    {
+        return new Person( this.id, this.age, _name );
+    }
+    
     /* @see java.lang.Object#hashCode() */
     @Override
     public int hashCode()
@@ -64,4 +72,9 @@ extends PersistentObject
         return id == other.id;
     }
 
+    public static Person newPersonFrom( Person person )
+    {
+        return new Person( person.persistenceId(), person.age, person.name );
+    }
+    
 }

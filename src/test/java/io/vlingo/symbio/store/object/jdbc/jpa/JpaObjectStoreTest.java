@@ -180,8 +180,9 @@ public class JpaObjectStoreTest
         final List<Object> modifiedPersons = new ArrayList<>();
         while ( iterator.hasNext() )
         {
-            final Person person = iterator.next();
-            person.name = person.name + " " + person.id;
+            Person person = iterator.next();
+            person = person.newPersonWithName( person.name + " " + person.id );
+                //person.name + " " + person.id;
             modifiedPersons.add( person );
         }
         
@@ -195,7 +196,16 @@ public class JpaObjectStoreTest
         objectStore.queryAll( queryExpression, queryInterest );
         queryInterest.until.completes();
         
-        assertArrayEquals( modifiedPersons.toArray(), queryInterest.multiResults.get().persistentObjects.toArray() );
+        Object[] queriedArray = queryInterest.multiResults.get().persistentObjects.toArray();
+        assertArrayEquals( modifiedPersons.toArray(), queriedArray );
+        for ( int i = 0; i < 3; i++ )
+        {
+            Person modifiedPerson = (Person)modifiedPersons.get( i );
+            Person queriedPerson = (Person)queriedArray[i];
+            assertEquals( modifiedPerson.id, queriedPerson.id );
+            assertEquals( modifiedPerson.age, queriedPerson.age );
+            assertEquals( modifiedPerson.name, queriedPerson.name );
+        }
 
         // cleanup db
         final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
