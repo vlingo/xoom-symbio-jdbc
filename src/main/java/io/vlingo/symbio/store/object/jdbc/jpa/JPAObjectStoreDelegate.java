@@ -9,9 +9,12 @@ package io.vlingo.symbio.store.object.jdbc.jpa;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
+import javax.persistence.FlushModeType;
 import javax.persistence.Persistence;
 import javax.persistence.TypedQuery;
 
@@ -23,6 +26,7 @@ import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.object.MapQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStore;
+import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 
@@ -30,10 +34,10 @@ import io.vlingo.symbio.store.object.QueryExpression;
  * The {@code JDBCObjectStoreDelegate} for JPA.
  */
 public class JPAObjectStoreDelegate 
-implements ObjectStore 
+implements JPAObjectStore 
 {
   
-  private final EntityManagerFactory emf = Persistence.createEntityManagerFactory( "JpaService" );
+  private final EntityManagerFactory emf = Persistence.createEntityManagerFactory( "JpaMySqlService" );
   private final EntityManager em = emf.createEntityManager();
   private final Logger logger;
 
@@ -43,6 +47,16 @@ implements ObjectStore
    */
   public JPAObjectStoreDelegate(final Stage stage) {
     logger = stage.world().defaultLogger();
+    FlushModeType flushMode = em.getFlushMode();
+    if ( flushMode.equals( FlushModeType.AUTO ))
+        em.setFlushMode( FlushModeType.COMMIT );
+    flushMode = em.getFlushMode();
+    assert flushMode.equals( FlushModeType.COMMIT );
+    Map<String,Object> props = em.getProperties();
+    for ( Entry<String, Object> e : props.entrySet() )
+    {
+        logger.log( e.toString() );
+    }
   }
 
   /*
@@ -64,7 +78,7 @@ implements ObjectStore
   public void persist(final Object persistentObject, final long updateId, final PersistResultInterest interest, final Object object) {
     try {
         em.getTransaction().begin();
-        em.persist( persistentObject );
+        createOrUpdate(persistentObject, updateId);
         em.getTransaction().commit();
         interest.persistResultedIn( Success.of( Result.Success ), persistentObject, 1, 1, object);
     } catch (Exception e)
@@ -79,7 +93,7 @@ implements ObjectStore
     }
   }
 
-  /*
+/*
    * @see io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object)
    */
   @Override
@@ -90,7 +104,8 @@ implements ObjectStore
         em.getTransaction().begin();
         for ( final Object o : persistentObjects )
         {
-            em.persist( o );
+            PersistentObject po = (PersistentObject) o;
+            createOrUpdate(po, po.persistenceId());
             count++;
         }
         em.getTransaction().commit();
@@ -117,8 +132,10 @@ implements ObjectStore
   public void queryAll(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
     List<?> results = null;
     
+    em.getTransaction().begin();
     TypedQuery<?> query = em.createNamedQuery( expression.query, expression.type );
     results = query.getResultList();
+    em.getTransaction().commit();
     
     interest.queryAllResultedIn(
         Success.of( Result.Success ), 
@@ -137,7 +154,8 @@ implements ObjectStore
     {
         MapQueryExpression mapExpression = expression.asMapQueryExpression();
         Object idObj = mapExpression.parameters.get( "id" );
-        obj = em.find( mapExpression.type, idObj );
+        obj = findObject( mapExpression.type, idObj );
+        em.detach( obj );
     }
     else
     {
@@ -149,6 +167,32 @@ implements ObjectStore
         Success.of( Result.Success ), 
         QuerySingleResult.of( obj ), 
         object);
+  }
+
+  /* @see io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStore#remove(java.lang.Object, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
+  @Override
+  public void remove(Object persistentObject, long removeId, PersistResultInterest interest, Object object)
+  {
+      try {
+          int count = 0;
+          Object managedObject = findObject( persistentObject.getClass(), removeId );
+          if ( managedObject != null ) {
+              em.getTransaction().begin();
+              em.remove( managedObject );
+              em.getTransaction().commit();
+              count++;
+          }
+          interest.persistResultedIn( Success.of( Result.Success ), persistentObject, 1, count, object );
+      } catch ( Exception e ) {
+          logger.log( "Removal of: " + persistentObject + " failed because: " + e.getMessage(), e );
+          
+          em.getTransaction().rollback();
+          
+          interest.persistResultedIn(
+              Failure.of( new StorageException( Result.Failure, e.getMessage(), e )), 
+              persistentObject, 1, 0, 
+              object);
+      }
   }
 
   /*
@@ -165,4 +209,37 @@ implements ObjectStore
   public void timeoutCheck() {
      // TODO: implementation
   }
+  
+  protected Object findObject( Class<?> entityClass, Object primaryKey )
+  {
+      return em.find( entityClass, primaryKey );
+  }
+
+  /**
+   * @param persistentObject
+   */
+  protected void createOrUpdate( final Object persistentObject, final long updateId )
+  {
+      if ( ObjectStore.isNoId( updateId )) {
+          /*
+           * RDB is expected to provide the id in this case.
+           */
+          em.persist( persistentObject );
+      } else {
+          Object managedObject = findObject( persistentObject.getClass(), updateId );
+          if ( managedObject == null ) {
+              /*
+               * App provided id is not yet saved.
+               */
+              em.persist( persistentObject );
+          }
+          else {
+              /*
+               * object to be updated
+               */
+              em.merge( persistentObject );
+          }
+      }
+  }
+
 }

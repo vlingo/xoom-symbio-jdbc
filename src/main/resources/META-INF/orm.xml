@@ -8,13 +8,23 @@
 			<access>FIELD</access>
 		</persistence-unit-defaults>
 	</persistence-unit-metadata>
-	<entity class="io.vlingo.symbio.store.object.jdbc.jpa.Person">
+	<entity class="io.vlingo.symbio.store.object.PersistentObject" access="FIELD">
 		<table name="PERSON" />
+		<inheritance strategy="SINGLE_TABLE"/>
+		<attributes>
+			<id name="persistenceId">
+				<column name="PID"/>
+			</id>
+		</attributes>
+	</entity>
+	<entity class="io.vlingo.symbio.store.object.jdbc.jpa.Person" access="FIELD">
 		<named-query name="Person.allPersons">
 			<query>SELECT p FROM Person p</query>
 		</named-query>
  		<attributes>
-			<id name="id" />
+			<basic name="id">
+				<column name="ID"/>
+			</basic>
 			<basic name="age">
 				<column name="AGE" />
 			</basic>

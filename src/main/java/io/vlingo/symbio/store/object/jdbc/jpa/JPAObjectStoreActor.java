@@ -17,7 +17,7 @@ import io.vlingo.symbio.store.object.QueryExpression;
  * @author mas
  * @since Feb 2, 2019
  */
-public class JPAObjectStoreActor extends Actor implements ObjectStore, Scheduled
+public class JPAObjectStoreActor extends Actor implements JPAObjectStore, Scheduled
 {
     private boolean closed;
     private final JPAObjectStoreDelegate delegate;
@@ -80,6 +80,13 @@ public class JPAObjectStoreActor extends Actor implements ObjectStore, Scheduled
     public void intervalSignal(Scheduled scheduled, Object data)
     {
         delegate.timeoutCheck();
+    }
+
+    /* @see io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStore#remove(java.lang.Object, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
+    @Override
+    public void remove(Object persistentObject, long removeId, PersistResultInterest interest, Object object)
+    {
+        delegate.remove(persistentObject, removeId, interest);
     }
 
 }
