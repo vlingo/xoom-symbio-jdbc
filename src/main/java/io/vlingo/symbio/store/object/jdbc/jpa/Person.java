@@ -18,9 +18,9 @@ extends PersistentObject
 {
     private static final long serialVersionUID = 1L;
     
-    int age;
-    long id;
-    String name;
+    protected int age;
+    protected long id;
+    protected String name;
     
     public Person() {}
     
