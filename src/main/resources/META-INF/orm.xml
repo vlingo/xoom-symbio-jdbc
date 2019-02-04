@@ -19,7 +19,7 @@
     </entity>
     <entity class="io.vlingo.symbio.store.object.jdbc.jpa.Person">
       <named-query name="Person.allPersons">
-        <query>SELECT p FROM Person p</query>
+        <query>SELECT p FROM Person p ORDER BY p.id ASC</query>
       </named-query>
       <attributes>
       <basic name="id">
