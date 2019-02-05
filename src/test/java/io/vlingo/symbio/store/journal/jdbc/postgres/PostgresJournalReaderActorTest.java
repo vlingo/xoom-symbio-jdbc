@@ -1,21 +1,20 @@
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import io.vlingo.actors.Definition;
-import io.vlingo.actors.testkit.TestUntil;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.store.journal.JournalReader;
-import io.vlingo.symbio.store.journal.Stream;
-import io.vlingo.symbio.store.journal.jdbc.postgres.PostgresJournalReaderActor;
-
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.UUID;
-
 import static io.vlingo.symbio.store.journal.JournalReader.Beginning;
 import static io.vlingo.symbio.store.journal.JournalReader.End;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+
+import java.util.List;
+import java.util.UUID;
+
+import org.junit.Before;
+import org.junit.Test;
+
+import io.vlingo.actors.Definition;
+import io.vlingo.actors.testkit.TestUntil;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.store.journal.JournalReader;
 
 public class PostgresJournalReaderActorTest extends BasePostgresJournalTest {
     private String readerName;
@@ -65,15 +64,15 @@ public class PostgresJournalReaderActorTest extends BasePostgresJournalTest {
         insertEvent(4);
 
         JournalReader<String> journalReader = journalReader();
-        Stream<String> events = journalReader.readNext(2).await();
-        assertEquals(2, events.entries.size());
-        assertEquals(1, parse(events.entries.get(0)).number);
-        assertEquals(2, parse(events.entries.get(1)).number);
+        List<Entry<String>> events = journalReader.readNext(2).await();
+        assertEquals(2, events.size());
+        assertEquals(1, parse(events.get(0)).number);
+        assertEquals(2, parse(events.get(1)).number);
 
         events = journalReader.readNext(2).await();
-        assertEquals(2, events.entries.size());
-        assertEquals(3, parse(events.entries.get(0)).number);
-        assertEquals(4, parse(events.entries.get(1)).number);
+        assertEquals(2, events.size());
+        assertEquals(3, parse(events.get(0)).number);
+        assertEquals(4, parse(events.get(1)).number);
     }
 
     @Test
