@@ -12,6 +12,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.any;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.Before;
@@ -77,12 +78,12 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
         journal.appendAll(streamName, 1, asList(appendedEvent1, appendedEvent2), interest, object);
         until.completes();
 
-        Stream<String> eventStream = journalReader.readNext(2).await();
-        Entry<String> entry1 = eventStream.entries.get(0);
+        List<Entry<String>> eventStream = journalReader.readNext(2).await();
+        Entry<String> entry1 = eventStream.get(0);
         TestEvent event1 = gson.fromJson(entry1.entryData, TestEvent.class);
         assertEquals(appendedEvent1, event1);
 
-        Entry<String> entry2 = eventStream.entries.get(1);
+        Entry<String> entry2 = eventStream.get(1);
         TestEvent event2 = gson.fromJson(entry2.entryData, TestEvent.class);
         assertEquals(appendedEvent2, event2);
     }
