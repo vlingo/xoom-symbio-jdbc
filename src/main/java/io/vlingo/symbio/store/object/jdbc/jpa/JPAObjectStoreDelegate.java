@@ -10,7 +10,6 @@ package io.vlingo.symbio.store.object.jdbc.jpa;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -39,7 +38,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   public static final String JPA_HSQLDB_PERSISTENCE_UNIT = "JpaHsqldbService";
   public static final String JPA_POSTGRES_PERSISTENCE_UNIT = "JpaPostgresService";
 
-  private final EntityManagerFactory emf = Persistence.createEntityManagerFactory(JPA_HSQLDB_PERSISTENCE_UNIT);
+  private final EntityManagerFactory emf = Persistence.createEntityManagerFactory(JPA_POSTGRES_PERSISTENCE_UNIT);
   private final EntityManager em = emf.createEntityManager();
   private final Logger logger;
 
@@ -55,10 +54,6 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
       em.setFlushMode(FlushModeType.COMMIT);
     flushMode = em.getFlushMode();
     assert flushMode.equals(FlushModeType.COMMIT);
-    Map<String, Object> properties = em.getProperties();
-    for (Entry<String, Object> entry : properties.entrySet()) {
-      logger.log(String.format("%s:%s", entry.getKey(), entry.getValue()));
-    }
   }
 
   /*

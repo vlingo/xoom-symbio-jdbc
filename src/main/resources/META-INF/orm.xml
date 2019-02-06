@@ -28,18 +28,18 @@
       	<query>SELECT p FROM Person p WHERE p.age >= :age ORDER BY p.id ASC</query>
       </named-query>
       <attributes>
-      <basic name="id">
-        <column name="ID"/>
-      </basic>
-      <basic name="age">
-        <column name="AGE" />
-      </basic>
-      <basic name="name">
-        <column name="NAME" />
-      </basic>
-      <version name="version">
-      	<column name="VERSION"/>
-      </version>
-	</attributes>
+	      <basic name="id">
+	        <column name="ID"/>
+	      </basic>
+	      <basic name="age">
+	        <column name="AGE" />
+	      </basic>
+	      <basic name="name">
+	        <column name="NAME" />
+	      </basic>
+	      <version name="version">
+	      	<column name="VERSION"/>
+	      </version>
+      </attributes>
   </entity>
 </entity-mappings>
