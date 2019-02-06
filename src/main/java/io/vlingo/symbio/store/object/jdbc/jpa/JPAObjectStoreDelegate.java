@@ -9,6 +9,7 @@ package io.vlingo.symbio.store.object.jdbc.jpa;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -45,9 +46,9 @@ implements JPAObjectStore
 
   /**
    * Constructs my default state.
-   * @param configuration the Configuration used to configure my concrete subclasses
+   * @param stage
    */
-  public JPAObjectStoreDelegate(final Stage stage) {
+public JPAObjectStoreDelegate(final Stage stage) {
     logger = stage.world().defaultLogger();
     FlushModeType flushMode = em.getFlushMode();
     if ( flushMode.equals( FlushModeType.AUTO ))
@@ -129,8 +130,30 @@ implements JPAObjectStore
   public void queryAll(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
     List<?> results = null;
     
-    em.getTransaction().begin();
     TypedQuery<?> query = em.createNamedQuery( expression.query, expression.type );
+    
+    if ( expression.isListQueryExpression() )
+    {
+        List<?> parameters = expression.asListQueryExpression().parameters;
+        if ( parameters != null )
+        {
+            for ( int i = 0; i < parameters.size(); i++ )
+            {
+                int parmOrdinal = i + 1;
+                query = query.setParameter( parmOrdinal, parameters.get( i ));
+            }
+        }
+    }
+    else if ( expression.isMapQueryExpression() )
+    {
+        Map<String,?> parameters = expression.asMapQueryExpression().parameters;
+        for ( String key : parameters.keySet() )
+        {
+            query = query.setParameter( key, parameters.get( key ));
+        }
+    }
+    
+    em.getTransaction().begin();
     results = query.getResultList();
     em.getTransaction().commit();
     

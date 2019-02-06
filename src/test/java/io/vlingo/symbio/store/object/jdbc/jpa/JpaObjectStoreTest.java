@@ -14,8 +14,10 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.After;
@@ -27,6 +29,7 @@ import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.common.Outcome;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.object.ListQueryExpression;
 import io.vlingo.symbio.store.object.MapQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest;
 import io.vlingo.symbio.store.object.ObjectStore.QueryMultiResults;
@@ -206,6 +209,81 @@ public class JpaObjectStoreTest
             assertEquals( modifiedPerson.name, queriedPerson.name );
         }
 
+        // cleanup db
+        final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
+        removeInterest.until = TestUntil.happenings( 3 );
+        objectStore.remove( person1, person1.id, removeInterest );
+        objectStore.remove( person2, person2.id, removeInterest );
+        objectStore.remove( person3, person3.id, removeInterest );
+        removeInterest.until.completes();
+    }
+    
+    @Test
+    public void testMultipleEntitiesParameterizedListQuery()
+    {
+        final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
+        persistInterest.until = TestUntil.happenings( 1 );
+        
+        Person person1 = new Person( 1L, 21, "Jody Jones" );
+        Person person2 = new Person( 2L, 21, "Joey Jones" );
+        Person person3 = new Person( 3L, 25, "Mira Jones" );
+        
+        objectStore.persistAll( Arrays.asList( person1, person2, person3 ), persistInterest );
+        persistInterest.until.completes();
+        assertEquals( Result.Success, persistInterest.outcome.get().andThen( success -> success ).get());
+        
+        final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
+        queryInterest.multiResults.set( null );
+        queryInterest.until = TestUntil.happenings( 1 );
+        ListQueryExpression queryExpression = 
+            ListQueryExpression.using( Person.class, "Person.adultsParmList", Arrays.asList( 22 ));
+        objectStore.queryAll( queryExpression, queryInterest );
+        queryInterest.until.completes();
+        final QueryMultiResults multiResults = queryInterest.multiResults.get();
+        assertNotNull( multiResults );
+        assertEquals( 1, multiResults.persistentObjects.size() );
+        @SuppressWarnings("unchecked")
+        final Iterator<Person> iterator = (Iterator<Person>) multiResults.persistentObjects.iterator();
+        assertEquals( person3, iterator.next() );
+        
+        // cleanup db
+        final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
+        removeInterest.until = TestUntil.happenings( 3 );
+        objectStore.remove( person1, person1.id, removeInterest );
+        objectStore.remove( person2, person2.id, removeInterest );
+        objectStore.remove( person3, person3.id, removeInterest );
+        removeInterest.until.completes();
+    }
+
+    @Test
+    public void testMultipleEntitiesParameterizedMapQuery()
+    {
+        final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
+        persistInterest.until = TestUntil.happenings( 1 );
+        
+        Person person1 = new Person( 1L, 21, "Jody Jones" );
+        Person person2 = new Person( 2L, 21, "Joey Jones" );
+        Person person3 = new Person( 3L, 25, "Mira Jones" );
+        
+        objectStore.persistAll( Arrays.asList( person1, person2, person3 ), persistInterest );
+        persistInterest.until.completes();
+        assertEquals( Result.Success, persistInterest.outcome.get().andThen( success -> success ).get());
+        
+        final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
+        queryInterest.multiResults.set( null );
+        queryInterest.until = TestUntil.happenings( 1 );
+        Map<String,Integer> parmMap = Collections.singletonMap("age", 22 );
+        MapQueryExpression queryExpression = 
+            MapQueryExpression.using( Person.class, "Person.adultsParmMap", parmMap );
+        objectStore.queryAll( queryExpression, queryInterest );
+        queryInterest.until.completes();
+        final QueryMultiResults multiResults = queryInterest.multiResults.get();
+        assertNotNull( multiResults );
+        assertEquals( 1, multiResults.persistentObjects.size() );
+        @SuppressWarnings("unchecked")
+        final Iterator<Person> iterator = (Iterator<Person>) multiResults.persistentObjects.iterator();
+        assertEquals( person3, iterator.next() );
+        
         // cleanup db
         final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
         removeInterest.until = TestUntil.happenings( 3 );

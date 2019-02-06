@@ -21,6 +21,12 @@
       <named-query name="Person.allPersons">
         <query>SELECT p FROM Person p ORDER BY p.id ASC</query>
       </named-query>
+      <named-query name="Person.adultsParmList">
+      	<query>SELECT p FROM Person p WHERE p.age >= ?1 ORDER BY p.id ASC</query>
+      </named-query>
+      <named-query name="Person.adultsParmMap">
+      	<query>SELECT p FROM Person p WHERE p.age >= :age ORDER BY p.id ASC</query>
+      </named-query>
       <attributes>
       <basic name="id">
         <column name="ID"/>
@@ -31,6 +37,9 @@
       <basic name="name">
         <column name="NAME" />
       </basic>
+      <version name="version">
+      	<column name="VERSION"/>
+      </version>
 	</attributes>
   </entity>
 </entity-mappings>

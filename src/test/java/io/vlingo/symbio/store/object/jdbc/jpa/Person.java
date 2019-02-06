@@ -21,6 +21,7 @@ extends PersistentObject
     protected int age;
     protected long id;
     protected String name;
+    protected int version;
     
     public Person( long persistentId )
     {
