@@ -38,7 +38,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   public static final String JPA_HSQLDB_PERSISTENCE_UNIT = "JpaHsqldbService";
   public static final String JPA_POSTGRES_PERSISTENCE_UNIT = "JpaPostgresService";
 
-  private final EntityManagerFactory emf = Persistence.createEntityManagerFactory(JPA_POSTGRES_PERSISTENCE_UNIT);
+  private final EntityManagerFactory emf = Persistence.createEntityManagerFactory(JPA_HSQLDB_PERSISTENCE_UNIT);
   private final EntityManager em = emf.createEntityManager();
   private final Logger logger;
 
