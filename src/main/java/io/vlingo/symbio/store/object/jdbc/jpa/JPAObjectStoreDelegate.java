@@ -45,7 +45,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   /**
    * Constructs my default state.
    * 
-   * @param stage
+   * @param stage from which to obtain the default logger.
    */
   public JPAObjectStoreDelegate(final Stage stage) {
     logger = stage.world().defaultLogger();
@@ -229,7 +229,8 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   }
 
   /**
-   * @param persistentObject
+   * @param persistentObject unmanaged entity to be persisted if does not exist or merged if does exist.
+   * @param updateId the primary key to be used to find the managed entity.
    */
   protected void createOrUpdate(final Object persistentObject, final long updateId) {
     if (ObjectStore.isNoId(updateId)) {
