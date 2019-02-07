@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="http://java.sun.com/xml/ns/persistence"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
+	version="2.0">
+  
+    <persistence-unit name="JpaMySqlService"  transaction-type="RESOURCE_LOCAL">
+      <!--  Only one JPA provider is on the classpath, which will be found automatically
+      <provider>org.apache.openjpa.persistence.PersistenceProviderImpl</provider>
+      -->
+      <mapping-file>META-INF/orm.xml</mapping-file>
+      <properties>
+       	<property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
+       	<property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost/test"/>
+       	<property name="javax.persistence.jdbc.user" value="test"/>
+       	<property name="javax.persistence.jdbc.password" value="test"/>
+       	<property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
+       	<property name="eclipselink.ddl-generation" value="drop-and-create-tables"/>
+       	<property name="eclipselink.ddl-generation.output-mode" value="both"/>
+      </properties>
+    </persistence-unit>
+    <persistence-unit name="JpaHsqldbService" transaction-type="RESOURCE_LOCAL">
+        <mapping-file>META-INF/orm.xml</mapping-file>
+        <properties>
+       	<property name="javax.persistence.jdbc.driver" value="org.hsqldb.jdbc.JDBCDriver"/>
+       	<property name="javax.persistence.jdbc.url" value="jdbc:hsqldb:test"/>
+       	<property name="javax.persistence.jdbc.user" value="SA"/>
+       	<property name="javax.persistence.jdbc.password" value=""/>
+       	<property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
+       	<property name="eclipselink.ddl-generation" value="drop-and-create-tables"/>
+       	<property name="eclipselink.ddl-generation.output-mode" value="both"/>
+        </properties>
+    </persistence-unit>
+    <persistence-unit name="JpaPostgresService" transaction-type="RESOURCE_LOCAL">
+        <mapping-file>META-INF/orm.xml</mapping-file>
+        <properties>
+       	<property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver"/>
+       	<property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost/vlingo_test"/>
+       	<property name="javax.persistence.jdbc.user" value="vlingo_test"/>
+       	<property name="javax.persistence.jdbc.password" value="vlingo123"/>
+       	<property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
+       	<property name="eclipselink.ddl-generation" value="drop-and-create-tables"/>
+       	<property name="eclipselink.ddl-generation.output-mode" value="both"/>
+        </properties>
+    </persistence-unit>
+</persistence>
