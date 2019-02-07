@@ -214,7 +214,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
    */
   @Override
   public void registerMapper(PersistentObjectMapper mapper) {
-    // TODO: implementation
+    throw new UnsupportedOperationException("registerMapper is unnecessary for JPA.");
   }
 
   /**

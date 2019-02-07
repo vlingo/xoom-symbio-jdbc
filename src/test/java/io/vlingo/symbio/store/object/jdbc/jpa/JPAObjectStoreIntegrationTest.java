@@ -118,7 +118,7 @@ public class JPAObjectStoreIntegrationTest {
 
     final TestPersistResultInterest updateInterest = new TestPersistResultInterest();
     updateInterest.until = TestUntil.happenings(1);
-    person1 = Person.newPersonFrom( person1 );
+    person1 = Person.newPersonFrom(person1);
     objectStore.persist(person1, person1.id, updateInterest);
     updateInterest.until.completes();
     assertEquals(Result.Success, updateInterest.outcome.get().andThen(success -> success).get());
