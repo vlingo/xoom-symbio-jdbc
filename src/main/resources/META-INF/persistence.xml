@@ -5,9 +5,10 @@
 	version="2.0">
   
     <persistence-unit name="JpaMySqlService"  transaction-type="RESOURCE_LOCAL">
-      <!--  Only one JPA provider is on the classpath, which will be found automatically
-      <provider>org.apache.openjpa.persistence.PersistenceProviderImpl</provider>
-      -->
+      <description>
+      	Example persistence unit for MySQL where EclipseLink is the JPA provider. 
+      </description>
+      <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
       <mapping-file>META-INF/orm.xml</mapping-file>
       <properties>
        	<property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
@@ -15,51 +16,61 @@
        	<property name="javax.persistence.jdbc.user" value="test"/>
        	<property name="javax.persistence.jdbc.password" value="test"/>
        	<property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
-       	<!--  
-       	<property name="openjpa.jdbc.TransactionIsolation" value="repeatable-read"/>
-       	<property name="openjpa.jdbc.SynchronizeMappings" value="buildSchema(ForeignKeys=true)"/>
-       	<property name="openjpa.IgnoreChanges" value="true"/> 
-       	<property name="openjpa.AutoDetach" value="close,commit,rollback"/>
-       	<property name="openjpa.Log" value="MetaData=TRACE, Enhance=TRACE, Runtime=TRACE"/>
-       	-->
-       	<property name="eclipselink.ddl-generation" value="drop-and-create-tables"/>
-       	<property name="eclipselink.ddl-generation.output-mode" value="both"/>
+       	<property name="javax.persistence.schema-generation.database.action" value="drop-and-create"/>
+       	<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
+       	<property name="javax.persistence.schema-generation.scripts.action" value="drop-and-create"/>
+       	<property name="javax.persistence.schema-generation.scripts.create-target" value="file:///tmp/createDDL.jdbc"/>
+       	<property name="javax.persistence.schema-generation.scripts.drop-target" value="file:///tmp/dropDDL.jdbc"/>
+       	<property name="javax.persistence.schema-generation.create-source" value="metadata"/>
+       	<property name="javax.persistence.schema-generation.drop-source" value="metadata"/>
+       	<property name="javax.persistence.schema-generation.create-script-source" value="file:///tmp/createDDL.jdbc"/>
+       	<property name="javax.persistence.schema-generation.drop-script-source" value="file:///tmp/dropDDL.jdbc"/>
       </properties>
     </persistence-unit>
     <persistence-unit name="JpaHsqldbService" transaction-type="RESOURCE_LOCAL">
-        <mapping-file>META-INF/orm.xml</mapping-file>
-        <properties>
+      <description>
+      	Example persistence unit for HSQLDB where EclipseLink is the JPA provider. 
+      </description>
+      <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
+      <mapping-file>META-INF/orm.xml</mapping-file>
+      <properties>
        	<property name="javax.persistence.jdbc.driver" value="org.hsqldb.jdbc.JDBCDriver"/>
        	<property name="javax.persistence.jdbc.url" value="jdbc:hsqldb:test"/>
        	<property name="javax.persistence.jdbc.user" value="SA"/>
        	<property name="javax.persistence.jdbc.password" value=""/>
        	<property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
-       	<!--  
-       	<property name="openjpa.jdbc.TransactionIsolation" value="repeatable-read"/>
-       	<property name="openjpa.jdbc.SynchronizeMappings" value="buildSchema(ForeignKeys=true)"/>
-       	<property name="openjpa.IgnoreChanges" value="true"/> 
-       	<property name="openjpa.AutoDetach" value="close,commit,rollback"/>
-       	-->
-       	<property name="eclipselink.ddl-generation" value="drop-and-create-tables"/>
-       	<property name="eclipselink.ddl-generation.output-mode" value="both"/>
-        </properties>
+       	<property name="javax.persistence.schema-generation.database.action" value="drop-and-create"/>
+       	<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
+       	<property name="javax.persistence.schema-generation.scripts.action" value="drop-and-create"/>
+       	<property name="javax.persistence.schema-generation.scripts.create-target" value="file:///tmp/createDDL.jdbc"/>
+       	<property name="javax.persistence.schema-generation.scripts.drop-target" value="file:///tmp/dropDDL.jdbc"/>
+       	<property name="javax.persistence.schema-generation.create-source" value="metadata"/>
+       	<property name="javax.persistence.schema-generation.drop-source" value="metadata"/>
+       	<property name="javax.persistence.schema-generation.create-script-source" value="file:///tmp/createDDL.jdbc"/>
+       	<property name="javax.persistence.schema-generation.drop-script-source" value="file:///tmp/dropDDL.jdbc"/>
+      </properties>
     </persistence-unit>
     <persistence-unit name="JpaPostgresService" transaction-type="RESOURCE_LOCAL">
-        <mapping-file>META-INF/orm.xml</mapping-file>
-        <properties>
+      <description>
+      	Example persistence unit for Postgresql where EclipseLink is the JPA provider. 
+      </description>
+      <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
+      <mapping-file>META-INF/orm.xml</mapping-file>
+      <properties>
        	<property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver"/>
        	<property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost/vlingo_test"/>
        	<property name="javax.persistence.jdbc.user" value="vlingo_test"/>
        	<property name="javax.persistence.jdbc.password" value="vlingo123"/>
        	<property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
-       	<!--  
-       	<property name="openjpa.jdbc.TransactionIsolation" value="repeatable-read"/>
-       	<property name="openjpa.jdbc.SynchronizeMappings" value="buildSchema(ForeignKeys=true)"/>
-       	<property name="openjpa.IgnoreChanges" value="true"/> 
-       	<property name="openjpa.AutoDetach" value="close,commit,rollback"/>
-       	-->
-       	<property name="eclipselink.ddl-generation" value="drop-and-create-tables"/>
-       	<property name="eclipselink.ddl-generation.output-mode" value="both"/>
-        </properties>
+       	<property name="javax.persistence.schema-generation.database.action" value="drop-and-create"/>
+       	<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
+       	<property name="javax.persistence.schema-generation.scripts.action" value="drop-and-create"/>
+       	<property name="javax.persistence.schema-generation.scripts.create-target" value="file:///tmp/createDDL.jdbc"/>
+       	<property name="javax.persistence.schema-generation.scripts.drop-target" value="file:///tmp/dropDDL.jdbc"/>
+       	<property name="javax.persistence.schema-generation.create-source" value="metadata"/>
+       	<property name="javax.persistence.schema-generation.drop-source" value="metadata"/>
+       	<property name="javax.persistence.schema-generation.create-script-source" value="file:///tmp/createDDL.jdbc"/>
+       	<property name="javax.persistence.schema-generation.drop-script-source" value="file:///tmp/dropDDL.jdbc"/>
+      </properties>
     </persistence-unit>
 </persistence>

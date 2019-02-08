@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <entity-mappings xmlns="http://java.sun.com/xml/ns/persistence/orm"
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence/orm http://java.sun.com/xml/ns/persistence/orm_1_0.xsd"
-	version="1.0">
+	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence/orm http://java.sun.com/xml/ns/persistence/orm_2_0.xsd"
+	version="2.0">
     <persistence-unit-metadata>
       <persistence-unit-defaults>
         <access>FIELD</access>
       </persistence-unit-defaults>
     </persistence-unit-metadata>
-    <mapped-superclass class="io.vlingo.symbio.store.object.PersistentObject">
+  <mapped-superclass class="io.vlingo.symbio.store.object.PersistentObject">
       <attributes>
         <id name="persistenceId">
           <column name="PID"/>
         </id>
       </attributes>
-    </mapped-superclass>
-    <entity class="io.vlingo.symbio.store.object.jdbc.jpa.Person">
+  </mapped-superclass>
+  <entity class="io.vlingo.symbio.store.object.jdbc.jpa.Person">
       <table name="PERSON" />
       <inheritance strategy="SINGLE_TABLE"/>
       <named-query name="Person.allPersons">

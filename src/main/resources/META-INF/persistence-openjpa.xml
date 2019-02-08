@@ -5,9 +5,10 @@
 	version="2.0">
   
     <persistence-unit name="JpaMySqlService"  transaction-type="RESOURCE_LOCAL">
-      <!--  Only one JPA provider is on the classpath, which will be found automatically
+      <description>
+      	Example persistence unit for MySQL where OpenJPA is the JPA provider.
+      </description>
       <provider>org.apache.openjpa.persistence.PersistenceProviderImpl</provider>
-      -->
       <mapping-file>META-INF/orm.xml</mapping-file>
       <properties>
        	<property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
@@ -23,8 +24,12 @@
       </properties>
     </persistence-unit>
     <persistence-unit name="JpaHsqldbService" transaction-type="RESOURCE_LOCAL">
-        <mapping-file>META-INF/orm.xml</mapping-file>
-        <properties>
+      <description>
+      	Example persistence unit for HSQLDB where OpenJPA is the JPA provider.
+      </description>
+      <provider>org.apache.openjpa.persistence.PersistenceProviderImpl</provider>
+      <mapping-file>META-INF/orm.xml</mapping-file>
+      <properties>
        	<property name="javax.persistence.jdbc.driver" value="org.hsqldb.jdbc.JDBCDriver"/>
        	<property name="javax.persistence.jdbc.url" value="jdbc:hsqldb:test"/>
        	<property name="javax.persistence.jdbc.user" value="SA"/>
@@ -34,11 +39,15 @@
        	<property name="openjpa.jdbc.SynchronizeMappings" value="buildSchema(ForeignKeys=true)"/>
        	<property name="openjpa.IgnoreChanges" value="true"/> 
        	<property name="openjpa.AutoDetach" value="close,commit,rollback"/>
-        </properties>
+      </properties>
     </persistence-unit>
     <persistence-unit name="JpaPostgresService" transaction-type="RESOURCE_LOCAL">
-        <mapping-file>META-INF/orm.xml</mapping-file>
-        <properties>
+      <description>
+      	Example persistence unit for Postgresql where OpenJPA is the JPA provider.
+      </description>
+      <provider>org.apache.openjpa.persistence.PersistenceProviderImpl</provider>
+      <mapping-file>META-INF/orm.xml</mapping-file>
+      <properties>
        	<property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver"/>
        	<property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost/vlingo_test"/>
        	<property name="javax.persistence.jdbc.user" value="vlingo_test"/>

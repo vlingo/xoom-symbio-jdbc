@@ -141,17 +141,21 @@
       <groupId>org.jdbi</groupId>
       <artifactId>jdbi3-core</artifactId>
     </dependency>
-    <!--  
-    <dependency>
-      <groupId>org.apache.openjpa</groupId>
-      <artifactId>openjpa-all</artifactId>
-      <version>3.0.0</version>
-    </dependency>
-    -->
+	<dependency>
+	  <groupId>org.hibernate</groupId>
+	  <artifactId>hibernate-c3p0</artifactId>
+	  <version>5.2.18.Final</version>
+	  <type>pom</type>
+	</dependency>
     <dependency>
     	<groupId>org.eclipse.persistence</groupId>
     	<artifactId>org.eclipse.persistence.jpa</artifactId>
     	<version>2.7.4</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.openjpa</groupId>
+      <artifactId>openjpa-all</artifactId>
+      <version>3.0.0</version>
     </dependency>
 	<dependency>
       <groupId>mysql</groupId>
