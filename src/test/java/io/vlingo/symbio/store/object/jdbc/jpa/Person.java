@@ -14,7 +14,7 @@ import io.vlingo.symbio.store.object.PersistentObject;
  * Person
  *
  */
-public class Person extends PersistentObject {
+public class Person implements Entity {
   private static final long serialVersionUID = 1L;
 
   protected int age;
@@ -27,7 +27,7 @@ public class Person extends PersistentObject {
   }
 
   public Person(long persistentId) {
-    super(persistentId);
+    super();
     this.id = persistentId;
   }
 
@@ -74,6 +74,12 @@ public class Person extends PersistentObject {
 
   public static Person newPersonFrom(Person person) {
     return new Person(person.id, person.age, person.name, person.version);
+  }
+
+  /* @see io.vlingo.symbio.store.object.jdbc.jpa.Entity#id() */
+  @Override
+  public Long id() {
+    return this.id;
   }
 
 }

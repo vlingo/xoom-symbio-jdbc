@@ -8,16 +8,8 @@
         <access>FIELD</access>
       </persistence-unit-defaults>
     </persistence-unit-metadata>
-  <mapped-superclass class="io.vlingo.symbio.store.object.PersistentObject">
-      <attributes>
-        <id name="persistenceId">
-          <column name="PID"/>
-        </id>
-      </attributes>
-  </mapped-superclass>
   <entity class="io.vlingo.symbio.store.object.jdbc.jpa.Person">
       <table name="PERSON" />
-      <inheritance strategy="SINGLE_TABLE"/>
       <named-query name="Person.allPersons">
         <query>SELECT p FROM Person p ORDER BY p.id ASC</query>
       </named-query>
@@ -28,9 +20,9 @@
       	<query>SELECT p FROM Person p WHERE p.age >= :age ORDER BY p.id ASC</query>
       </named-query>
       <attributes>
-	      <basic name="id">
+	      <id name="id">
 	        <column name="ID"/>
-	      </basic>
+	      </id>
 	      <basic name="age">
 	        <column name="AGE" />
 	      </basic>

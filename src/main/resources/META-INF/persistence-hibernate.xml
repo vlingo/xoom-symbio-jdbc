@@ -18,13 +18,6 @@
        	<property name="javax.persistence.jdbc.password" value="test"/>
        	<property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
        	<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
-       	<property name="javax.persistence.schema-generation.scripts.action" value="drop-and-create"/>
-       	<property name="javax.persistence.schema-generation.scripts.create-target" value="file:///tmp/createDDL.jdbc"/>
-       	<property name="javax.persistence.schema-generation.scripts.drop-target" value="file:///tmp/dropDDL.jdbc"/>
-       	<property name="javax.persistence.schema-generation.create-source" value="metadata"/>
-       	<property name="javax.persistence.schema-generation.drop-source" value="metadata"/>
-       	<property name="javax.persistence.schema-generation.create-script-source" value="file:///tmp/createDDL.jdbc"/>
-       	<property name="javax.persistence.schema-generation.drop-script-source" value="file:///tmp/dropDDL.jdbc"/>
       </properties>
     </persistence-unit>
     <persistence-unit name="JpaHsqldbService" transaction-type="RESOURCE_LOCAL">
@@ -39,17 +32,10 @@
        	<property name="javax.persistence.jdbc.user" value="SA"/>
        	<property name="javax.persistence.jdbc.password" value=""/>
        	<property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
-       	<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
-       	<property name="javax.persistence.schema-generation.scripts.action" value="drop-and-create"/>
-       	<property name="javax.persistence.schema-generation.scripts.create-target" value="file:///tmp/createDDL.jdbc"/>
-       	<property name="javax.persistence.schema-generation.scripts.drop-target" value="file:///tmp/dropDDL.jdbc"/>
-       	<property name="javax.persistence.schema-generation.create-source" value="metadata"/>
-       	<property name="javax.persistence.schema-generation.drop-source" value="metadata"/>
-       	<property name="javax.persistence.schema-generation.create-script-source" value="file:///tmp/createDDL.jdbc"/>
-       	<property name="javax.persistence.schema-generation.drop-script-source" value="file:///tmp/dropDDL.jdbc"/>
+      	<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
       </properties>
     </persistence-unit>
-<!--     <persistence-unit name="JpaPostgresService" transaction-type="RESOURCE_LOCAL">
+    <persistence-unit name="JpaPostgresService" transaction-type="RESOURCE_LOCAL">
       <description>
       	Example persistence unit for Postgresql where Hibernate is the JPA provider. 
       </description>
@@ -61,14 +47,7 @@
        	<property name="javax.persistence.jdbc.user" value="vlingo_test"/>
        	<property name="javax.persistence.jdbc.password" value="vlingo123"/>
        	<property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
-       	<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
-       	<property name="javax.persistence.schema-generation.scripts.action" value="drop-and-create"/>
-       	<property name="javax.persistence.schema-generation.scripts.create-target" value="file:///tmp/createDDL.jdbc"/>
-       	<property name="javax.persistence.schema-generation.scripts.drop-target" value="file:///tmp/dropDDL.jdbc"/>
-       	<property name="javax.persistence.schema-generation.create-source" value="metadata"/>
-       	<property name="javax.persistence.schema-generation.drop-source" value="metadata"/>
-       	<property name="javax.persistence.schema-generation.create-script-source" value="file:///tmp/createDDL.jdbc"/>
-       	<property name="javax.persistence.schema-generation.drop-script-source" value="file:///tmp/dropDDL.jdbc"/>
+    	<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
       </properties>
-    </persistence-unit> -->
+    </persistence-unit>
 </persistence>

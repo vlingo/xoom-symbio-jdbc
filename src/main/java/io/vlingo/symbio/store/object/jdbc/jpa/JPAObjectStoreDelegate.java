@@ -25,7 +25,6 @@ import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.object.MapQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStore;
-import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 
@@ -103,8 +102,8 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
       int count = 0;
       em.getTransaction().begin();
       for (final Object o : persistentObjects) {
-        PersistentObject po = (PersistentObject) o;
-        createOrUpdate(po, po.persistenceId());
+        Entity detachedEntity = (Entity) o;
+        createOrUpdate(detachedEntity, detachedEntity.id());
         count++;
       }
       em.getTransaction().commit();
@@ -167,7 +166,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     if (expression.isMapQueryExpression()) {
       MapQueryExpression mapExpression = expression.asMapQueryExpression();
       Object idObj = mapExpression.parameters.get("id");
-      obj = findObject(mapExpression.type, idObj);
+      obj = findEntity(mapExpression.type, idObj);
       if (obj != null)
         em.detach(obj);
     } else {
@@ -189,10 +188,10 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   public void remove(Object persistentObject, long removeId, PersistResultInterest interest, Object object) {
     try {
       int count = 0;
-      Object managedObject = findObject(persistentObject.getClass(), removeId);
-      if (managedObject != null) {
+      Object managedEntity = findEntity(persistentObject.getClass(), removeId);
+      if (managedEntity != null) {
         em.getTransaction().begin();
-        em.remove(managedObject);
+        em.remove(managedEntity);
         em.getTransaction().commit();
         count++;
       }
@@ -224,32 +223,32 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     // TODO: implementation
   }
 
-  protected Object findObject(Class<?> entityClass, Object primaryKey) {
+  protected Object findEntity(Class<?> entityClass, Object primaryKey) {
     return em.find(entityClass, primaryKey);
   }
 
   /**
-   * @param persistentObject unmanaged entity to be persisted if does not exist or merged if does exist.
+   * @param detachedEntity unmanaged entity to be persisted if does not exist or merged if does exist.
    * @param updateId the primary key to be used to find the managed entity.
    */
-  protected void createOrUpdate(final Object persistentObject, final long updateId) {
+  protected void createOrUpdate(final Object detachedEntity, final long updateId) {
     if (ObjectStore.isNoId(updateId)) {
       /*
        * RDB is expected to provide the id in this case.
        */
-      em.persist(persistentObject);
+      em.persist(detachedEntity);
     } else {
-      Object managedObject = findObject(persistentObject.getClass(), updateId);
-      if (managedObject == null) {
+      Object managedEntity = findEntity(detachedEntity.getClass(), updateId);
+      if (managedEntity == null) {
         /*
          * App provided id is not yet saved.
          */
-        em.persist(persistentObject);
+        em.persist(detachedEntity);
       } else {
         /*
          * object to be updated
          */
-        em.merge(persistentObject);
+        em.merge(detachedEntity);
       }
     }
   }
