@@ -48,6 +48,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
 
   /**
    * Constructs my default state.
+   * @param stage the Stage I use
    * @param configuration the Configuration used to configure my concrete subclasses
    */
   public JdbiObjectStoreDelegate(final Stage stage, final Configuration configuration) {
