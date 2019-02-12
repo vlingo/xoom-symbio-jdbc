@@ -9,8 +9,6 @@ package io.vlingo.symbio.store.object.jdbc.jpa;
 import java.util.Collection;
 
 import io.vlingo.actors.Actor;
-import io.vlingo.common.Scheduled;
-import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 
@@ -18,7 +16,7 @@ import io.vlingo.symbio.store.object.QueryExpression;
  * JPAObjectStoreActor
  *
  */
-public class JPAObjectStoreActor extends Actor implements JPAObjectStore, Scheduled {
+public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   private boolean closed;
   private final JPAObjectStoreDelegate delegate;
 
@@ -90,15 +88,6 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore, Schedu
   @Override
   public void registerMapper(PersistentObjectMapper mapper) {
     delegate.registerMapper(mapper);
-  }
-
-  /*
-   * @see io.vlingo.common.Scheduled#intervalSignal(io.vlingo.common.Scheduled,
-   * java.lang.Object)
-   */
-  @Override
-  public void intervalSignal(Scheduled scheduled, Object data) {
-    delegate.timeoutCheck();
   }
 
   /*

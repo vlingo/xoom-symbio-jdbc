@@ -216,13 +216,6 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     throw new UnsupportedOperationException("registerMapper is unnecessary for JPA.");
   }
 
-  /**
-   * Check for timed out transaction
-   */
-  public void timeoutCheck() {
-    // TODO: implementation
-  }
-
   protected Object findEntity(Class<?> entityClass, Object primaryKey) {
     return em.find(entityClass, primaryKey);
   }
