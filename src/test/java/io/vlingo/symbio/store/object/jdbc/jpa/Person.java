@@ -8,14 +8,11 @@ package io.vlingo.symbio.store.object.jdbc.jpa;
 
 import java.util.Objects;
 
-import io.vlingo.symbio.store.object.PersistentObject;
-
 /**
  * Person
  *
  */
-public class Person implements Entity {
-  private static final long serialVersionUID = 1L;
+public class Person implements ReferenceObject {
 
   protected int age;
   protected long id;
@@ -76,7 +73,7 @@ public class Person implements Entity {
     return new Person(person.id, person.age, person.name, person.version);
   }
 
-  /* @see io.vlingo.symbio.store.object.jdbc.jpa.Entity#id() */
+  /* @see io.vlingo.symbio.store.object.jdbc.jpa.ReferenceObject#id() */
   @Override
   public Long id() {
     return this.id;

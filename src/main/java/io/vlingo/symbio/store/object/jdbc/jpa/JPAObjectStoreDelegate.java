@@ -102,7 +102,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
       int count = 0;
       em.getTransaction().begin();
       for (final Object o : persistentObjects) {
-        Entity detachedEntity = (Entity) o;
+        ReferenceObject detachedEntity = (ReferenceObject) o;
         createOrUpdate(detachedEntity, detachedEntity.id());
         count++;
       }
