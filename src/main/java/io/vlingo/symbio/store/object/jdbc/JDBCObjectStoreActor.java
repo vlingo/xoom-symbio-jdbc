@@ -19,10 +19,11 @@ import io.vlingo.symbio.store.object.QueryExpression;
  * The actor implementing the {@code ObjectStore} protocol in behalf of
  * any number of {@code JDBCObjectStoreDelegate} types.
  */
-public class JDBCObjectStoreActor extends Actor implements ObjectStore, Scheduled {
+public class JDBCObjectStoreActor extends Actor implements ObjectStore, Scheduled<Object> {
   private boolean closed;
   private final JDBCObjectStoreDelegate delegate;
 
+  @SuppressWarnings("unchecked")
   public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate) {
     this.delegate = delegate;
     this.closed = false;
@@ -80,7 +81,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   }
 
   @Override
-  public void intervalSignal(final Scheduled scheduled, final Object data) {
+  public void intervalSignal(final Scheduled<Object> scheduled, final Object data) {
     delegate.timeoutCheck();
   }
 
