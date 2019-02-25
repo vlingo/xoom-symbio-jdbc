@@ -130,7 +130,7 @@ public abstract class JDBCTextStateStoreActorTest {
   
   @Test
   public void testRedispatch() {
-    interest.afterCompleting(1);
+    interest.afterCompleting(3);
     final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
 
     accessDispatcher.writeUsing("processDispatch", false);

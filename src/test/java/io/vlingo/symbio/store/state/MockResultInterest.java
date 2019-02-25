@@ -46,7 +46,9 @@ public class MockResultInterest
      * update confirmDispatchedResultedIn via AccessSafely to prevent
      * database connection from closing before dispatch is confirmed
      */
+    System.out.println("WRITE");
     access.writeUsing("confirmDispatchedResultedIn", 1);
+    System.out.println("WRITE");
   }
 
   @Override
@@ -54,10 +56,12 @@ public class MockResultInterest
     outcome
       .andThen(result -> {
         access.writeUsing("readStoreData", new StoreData(1, result, state, metadata, null));
+        System.out.println("WRITE");
         return result;
       })
       .otherwise(cause -> {
         access.writeUsing("readStoreData", new StoreData(1, cause.result, state, metadata, cause));
+        System.out.println("WRITE");
         return cause.result;
       });
   }
@@ -67,10 +71,12 @@ public class MockResultInterest
     outcome
       .andThen(result -> {
         access.writeUsing("writeStoreData", new StoreData(1, result, state, null, null));
+        System.out.println("WRITE");
         return result;
       })
       .otherwise(cause -> {
         access.writeUsing("writeStoreData", new StoreData(1, cause.result, state, null, cause));
+        System.out.println("WRITE");
         return cause.result;
       });
   }
