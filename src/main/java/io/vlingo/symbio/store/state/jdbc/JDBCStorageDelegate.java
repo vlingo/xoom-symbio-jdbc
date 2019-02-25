@@ -119,9 +119,10 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   public void confirmDispatched(final String dispatchId) {
     try {
       beginWrite();
-      dispatchableCachedStatements.deleteStatement().preparedStatement.clearParameters();
-      dispatchableCachedStatements.deleteStatement().preparedStatement.setString(1, dispatchId);
-      dispatchableCachedStatements.deleteStatement().preparedStatement.executeUpdate();
+      PreparedStatement deleteStmt = dispatchableCachedStatements.deleteStatement().preparedStatement;
+      deleteStmt.clearParameters();
+      deleteStmt.setString(1, dispatchId);
+      deleteStmt.executeUpdate();
       complete();
     } catch (Exception e) {
       fail();
