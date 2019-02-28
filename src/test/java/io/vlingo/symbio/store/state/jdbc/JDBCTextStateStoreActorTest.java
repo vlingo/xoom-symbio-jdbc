@@ -41,8 +41,6 @@ public abstract class JDBCTextStateStoreActorTest {
 
   @Test
   public void testThatStateStoreDispatches() throws Exception {
-    System.out.println(getClass().getSimpleName() + "::testThatStateStoreDispatches - entered");
-    try {
     final AccessSafely accessInterest1 = interest.afterCompleting(6);
     final AccessSafely accessDispatcher1 = dispatcher.afterCompleting(3);
 
@@ -81,16 +79,10 @@ public abstract class JDBCTextStateStoreActorTest {
     assertEquals("456", state456.id);
     final State<?> state567 = accessDispatcher1.readFrom("dispatchedState", dispatchId("567"));
     assertEquals("567", state567.id);
-    }
-    finally {
-      System.out.println(getClass().getSimpleName() + "::testThatStateStoreDispatches - exited");
-    }
   }
 
   @Test
   public void testThatReadErrorIsReported() {
-    System.out.println(getClass().getSimpleName() + "::testThatReadErrorIsReported - entered");
-    try {
     final AccessSafely accessInterest1 = interest.afterCompleting(3);
     dispatcher.afterCompleting(2);
     
@@ -118,16 +110,10 @@ public abstract class JDBCTextStateStoreActorTest {
     assertTrue(result2.isError());
     final Object objectState = accessInterest2.readFrom("stateHolder");
     assertNull(objectState);
-    }
-    finally {
-      System.out.println(getClass().getSimpleName() + "::testThatReadErrorIsReported - exited");
-    }
   }
 
   @Test
   public void testThatWriteErrorIsReported() {
-    System.out.println(getClass().getSimpleName() + "::testThatWriteErrorIsReported - entered");
-    try {
     final AccessSafely accessInterest1 = interest.afterCompleting(1);
     dispatcher.afterCompleting(1);
 
@@ -140,16 +126,10 @@ public abstract class JDBCTextStateStoreActorTest {
     assertTrue(result1.isError());
     final Object objectState = accessInterest1.readFrom("stateHolder");
     assertNull(objectState);
-    }
-    finally {
-      System.out.println(getClass().getSimpleName() + "::testThatWriteErrorIsReported - exited");
-    }
   }
   
   @Test
   public void testRedispatch() {
-    System.out.println(getClass().getSimpleName() + "::testThatWriteErrorIsReported - entered");
-    try {
     interest.afterCompleting(3);
     final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
 
@@ -172,56 +152,38 @@ public abstract class JDBCTextStateStoreActorTest {
     accessDispatcher.writeUsing("processDispatch", true);
 
     int dispatchedStateCount = accessDispatcher.readFrom("dispatchedStateCount");
-    System.out.println("JDBCTextStateStoreActorTest::testRedispatch - dispatchedStateCount=" + dispatchedStateCount);
     assertTrue("dispatchedStateCount", dispatchedStateCount == 3);
     
     int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
-    System.out.println("JDBCTextStateStoreActorTest::testRedispatch - dispatchAttemptCount=" + dispatchAttemptCount);
-    assertTrue("dispatchAttemptCount", dispatchAttemptCount > 1);
-    }
-    finally {
-      System.out.println(getClass().getSimpleName() + "::testThatWriteErrorIsReported - exited");
-    }
+    assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
   }
 
   @Before
   public void setUp() throws Exception {
-    System.out.println(getClass().getSimpleName() + "::setUp - entered");
-    try {
-      world = World.startWithDefaults("test-store");
-  
-      entity1StoreName = Entity1.class.getSimpleName();
-      StateTypeStateStoreMap.stateTypeToStoreName(Entity1.class, entity1StoreName);
-  
-      configuration = testConfiguration(DataFormat.Text);
-  
-      delegate = delegate();
-  
-      interest = new MockResultInterest();
-      dispatcher = new MockTextDispatcher(0, interest);
-  
-      store = world.actorFor(
-              StateStore.class,
-              Definition.has(JDBCStateStoreActor.class, Definition.parameters(dispatcher, delegate)));
-      store.registerAdapter(Entity1.class, new Entity1StateAdapter());
-    }
-    finally {
-      System.out.println(getClass().getSimpleName() + "::setUp - exited");
-    }
+    world = World.startWithDefaults("test-store");
+
+    entity1StoreName = Entity1.class.getSimpleName();
+    StateTypeStateStoreMap.stateTypeToStoreName(Entity1.class, entity1StoreName);
+
+    configuration = testConfiguration(DataFormat.Text);
+
+    delegate = delegate();
+
+    interest = new MockResultInterest();
+    dispatcher = new MockTextDispatcher(0, interest);
+
+    store = world.actorFor(
+            StateStore.class,
+            Definition.has(JDBCStateStoreActor.class, Definition.parameters(dispatcher, delegate)));
+    store.registerAdapter(Entity1.class, new Entity1StateAdapter());
   }
 
   @After
   public void tearDown() throws Exception {
-    System.out.println(getClass().getSimpleName() + "::tearDown - entered");
-    try {
-      if (configuration == null) return;
-      configuration.cleanUp();
-      delegate.close();
-      world.terminate();
-    }
-    finally {
-      System.out.println(getClass().getSimpleName() + "::tearDown - exited");
-    }
+    if (configuration == null) return;
+    configuration.cleanUp();
+    delegate.close();
+    world.terminate();
   }
 
   protected abstract StorageDelegate delegate() throws Exception;
