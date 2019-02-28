@@ -41,6 +41,8 @@ public abstract class JDBCTextStateStoreActorTest {
 
   @Test
   public void testThatStateStoreDispatches() throws Exception {
+    System.out.println(getClass().getSimpleName() + "::testThatStateStoreDispatches - entered");
+    try {
     final AccessSafely accessInterest1 = interest.afterCompleting(6);
     final AccessSafely accessDispatcher1 = dispatcher.afterCompleting(3);
 
@@ -79,10 +81,16 @@ public abstract class JDBCTextStateStoreActorTest {
     assertEquals("456", state456.id);
     final State<?> state567 = accessDispatcher1.readFrom("dispatchedState", dispatchId("567"));
     assertEquals("567", state567.id);
+    }
+    finally {
+      System.out.println(getClass().getSimpleName() + "::testThatStateStoreDispatches - exited");
+    }
   }
 
   @Test
   public void testThatReadErrorIsReported() {
+    System.out.println(getClass().getSimpleName() + "::testThatReadErrorIsReported - entered");
+    try {
     final AccessSafely accessInterest1 = interest.afterCompleting(3);
     dispatcher.afterCompleting(2);
     
@@ -110,10 +118,16 @@ public abstract class JDBCTextStateStoreActorTest {
     assertTrue(result2.isError());
     final Object objectState = accessInterest2.readFrom("stateHolder");
     assertNull(objectState);
+    }
+    finally {
+      System.out.println(getClass().getSimpleName() + "::testThatReadErrorIsReported - exited");
+    }
   }
 
   @Test
   public void testThatWriteErrorIsReported() {
+    System.out.println(getClass().getSimpleName() + "::testThatWriteErrorIsReported - entered");
+    try {
     final AccessSafely accessInterest1 = interest.afterCompleting(1);
     dispatcher.afterCompleting(1);
 
@@ -126,10 +140,16 @@ public abstract class JDBCTextStateStoreActorTest {
     assertTrue(result1.isError());
     final Object objectState = accessInterest1.readFrom("stateHolder");
     assertNull(objectState);
+    }
+    finally {
+      System.out.println(getClass().getSimpleName() + "::testThatWriteErrorIsReported - exited");
+    }
   }
   
   @Test
   public void testRedispatch() {
+    System.out.println(getClass().getSimpleName() + "::testThatWriteErrorIsReported - entered");
+    try {
     interest.afterCompleting(3);
     final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
 
@@ -158,6 +178,10 @@ public abstract class JDBCTextStateStoreActorTest {
     int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
     System.out.println("JDBCTextStateStoreActorTest::testRedispatch - dispatchAttemptCount=" + dispatchAttemptCount);
     assertTrue("dispatchAttemptCount", dispatchAttemptCount > 1);
+    }
+    finally {
+      System.out.println(getClass().getSimpleName() + "::testThatWriteErrorIsReported - exited");
+    }
   }
 
   @Before
