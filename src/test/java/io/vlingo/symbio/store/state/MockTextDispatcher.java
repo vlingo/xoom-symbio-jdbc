@@ -41,6 +41,7 @@ public class MockTextDispatcher implements Dispatcher {
     dispatchAttemptCount.getAndIncrement();
     if (processDispatch.get()) {
       access.writeUsing("dispatchedState", dispatchId, (State<?>) state);
+      System.out.println("dispatcher WRITE dispatchedState");
       control.confirmDispatched(dispatchId, confirmDispatchedResultInterest);
     }
   }
