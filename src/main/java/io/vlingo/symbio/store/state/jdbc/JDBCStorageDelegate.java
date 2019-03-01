@@ -102,7 +102,16 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       logger.log(getClass().getSimpleName() + ": Could not close because: " + e.getMessage(), e);
     }
   }
-
+  
+  public boolean isClosed() {
+    try {
+      return connection == null || connection.isClosed();
+    } catch (Exception e) {
+      logger.log(getClass().getSimpleName() + ": Error while determining if connection is closed: " + e.getMessage(), e);
+      return true;
+    }
+  }
+  
   @Override
   public void complete() throws Exception {
     mode = Mode.None;
