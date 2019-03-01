@@ -182,8 +182,8 @@ public abstract class JDBCTextStateStoreActorTest {
   public void tearDown() throws Exception {
     if (configuration == null) return;
     configuration.cleanUp();
-    delegate.close();
     world.terminate();
+    delegate.close();
   }
 
   protected abstract StorageDelegate delegate() throws Exception;

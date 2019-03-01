@@ -62,11 +62,12 @@ implements DispatcherControl, RedispatchControl, Scheduled<Object> {
     }
   }
   
+  /* @see io.vlingo.actors.Actor#stop() */
   @Override
-  protected void afterStop() {
-    super.afterStop();
+  public void stop() {
     if (cancellable != null) {
       cancellable.cancel();
     }
+    super.stop();
   }
 }
