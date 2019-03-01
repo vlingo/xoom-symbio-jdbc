@@ -46,7 +46,7 @@ implements DispatcherControl, RedispatchControl, Scheduled<Object> {
   
   @Override
   public void confirmDispatched(String dispatchId, ConfirmDispatchedResultInterest interest) {
-//    if (delegate.isClosed()) return;
+    if (delegate.isClosed()) return;
     delegate.confirmDispatched(dispatchId);
     interest.confirmDispatchedResultedIn(Result.Success, dispatchId);
   }
@@ -54,7 +54,7 @@ implements DispatcherControl, RedispatchControl, Scheduled<Object> {
   @Override
   public void dispatchUnconfirmed() {
     try {
-//      if (delegate.isClosed()) return;
+      if (delegate.isClosed()) return;
       Collection<Dispatchable<TextState>> all = delegate.allUnconfirmedDispatchableStates();
       for (final Dispatchable<TextState> dispatchable : all) {
         dispatcher.dispatch(dispatchable.id, dispatchable.state.asTextState());
