@@ -54,11 +54,13 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     control.dispatchUnconfirmed();
   }
 
+  /* @see io.vlingo.actors.Actor#stop() */
   @Override
-  protected void afterStop() {
+  public void stop() {
     if (redispatchControl != null) {
       redispatchControl.stop();
     }
+    super.stop();
   }
   
   @Override
