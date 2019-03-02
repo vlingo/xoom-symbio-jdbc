@@ -62,7 +62,7 @@ public abstract class JDBCTextStateStoreActorTest {
       final State<?> state345 = accessDispatcher1.readFrom("dispatchedState", dispatchId("345"));
       assertEquals("345", state345.id);
       
-      final AccessSafely accessInterest2 = interest.afterCompleting(4);
+      final AccessSafely accessInterest2 = interest.afterCompleting(5);
       final AccessSafely accessDispatcher2 = dispatcher.afterCompleting(4);
   
       accessDispatcher2.writeUsing("processDispatch", false);
@@ -76,7 +76,7 @@ public abstract class JDBCTextStateStoreActorTest {
       accessDispatcher2.readFrom("dispatchedStateCount");
   
       assertEquals(5, (int) accessDispatcher2.readFrom("dispatchedStateCount"));
-      assertEquals(5, (int) accessInterest2.readFrom("confirmDispatchedResultedIn"));
+      assertEquals(6, (int) accessInterest2.readFrom("confirmDispatchedResultedIn"));
       final State<?> state456 = accessDispatcher1.readFrom("dispatchedState", dispatchId("456"));
       assertEquals("456", state456.id);
       final State<?> state567 = accessDispatcher1.readFrom("dispatchedState", dispatchId("567"));
