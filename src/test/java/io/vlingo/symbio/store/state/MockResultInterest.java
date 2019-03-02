@@ -79,7 +79,7 @@ public class MockResultInterest
     access = AccessSafely.afterCompleting(times);
 
     access
-      .writingWith("confirmDispatchedResultedIn", (Integer increment) -> confirmDispatchedResultedIn.addAndGet(increment))
+      .writingWith("confirmDispatchedResultedIn", (Integer increment) -> { System.out.println("WRITE confirmDispatchedResultedIn"); confirmDispatchedResultedIn.addAndGet(increment); })
       .readingWith("confirmDispatchedResultedIn", () -> confirmDispatchedResultedIn.get())
 
       .writingWith("writeStoreData", (StoreData data) -> {
