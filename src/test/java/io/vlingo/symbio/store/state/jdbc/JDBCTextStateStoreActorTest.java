@@ -73,6 +73,7 @@ public abstract class JDBCTextStateStoreActorTest {
     dispatcher.control.dispatchUnconfirmed();
     accessDispatcher2.readFrom("dispatchedStateCount");
 
+    accessDispatcher2.readFrom("dispatchStateLog");
     assertEquals(5, (int) accessDispatcher2.readFrom("dispatchedStateCount"));
     assertEquals(5, (int) accessInterest2.readFrom("confirmDispatchedResultedIn"));
     final State<?> state456 = accessDispatcher1.readFrom("dispatchedState", dispatchId("456"));
