@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence xmlns="http://xmlns.jcp.org/xml/ns/persistence"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence
+             http://xmlns.jcp.org/xml/ns/persistence/persistence_2_1.xsd"
+             version="2.1">
+  
+    <persistence-unit name="JpaMySqlService"  transaction-type="RESOURCE_LOCAL">
+      <description>
+      	Example persistence unit for MySQL where Hibernate is the JPA provider. 
+      </description>
+      <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+      <mapping-file>META-INF/orm.xml</mapping-file>
+      <properties>
+       	<property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
+       	<property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost/test"/>
+       	<property name="javax.persistence.jdbc.user" value="test"/>
+       	<property name="javax.persistence.jdbc.password" value="test"/>
+        <property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
+       	<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/> 
+        <!--Hibernate properties-->
+        <property name="hibernate.show_sql" value="false"/>
+        <property name="hibernate.format_sql" value="false"/>
+        <property name="hibernate.hbm2ddl.auto" value="create"/>
+        <property name="hibernate.dialect" value="org.hibernate.dialect.MySQL8Dialect"/>
+      </properties>
+    </persistence-unit>
+    <persistence-unit name="JpaHsqldbService" transaction-type="RESOURCE_LOCAL">
+      <description>
+      	Example persistence unit for HSQLDB where Hibernate is the JPA provider. 
+      </description>
+      <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+      <mapping-file>META-INF/orm.xml</mapping-file>
+      <properties>
+       	<property name="javax.persistence.jdbc.driver" value="org.hsqldb.jdbc.JDBCDriver"/>
+       	<property name="javax.persistence.jdbc.url" value="jdbc:hsqldb:test"/>
+       	<property name="javax.persistence.jdbc.user" value="SA"/>
+       	<property name="javax.persistence.jdbc.password" value=""/>
+       	<property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
+      	<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
+        <!--Hibernate properties-->
+        <property name="hibernate.show_sql" value="false"/>
+        <property name="hibernate.format_sql" value="false"/>
+        <property name="hibernate.hbm2ddl.auto" value="create"/>
+        <property name="hibernate.dialect" value="org.hibernate.dialect.HSQLDialect"/>
+      </properties>
+    </persistence-unit>
+    <persistence-unit name="JpaPostgresService" transaction-type="RESOURCE_LOCAL">
+      <description>
+      	Example persistence unit for Postgresql where Hibernate is the JPA provider. 
+      </description>
+      <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+      <mapping-file>META-INF/orm.xml</mapping-file>
+      <properties>
+       	<property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver"/>
+       	<property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost/vlingo_test"/>
+       	<property name="javax.persistence.jdbc.user" value="vlingo_test"/>
+       	<property name="javax.persistence.jdbc.password" value="vlingo123"/>
+       	<property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
+    	<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
+        <!--Hibernate properties-->
+        <property name="hibernate.show_sql" value="false"/>
+        <property name="hibernate.format_sql" value="false"/>
+        <property name="hibernate.hbm2ddl.auto" value="create"/>
+        <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQL82Dialect"/>
+      </properties>
+    </persistence-unit>
+</persistence>
