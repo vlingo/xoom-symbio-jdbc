@@ -11,6 +11,7 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -100,6 +101,16 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       }
     } catch (Exception e) {
       logger.log(getClass().getSimpleName() + ": Could not close because: " + e.getMessage(), e);
+    }
+  }
+
+  @Override
+  public boolean isClosed() {
+    try {
+      return connection == null || connection.isClosed();
+    }
+    catch (SQLException ex) {
+      return true;
     }
   }
 
