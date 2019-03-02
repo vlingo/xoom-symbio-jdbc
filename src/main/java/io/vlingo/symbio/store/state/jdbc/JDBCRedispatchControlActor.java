@@ -47,29 +47,41 @@ implements DispatcherControl, RedispatchControl, Scheduled<Object> {
   @Override
   public void confirmDispatched(String dispatchId, ConfirmDispatchedResultInterest interest) {
     if (delegate.isClosed()) return;
-    delegate.confirmDispatched(dispatchId);
-    interest.confirmDispatchedResultedIn(Result.Success, dispatchId);
+    try {
+      delegate.confirmDispatched(dispatchId);
+      interest.confirmDispatchedResultedIn(Result.Success, dispatchId);
+    }
+    catch (Exception ex) {
+      logger().log(getClass().getSimpleName() + " confirmDispatched() failed because: " + ex.getMessage(), ex);
+      cancel();
+    }
   }
   
   @Override
   public void dispatchUnconfirmed() {
+    if (delegate.isClosed()) return;
     try {
-      if (delegate.isClosed()) return;
       Collection<Dispatchable<TextState>> all = delegate.allUnconfirmedDispatchableStates();
       for (final Dispatchable<TextState> dispatchable : all) {
         dispatcher.dispatch(dispatchable.id, dispatchable.state.asTextState());
       }
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       logger().log(getClass().getSimpleName() + " dispatchUnconfirmed() failed because: " + e.getMessage(), e);
+      cancel();
     }
   }
   
   /* @see io.vlingo.actors.Actor#stop() */
   @Override
   public void stop() {
+    cancel();
+    super.stop();
+  }
+
+  private void cancel() {
     if (cancellable != null) {
       cancellable.cancel();
     }
-    super.stop();
   }
 }
