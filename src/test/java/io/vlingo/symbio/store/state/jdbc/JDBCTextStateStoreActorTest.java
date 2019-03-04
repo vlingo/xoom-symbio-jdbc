@@ -41,50 +41,42 @@ public abstract class JDBCTextStateStoreActorTest {
 
   @Test
   public void testThatStateStoreDispatches() throws Exception {
-    System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-    try {
-      final AccessSafely accessInterest1 = interest.afterCompleting(6);
-      final AccessSafely accessDispatcher1 = dispatcher.afterCompleting(3);
-  
-      final Entity1 entity1 = new Entity1("123", 1);
-      store.write(entity1.id, entity1, 1, interest);
-      final Entity1 entity2 = new Entity1("234", 2);
-      store.write(entity2.id, entity2, 1, interest);
-      final Entity1 entity3 = new Entity1("345", 3);
-      store.write(entity3.id, entity3, 1, interest);
-            
-      assertEquals(3, (int) accessDispatcher1.readFrom("dispatchedStateCount"));
-      assertEquals(3, (int) accessInterest1.readFrom("confirmDispatchedResultedIn"));
-      final State<?> state123 = accessDispatcher1.readFrom("dispatchedState", dispatchId("123"));
-      assertEquals("123", state123.id);
-      final State<?> state234 = accessDispatcher1.readFrom("dispatchedState", dispatchId("234"));
-      assertEquals("234", state234.id);
-      final State<?> state345 = accessDispatcher1.readFrom("dispatchedState", dispatchId("345"));
-      assertEquals("345", state345.id);
-      
-      final AccessSafely accessInterest2 = interest.afterCompleting(4);
-      final AccessSafely accessDispatcher2 = dispatcher.afterCompleting(4);
-  
-      accessDispatcher2.writeUsing("processDispatch", false);
-      final Entity1 entity4 = new Entity1("456", 4);
-      store.write(entity4.id, entity4, 1, interest);
-      final Entity1 entity5 = new Entity1("567", 5);
-      store.write(entity5.id, entity5, 1, interest);
-      
-      accessDispatcher2.writeUsing("processDispatch", true);
-      
-      System.out.println("dispatchedStateCount=" + accessDispatcher2.readFrom("dispatchedStateCount"));
-      System.out.println("confirmDispatchedResultedIn=" + accessInterest2.readFrom("confirmDispatchedResultedIn"));
-      assertEquals(5, (int) accessDispatcher2.readFrom("dispatchedStateCount"));
-      assertEquals(5, (int) accessInterest2.readFrom("confirmDispatchedResultedIn"));
-      final State<?> state456 = accessDispatcher2.readFrom("dispatchedState", dispatchId("456"));
-      assertEquals("456", state456.id);
-      final State<?> state567 = accessDispatcher2.readFrom("dispatchedState", dispatchId("567"));
-      assertEquals("567", state567.id);
-    }
-    finally {
-      System.out.println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
-    }
+    final AccessSafely accessInterest1 = interest.afterCompleting(6);
+    final AccessSafely accessDispatcher1 = dispatcher.afterCompleting(3);
+
+    final Entity1 entity1 = new Entity1("123", 1);
+    store.write(entity1.id, entity1, 1, interest);
+    final Entity1 entity2 = new Entity1("234", 2);
+    store.write(entity2.id, entity2, 1, interest);
+    final Entity1 entity3 = new Entity1("345", 3);
+    store.write(entity3.id, entity3, 1, interest);
+          
+    assertEquals(3, (int) accessDispatcher1.readFrom("dispatchedStateCount"));
+    assertEquals(3, (int) accessInterest1.readFrom("confirmDispatchedResultedIn"));
+    final State<?> state123 = accessDispatcher1.readFrom("dispatchedState", dispatchId("123"));
+    assertEquals("123", state123.id);
+    final State<?> state234 = accessDispatcher1.readFrom("dispatchedState", dispatchId("234"));
+    assertEquals("234", state234.id);
+    final State<?> state345 = accessDispatcher1.readFrom("dispatchedState", dispatchId("345"));
+    assertEquals("345", state345.id);
+    
+    final AccessSafely accessInterest2 = interest.afterCompleting(4);
+    final AccessSafely accessDispatcher2 = dispatcher.afterCompleting(4);
+
+    accessDispatcher2.writeUsing("processDispatch", false);
+    final Entity1 entity4 = new Entity1("456", 4);
+    store.write(entity4.id, entity4, 1, interest);
+    final Entity1 entity5 = new Entity1("567", 5);
+    store.write(entity5.id, entity5, 1, interest);
+    
+    accessDispatcher2.writeUsing("processDispatch", true);
+    
+    assertEquals(5, (int) accessDispatcher2.readFrom("dispatchedStateCount"));
+    assertEquals(5, (int) accessInterest2.readFrom("confirmDispatchedResultedIn"));
+    final State<?> state456 = accessDispatcher2.readFrom("dispatchedState", dispatchId("456"));
+    assertEquals("456", state456.id);
+    final State<?> state567 = accessDispatcher2.readFrom("dispatchedState", dispatchId("567"));
+    assertEquals("567", state567.id);
   }
 
   @Test
