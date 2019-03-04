@@ -62,7 +62,7 @@ public abstract class JDBCTextStateStoreActorTest {
       final State<?> state345 = accessDispatcher1.readFrom("dispatchedState", dispatchId("345"));
       assertEquals("345", state345.id);
       
-      final AccessSafely accessInterest2 = interest.afterCompleting(5);
+      final AccessSafely accessInterest2 = interest.afterCompleting(4);
       final AccessSafely accessDispatcher2 = dispatcher.afterCompleting(4);
   
       accessDispatcher2.writeUsing("processDispatch", false);
@@ -72,14 +72,14 @@ public abstract class JDBCTextStateStoreActorTest {
       store.write(entity5.id, entity5, 1, interest);
       
       accessDispatcher2.writeUsing("processDispatch", true);
-      dispatcher.control.dispatchUnconfirmed();
-      accessDispatcher2.readFrom("dispatchedStateCount");
-  
+      
+      System.out.println("dispatchedStateCount=" + accessDispatcher2.readFrom("dispatchedStateCount"));
+      System.out.println("confirmDispatchedResultedIn=" + accessInterest2.readFrom("confirmDispatchedResultedIn"));
       assertEquals(5, (int) accessDispatcher2.readFrom("dispatchedStateCount"));
-      assertEquals(6, (int) accessInterest2.readFrom("confirmDispatchedResultedIn"));
-      final State<?> state456 = accessDispatcher1.readFrom("dispatchedState", dispatchId("456"));
+      assertEquals(5, (int) accessInterest2.readFrom("confirmDispatchedResultedIn"));
+      final State<?> state456 = accessDispatcher2.readFrom("dispatchedState", dispatchId("456"));
       assertEquals("456", state456.id);
-      final State<?> state567 = accessDispatcher1.readFrom("dispatchedState", dispatchId("567"));
+      final State<?> state567 = accessDispatcher2.readFrom("dispatchedState", dispatchId("567"));
       assertEquals("567", state567.id);
     }
     finally {
@@ -105,7 +105,7 @@ public abstract class JDBCTextStateStoreActorTest {
     
     interest = new MockResultInterest();
     final AccessSafely accessInterest2 = interest.afterCompleting(1);
-    final AccessSafely accessDispatcher2 = dispatcher.afterCompleting(1);
+    dispatcher.afterCompleting(1);
     
     store.read(entity.id, null, interest);  // includes read
     
@@ -134,6 +134,36 @@ public abstract class JDBCTextStateStoreActorTest {
     assertNull(objectState);
   }
   
+  @Test
+  public void testRedispatch() {
+    interest.afterCompleting(3);
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
+
+    accessDispatcher.writeUsing("processDispatch", false);
+    
+    final Entity1 entity1 = new Entity1("123", 1);
+    store.write(entity1.id, entity1, 1, interest);
+    final Entity1 entity2 = new Entity1("234", 2);
+    store.write(entity2.id, entity2, 1, interest);
+    final Entity1 entity3 = new Entity1("345", 3);
+    store.write(entity3.id, entity3, 1, interest);
+
+    try {
+      Thread.sleep(2000);
+    }
+    catch (InterruptedException ex) {
+      //ignored
+    }
+    
+    accessDispatcher.writeUsing("processDispatch", true);
+
+    int dispatchedStateCount = accessDispatcher.readFrom("dispatchedStateCount");
+    assertTrue("dispatchedStateCount", dispatchedStateCount == 3);
+    
+    int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
+    assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
+  }
+
   @Before
   public void setUp() throws Exception {
     world = World.startWithDefaults("test-store");
