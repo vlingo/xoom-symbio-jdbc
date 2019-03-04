@@ -9,9 +9,10 @@ package io.vlingo.symbio.store.state.jdbc;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.util.Collection;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.Definition;
+import io.vlingo.actors.Protocols;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.Metadata;
@@ -21,43 +22,46 @@ import io.vlingo.symbio.StateAdapter;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
 import io.vlingo.symbio.store.state.StateStoreAdapterAssistant;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 
-public class JDBCStateStoreActor extends Actor implements StateStore, DispatcherControl {
+public class JDBCStateStoreActor extends Actor implements StateStore {
   private final StateStoreAdapterAssistant adapterAssistant;
   private final StorageDelegate delegate;
   private final Dispatcher dispatcher;
+  private final RedispatchControl redispatchControl;
 
   public JDBCStateStoreActor(final Dispatcher dispatcher, final StorageDelegate delegate) {
+    this(dispatcher, delegate, 1000L, 1000L);
+  }
+
+  public JDBCStateStoreActor(final Dispatcher dispatcher, final StorageDelegate delegate, final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.dispatcher = dispatcher;
     this.delegate = delegate;
 
     this.adapterAssistant = new StateStoreAdapterAssistant();
-    final DispatcherControl control = selfAs(DispatcherControl.class);
+    
+    Protocols protocols = stage().actorFor(
+      new Class[] { DispatcherControl.class, RedispatchControl.class },
+      Definition.has(
+        JDBCRedispatchControlActor.class,
+        Definition.parameters(dispatcher, delegate, checkConfirmationExpirationInterval, confirmationExpiration))
+    );
+    final DispatcherControl control = protocols.get(0);
+    redispatchControl = protocols.get(1);
+    
     dispatcher.controlWith(control);
     control.dispatchUnconfirmed();
   }
 
   @Override
-  public void confirmDispatched(final String dispatchId, final ConfirmDispatchedResultInterest interest) {
-    delegate.confirmDispatched(dispatchId);
-    interest.confirmDispatchedResultedIn(Result.Success, dispatchId);
-  }
-
-  @Override
-  public void dispatchUnconfirmed() {
-    try {
-      Collection<Dispatchable<TextState>> all = delegate.allUnconfirmedDispatchableStates();
-      for (final Dispatchable<TextState> dispatchable : all) {
-        dispatch(dispatchable.id, dispatchable.state);
-      }
-    } catch (Exception e) {
-      logger().log(getClass().getSimpleName() + " dispatchUnconfirmed() failed because: " + e.getMessage(), e);
+  public void stop() {
+    if (redispatchControl != null) {
+      redispatchControl.stop();
     }
+    super.stop();
   }
-
+  
   @Override
   public void read(final String id, Class<?> type, final ReadResultInterest interest) {
     read(id, type, interest, null);
