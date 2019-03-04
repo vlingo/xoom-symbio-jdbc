@@ -49,6 +49,7 @@ public interface PostgresQueries {
   final static String SQL_CREATE_DISPATCHABLES_STORE =
           "CREATE TABLE {0} (\n" +
           "   d_id BIGSERIAL PRIMARY KEY," +
+          "   d_created_at TIMESTAMP NOT NULL," +
           "   d_originator_id VARCHAR(32) NOT NULL," +
           "   d_dispatch_id VARCHAR(128) NOT NULL,\n" +
           "   d_state_id VARCHAR(128) NOT NULL, \n" +
@@ -72,17 +73,17 @@ public interface PostgresQueries {
 
   final static String SQL_DISPATCHABLE_APPEND =
           "INSERT INTO {0} \n" +
-               "(d_id, d_originator_id, d_dispatch_id, \n" +
+               "(d_id, d_created_at, d_originator_id, d_dispatch_id, \n" +
                " d_state_id, d_state_type, d_state_type_version, \n" +
                " d_state_data, d_state_data_version, \n" +
                " d_state_metadata_value, d_state_metadata_op, d_state_metadata_object, d_state_metadata_object_type) \n" +
-               "VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+               "VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
   final static String SQL_DISPATCHABLE_DELETE =
           "DELETE FROM {0} WHERE d_dispatch_id = ?";
 
   final static String SQL_DISPATCHABLE_SELECT =
-          "SELECT d_dispatch_id, d_state_id, d_state_type, d_state_type_version, d_state_data, d_state_data_version, \n" +
+          "SELECT d_created_at, d_dispatch_id, d_state_id, d_state_type, d_state_type_version, d_state_data, d_state_data_version, \n" +
           "       d_state_metadata_value, d_state_metadata_op, d_state_metadata_object, d_state_metadata_object_type \n" +
           "FROM {0} \n" +
           "WHERE d_originator_id = ? ORDER BY D_ID";

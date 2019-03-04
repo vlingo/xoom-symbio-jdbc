@@ -13,6 +13,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -148,22 +150,23 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     final PreparedStatement preparedStatement = dispatchableCachedStatements.appendStatement().preparedStatement;
 
     preparedStatement.clearParameters();
-    preparedStatement.setString(1, originatorId);
-    preparedStatement.setString(2, dispatchId);
-    preparedStatement.setString(3, state.id);
-    preparedStatement.setString(4, state.type);
-    preparedStatement.setInt(5, state.typeVersion);
+    preparedStatement.setObject(1, Timestamp.valueOf(LocalDateTime.now()));
+    preparedStatement.setString(2, originatorId);
+    preparedStatement.setString(3, dispatchId);
+    preparedStatement.setString(4, state.id);
+    preparedStatement.setString(5, state.type);
+    preparedStatement.setInt(6, state.typeVersion);
     if (format.isBinary()) {
-      setBinaryObject(dispatchableCachedStatements.appendStatement(), 6, state);
+      setBinaryObject(dispatchableCachedStatements.appendStatement(), 7, state);
     } else if (state.isText()) {
-      setTextObject(dispatchableCachedStatements.appendStatement(), 6, state);
+      setTextObject(dispatchableCachedStatements.appendStatement(), 7, state);
     }
-    preparedStatement.setInt(7, state.dataVersion);
-    preparedStatement.setString(8, state.metadata.value);
-    preparedStatement.setString(9, state.metadata.operation);
+    preparedStatement.setInt(8, state.dataVersion);
+    preparedStatement.setString(9, state.metadata.value);
+    preparedStatement.setString(10, state.metadata.operation);
     final Tuple2<String, String> metadataObject = serialized(state.metadata.object);
-    preparedStatement.setString(10, metadataObject._1);
-    preparedStatement.setString(11, metadataObject._2);
+    preparedStatement.setString(11, metadataObject._1);
+    preparedStatement.setString(12, metadataObject._2);
     return (W) preparedStatement;
   }
 
@@ -341,16 +344,17 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   private <S extends State<?>> Dispatchable<S> stateFrom(final ResultSet resultSet) throws Exception {
-    final String dispatchId = resultSet.getString(1);
-    final String id = resultSet.getString(2);
-    final Class<?> type = Class.forName(resultSet.getString(3));
-    final int typeVersion = resultSet.getInt(4);
-    // 5 below
-    final int dataVersion = resultSet.getInt(6);
-    final String metadataValue = resultSet.getString(7);
-    final String metadataOperation = resultSet.getString(8);
-    final String metadataObject = resultSet.getString(9);
-    final String metadataObjectType = resultSet.getString(10);
+    final LocalDateTime createdAt = resultSet.getObject(1, Timestamp.class).toLocalDateTime();
+    final String dispatchId = resultSet.getString(2);
+    final String id = resultSet.getString(3);
+    final Class<?> type = Class.forName(resultSet.getString(4));
+    final int typeVersion = resultSet.getInt(5);
+    // 6 below
+    final int dataVersion = resultSet.getInt(7);
+    final String metadataValue = resultSet.getString(8);
+    final String metadataOperation = resultSet.getString(9);
+    final String metadataObject = resultSet.getString(10);
+    final String metadataObjectType = resultSet.getString(11);
 
     final Object object = metadataObject != null ?
             JsonSerialization.deserialized(metadataObject, Class.forName(metadataObjectType)) : null;
@@ -358,11 +362,11 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     final Metadata metadata = Metadata.with(object, metadataValue, metadataOperation);
 
     if (format.isBinary()) {
-      final byte[] data = binaryDataFrom(resultSet, 5);
-      return new Dispatchable(dispatchId, new BinaryState(id, type, typeVersion, data, dataVersion, metadata));
+      final byte[] data = binaryDataFrom(resultSet, 6);
+      return new Dispatchable(dispatchId, createdAt, new BinaryState(id, type, typeVersion, data, dataVersion, metadata));
     } else {
-      final String data = textDataFrom(resultSet, 5);
-      return new Dispatchable(dispatchId, new TextState(id, type, typeVersion, data, dataVersion, metadata));
+      final String data = textDataFrom(resultSet, 6);
+      return new Dispatchable(dispatchId, createdAt, new TextState(id, type, typeVersion, data, dataVersion, metadata));
     }
   }
 
