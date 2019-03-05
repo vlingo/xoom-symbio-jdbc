@@ -19,7 +19,6 @@ import io.vlingo.symbio.store.state.StateStore.ConfirmDispatchedResultInterest;
 import io.vlingo.symbio.store.state.StateStore.Dispatchable;
 import io.vlingo.symbio.store.state.StateStore.Dispatcher;
 import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
-import io.vlingo.symbio.store.state.StateStore.RedispatchControl;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 /**
  * JDBCRedispatchControlActor is responsible for requesting re-dispatch
@@ -28,8 +27,8 @@ import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
  * to be shifted to a different thread than the one responsible for
  * reading and writing in the state store.
  */
-public class JDBCRedispatchControlActor extends Actor
-implements DispatcherControl, RedispatchControl, Scheduled<Object> {
+public class JDBCDispatcherControlActor extends Actor
+implements DispatcherControl, Scheduled<Object> {
   
   public final static long DEFAULT_REDISPATCH_DELAY = 2000L;
 
@@ -39,17 +38,15 @@ implements DispatcherControl, RedispatchControl, Scheduled<Object> {
   private final Cancellable cancellable;
   
   @SuppressWarnings("unchecked")
-  public JDBCRedispatchControlActor(final Dispatcher dispatcher, final StorageDelegate delegate, final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+  public JDBCDispatcherControlActor(final Dispatcher dispatcher, final StorageDelegate delegate, final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.dispatcher = dispatcher;
     this.delegate = delegate;
     this.confirmationExpiration = confirmationExpiration;
     this.cancellable = scheduler().schedule(selfAs(Scheduled.class), null, DEFAULT_REDISPATCH_DELAY, checkConfirmationExpirationInterval);
-    System.out.println("JDBCRedispatchControlActor constructed at " + System.currentTimeMillis());
   }
   
   @Override
   public void intervalSignal(final Scheduled<Object> scheduled, final Object data) {
-    System.out.println("JDBCRedispatchControlActor::intervalSignal at " + System.currentTimeMillis());
     dispatchUnconfirmed();
   }
   

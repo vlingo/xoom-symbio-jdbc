@@ -12,7 +12,6 @@ import java.sql.ResultSet;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
-import io.vlingo.actors.Protocols;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.Metadata;
@@ -29,7 +28,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   private final StateStoreAdapterAssistant adapterAssistant;
   private final StorageDelegate delegate;
   private final Dispatcher dispatcher;
-  private final RedispatchControl redispatchControl;
+  private final DispatcherControl dispatcherControl;
 
   public JDBCStateStoreActor(final Dispatcher dispatcher, final StorageDelegate delegate) {
     this(dispatcher, delegate, 1000L, 1000L);
@@ -41,23 +40,21 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
 
     this.adapterAssistant = new StateStoreAdapterAssistant();
     
-    Protocols protocols = stage().actorFor(
-      new Class[] { DispatcherControl.class, RedispatchControl.class },
+    this.dispatcherControl = stage().actorFor(
+      DispatcherControl.class,
       Definition.has(
-        JDBCRedispatchControlActor.class,
+        JDBCDispatcherControlActor.class,
         Definition.parameters(dispatcher, delegate, checkConfirmationExpirationInterval, confirmationExpiration))
     );
-    final DispatcherControl control = protocols.get(0);
-    redispatchControl = protocols.get(1);
     
-    dispatcher.controlWith(control);
-    control.dispatchUnconfirmed();
+    dispatcher.controlWith(dispatcherControl);
+    dispatcherControl.dispatchUnconfirmed();
   }
 
   @Override
   public void stop() {
-    if (redispatchControl != null) {
-      redispatchControl.stop();
+    if (dispatcherControl != null) {
+      dispatcherControl.stop();
     }
     super.stop();
   }
