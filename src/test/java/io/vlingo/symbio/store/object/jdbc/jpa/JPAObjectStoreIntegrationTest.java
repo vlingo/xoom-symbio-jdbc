@@ -167,6 +167,7 @@ public class JPAObjectStoreIntegrationTest {
     assertTrue(resultCollection.size() == 3);
 
     final QueryMultiResults mapResults = queryInterest.multiResults.get();
+    @SuppressWarnings("unchecked")
     final Iterator<Person> iterator = (Iterator<Person>) mapResults.persistentObjects.iterator();
 
     /*
