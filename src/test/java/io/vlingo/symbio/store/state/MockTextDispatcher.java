@@ -6,7 +6,6 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -20,7 +19,7 @@ import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
 
 public class MockTextDispatcher implements Dispatcher {
   private AccessSafely access;
-  
+
   public final ConfirmDispatchedResultInterest confirmDispatchedResultInterest;
   public DispatcherControl control;
   public final Map<String,State<?>> dispatched = new HashMap<>();
@@ -52,10 +51,10 @@ public class MockTextDispatcher implements Dispatcher {
       .writingWith("dispatchedState", (String id, State<?> state) -> dispatched.put(id, state))
       .readingWith("dispatchedState", (String id) -> dispatched.get(id))
       .readingWith("dispatchedStateCount", () -> dispatched.size())
-      
+
       .writingWith("processDispatch", (Boolean flag) -> processDispatch.set(flag))
       .readingWith("processDispatch", () -> processDispatch.get())
-      
+
       .readingWith("dispatchAttemptCount", () -> dispatchAttemptCount.get())
 
       .readingWith("dispatched", () -> dispatched);
