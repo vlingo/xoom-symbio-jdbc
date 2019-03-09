@@ -75,6 +75,7 @@ public class Person implements ReferenceObject {
 
   /* @see io.vlingo.symbio.store.object.jdbc.jpa.ReferenceObject#id() */
   @Override
+  @SuppressWarnings("unchecked")
   public Long id() {
     return this.id;
   }
