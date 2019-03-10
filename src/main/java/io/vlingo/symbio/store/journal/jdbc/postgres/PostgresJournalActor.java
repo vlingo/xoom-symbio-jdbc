@@ -83,9 +83,9 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
     @Override
     public <S,ST> void append(final String streamName, final int streamVersion, final Source<S> source, final AppendResultInterest interest, final Object object) {
-      final Entry<String> entry = asEntry(source);
       final Consumer<Exception> whenFailed =
-              (e) -> interest.appendResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, streamVersion, source, Optional.empty(), object);
+              (e) -> appendResultedInFailure(streamName, streamVersion, source, null, interest, object, e);
+      final Entry<String> entry = asEntry(source, whenFailed);
       insertEntry(streamName, streamVersion, entry, whenFailed);
       doCommit(whenFailed);
       listener.appended(entry);
@@ -94,9 +94,9 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
     @Override
     public <S,ST> void appendWith(final String streamName, final int streamVersion, final Source<S> source, final ST snapshot, final AppendResultInterest interest, final Object object) {
-      final Entry<String> entry = asEntry(source);
       final Consumer<Exception> whenFailed =
-              (e) -> interest.appendResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, streamVersion, source, Optional.of(snapshot), object);
+              (e) -> appendResultedInFailure(streamName, streamVersion, source, snapshot, interest, object, e);
+      final Entry<String> entry = asEntry(source, whenFailed);
       insertEntry(streamName, streamVersion, entry, whenFailed);
       final Tuple2<Optional<ST>,Optional<TextState>> snapshotState = toState(snapshot, streamVersion);
       snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
@@ -108,9 +108,9 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
     @Override
     public <S,ST> void appendAll(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final AppendResultInterest interest, final Object object) {
-      final List<Entry<String>> entries = asEntries(sources);
       final Consumer<Exception> whenFailed =
-              (e) -> interest.appendAllResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, fromStreamVersion, sources, Optional.empty(), object);
+              (e) -> appendAllResultedInFailure(streamName, fromStreamVersion, sources, null, interest, object, e);
+      final List<Entry<String>> entries = asEntries(sources, whenFailed);
       int version = fromStreamVersion;
       for (Entry<String> entry : entries) {
           insertEntry(streamName, version++, entry, whenFailed);
@@ -122,9 +122,9 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
     @Override
     public <S,ST> void appendAllWith(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final ST snapshot, final AppendResultInterest interest, final Object object) {
-      final List<Entry<String>> entries = asEntries(sources);
       final Consumer<Exception> whenFailed =
-              (e) -> interest.appendAllResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, fromStreamVersion, sources, Optional.of(snapshot), object);
+              (e) -> appendAllResultedInFailure(streamName, fromStreamVersion, sources, snapshot, interest, object, e);
+      final List<Entry<String>> entries = asEntries(sources, whenFailed);
       int version = fromStreamVersion;
       for (Entry<String> entry : entries) {
         insertEntry(streamName, version++, entry, whenFailed);
@@ -155,19 +155,25 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
       throw new IllegalStateException("Adapter not registrered for: " + sourceType.getName());
     }
 
-    private <S> List<Entry<String>> asEntries(final List<Source<S>> sources) {
+    private <S> List<Entry<String>> asEntries(final List<Source<S>> sources, final Consumer<Exception> whenFailed) {
       final List<Entry<String>> entries = new ArrayList<>();
       for (final Source<?> source : sources) {
-        entries.add(asEntry(source));
+        entries.add(asEntry(source, whenFailed));
       }
       return entries;
     }
 
     @SuppressWarnings("unchecked")
-    private Entry<String> asEntry(final Source<?> source) {
-      final EntryAdapter<Source<?>,Entry<?>>  adapter = (EntryAdapter<Source<?>,Entry<?>>) adapter(source.getClass());
+    private Entry<String> asEntry(final Source<?> source, final Consumer<Exception> whenFailed) {
+      try {
+        final EntryAdapter<Source<?>,Entry<?>>  adapter = (EntryAdapter<Source<?>,Entry<?>>) adapter(source.getClass());
 
-      return (Entry<String>) adapter.toEntry(source);
+        return (Entry<String>) adapter.toEntry(source);
+      } catch (Exception e) {
+        whenFailed.accept(e);
+        logger().log("vlingo/symbio-jdbc-postgres: Cannot adapt source to entry because: ", e);
+        throw new IllegalArgumentException(e);
+      }
     }
 
     @Override
@@ -258,6 +264,42 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
             logger().log("vlingo/symbio-jdbc-postgres: Could not insert event with id " + snapshotState.id, e);
             throw new IllegalStateException(e);
         }
+    }
+
+    private <S,ST> void appendResultedInFailure(
+            String streamName,
+            int streamVersion,
+            Source<S> source,
+            final ST snapshot,
+            AppendResultInterest interest,
+            Object object,
+            Exception e) {
+
+      interest.appendResultedIn(
+              Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
+              streamName,
+              streamVersion,
+              source,
+              snapshot == null ? Optional.empty() : Optional.of(snapshot),
+              object);
+    }
+
+    private <S,ST> void appendAllResultedInFailure(
+            String streamName,
+            int streamVersion,
+            List<Source<S>> sources,
+            final ST snapshot,
+            AppendResultInterest interest,
+            Object object,
+            Exception e) {
+
+      interest.appendAllResultedIn(
+              Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
+              streamName,
+              streamVersion,
+              sources,
+              snapshot == null ? Optional.empty() : Optional.of(snapshot),
+              object);
     }
 
     private void doCommit(final Consumer<Exception> whenFailed) {
