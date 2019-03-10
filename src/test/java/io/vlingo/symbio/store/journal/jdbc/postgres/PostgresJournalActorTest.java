@@ -19,6 +19,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.common.serialization.JsonSerialization;
 import io.vlingo.symbio.Entry;
@@ -127,6 +128,22 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
     }
 
     @Test
+    public void testThatInsertsANewListOfEventsWithErrorWithoutASnapshot() {
+        System.out.println("========== BEGIN: testThatInsertsANewListOfEventsWithErrorWithoutASnapshot()");
+        System.out.println("========== BEGIN: EXPECTED EXCEPTIONS AHEAD");
+        TestEvent appendedEvent1 = newEventForData(1);
+        TestEvent appendedEvent3 = newEventForData(3);
+
+        final AccessSafely access = interest.afterCompleting(2);
+
+        journal.appendAllWith(streamName, 1, Arrays.asList(appendedEvent1, null), null, interest, object);
+        journal.appendAllWith(streamName, 3, Arrays.asList(appendedEvent3, null), null, interest, object);
+
+        assertEquals(0, (int) access.readFrom("successCount"));
+        assertEquals(2, (int) access.readFrom("failureCount"));
+    }
+
+    @Test
     public void testThatReturnsSameReaderForSameName() {
         final String name = UUID.randomUUID().toString();
         assertEquals(journal.journalReader(name).await(), journal.journalReader(name).await());
@@ -141,13 +158,13 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
     public static final class Entity1 {
       public final String id;
       public final int number;
-      
+
       public Entity1(final String id, final int number) {
         this.id = id;
         this.number = number;
       }
     }
-    
+
     public static final class Entity1Adapter implements StateAdapter<Entity1,TextState> {
 
       @Override
