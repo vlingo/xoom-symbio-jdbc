@@ -6,18 +6,15 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.After;
@@ -25,7 +22,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import io.vlingo.actors.World;
-import io.vlingo.actors.testkit.TestUntil;
+import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.common.Outcome;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -49,153 +46,133 @@ public class JPAObjectStoreIntegrationTest {
   @Test
   public void testThatObjectStoreInsertsOneAndQuerys() {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
-    persistInterest.until = TestUntil.happenings(1);
+    AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
     Person person = new Person(1L, 21, "Jody Jones");
     objectStore.persist(person, person.id, persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    assertEquals(Result.Success, persistInterestAccess.readFrom("result")); 
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
+    AccessSafely queryInterestAccess = queryInterest.afterCompleting(1);
 
-    queryInterest.until = TestUntil.happenings(1);
     MapQueryExpression expression = MapQueryExpression.using(Person.class, null, MapQueryExpression.map("id", 1L));
     objectStore.queryObject(expression, queryInterest);
-    queryInterest.until.completes();
-    assertNotNull(queryInterest.singleResult.get());
-    assertEquals(person, queryInterest.singleResult.get().persistentObject);
+    assertNotNull( queryInterestAccess.readFrom("singleResult")); 
+    assertEquals(person, queryInterestAccess.readFrom("singleResultValue")); 
 
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
-    removeInterest.until = TestUntil.happenings(1);
+    AccessSafely removeInterestAccess = removeInterest.afterCompleting(1);
     objectStore.remove(person, person.id, removeInterest);
-    removeInterest.until.completes();
+    assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
   }
 
   @Test
   public void testThatObjectStoreInsertsMultipleAndQueries() {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
-    persistInterest.until = TestUntil.happenings(1);
+    AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
     Person person1 = new Person(1L, 21, "Jody Jones");
     Person person2 = new Person(2L, 21, "Joey Jones");
     Person person3 = new Person(3L, 25, "Mira Jones");
     objectStore.persistAll(Arrays.asList(person1, person2, person3), persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
+    AccessSafely queryInterestAccess = queryInterest.afterCompleting(1);
     queryInterest.multiResults.set(null);
-    queryInterest.until = TestUntil.happenings(1);
     QueryExpression queryExpression = QueryExpression.using(Person.class, "Person.allPersons");
     objectStore.queryAll(queryExpression, queryInterest);
-    queryInterest.until.completes();
-    final QueryMultiResults multiResults = queryInterest.multiResults.get();
-    assertNotNull(multiResults);
-    assertEquals(3, multiResults.persistentObjects.size());
-    @SuppressWarnings("unchecked")
-    final Iterator<Person> iterator = (Iterator<Person>) multiResults.persistentObjects.iterator();
-    assertEquals(person1, iterator.next());
-    assertEquals(person2, iterator.next());
-    assertEquals(person3, iterator.next());
+    assertNotNull(queryInterestAccess.readFrom("multiResults"));
+    assertEquals(3, (int)queryInterestAccess.readFrom("multiResultsSize")); 
+    assertEquals(person1, queryInterestAccess.readFrom("multiResultsValue", 0)); 
+    assertEquals(person2, queryInterestAccess.readFrom("multiResultsValue", 1)); 
+    assertEquals(person3, queryInterestAccess.readFrom("multiResultsValue", 2));
 
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
-    removeInterest.until = TestUntil.happenings(3);
+    AccessSafely removeInterestAccess = removeInterest.afterCompleting(3);
     objectStore.remove(person1, person1.id, removeInterest);
     objectStore.remove(person2, person2.id, removeInterest);
     objectStore.remove(person3, person3.id, removeInterest);
-    removeInterest.until.completes();
+    assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
+    assertEquals(3, (int)removeInterestAccess.readFrom("count"));
   }
 
   @Test
   public void testThatSingleEntityUpdates() {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
-    persistInterest.until = TestUntil.happenings(1);
+    final AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
     Person person1 = new Person(1L, 21, "Jody Jones");
 
     objectStore.persist(person1, person1.id, persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
     final TestPersistResultInterest updateInterest = new TestPersistResultInterest();
-    updateInterest.until = TestUntil.happenings(1);
+    final AccessSafely updateInterestAccess = updateInterest.afterCompleting(1);
     person1 = person1.newPersonWithName( person1.name + " " + person1.id );
     objectStore.persist(person1, person1.id, updateInterest);
-    updateInterest.until.completes();
-    assertEquals(Result.Success, updateInterest.outcome.get().andThen(success -> success).get());
+    assertEquals(Result.Success, updateInterestAccess.readFrom("result"));
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
-    queryInterest.until = TestUntil.happenings(1);
+    final AccessSafely queryInterestAccess = queryInterest.afterCompleting(1);
     MapQueryExpression expression = MapQueryExpression.using(Person.class, null, MapQueryExpression.map("id", 1L));
     objectStore.queryObject(expression, queryInterest);
-    queryInterest.until.completes();
-    assertNotNull(queryInterest.singleResult.get());
-    Person queriedPerson = (Person) queryInterest.singleResult.get().persistentObject;
+    assertNotNull( queryInterestAccess.readFrom("singleResult"));
+    Person queriedPerson = (Person) queryInterestAccess.readFrom("singleResultValue");
     assertEquals(person1.id, queriedPerson.id);
     assertEquals(person1.age, queriedPerson.age);
     assertEquals(person1.name, queriedPerson.name);
 
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
-    removeInterest.until = TestUntil.happenings(1);
+    final AccessSafely removeInterestAccess = removeInterest.afterCompleting(1);
     objectStore.remove(person1, person1.id, removeInterest);
-    removeInterest.until.completes();
+    assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
   }
 
   @Test
   public void testThatMultipleEntitiesUpdate() {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
-    persistInterest.until = TestUntil.happenings(1);
+    final AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
 
     Person person1 = new Person(1L, 21, "Jody Jones");
     Person person2 = new Person(2L, 21, "Joey Jones");
     Person person3 = new Person(3L, 25, "Mira Jones");
 
     objectStore.persistAll(Arrays.asList(person1, person2, person3), persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    assertEquals(Result.Success, persistInterestAccess.readFrom("result")); 
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
+    final AccessSafely queryInterestAccess = queryInterest.afterCompleting(1);
 
     queryInterest.multiResults.set(null);
-    queryInterest.until = TestUntil.happenings(1);
     QueryExpression queryExpression = QueryExpression.using(Person.class, "Person.allPersons");
     objectStore.queryAll(queryExpression, queryInterest);
-    queryInterest.until.completes();
 
-    Collection<?> resultCollection = queryInterest.multiResults.get().persistentObjects;
-    assertNotNull(resultCollection);
-    assertTrue(resultCollection.size() == 3);
+    assertNotNull(queryInterestAccess.readFrom("multiResultsValue"));
+    int count = queryInterestAccess.readFrom("multiResultsSize");
+    assertEquals(3, count);
 
-    final QueryMultiResults mapResults = queryInterest.multiResults.get();
-    @SuppressWarnings("unchecked")
-    final Iterator<Person> iterator = (Iterator<Person>) mapResults.persistentObjects.iterator();
-
-    /*
-     * TODO: persistentId not being set on queried entities
-     */
     final List<Object> modifiedPersons = new ArrayList<>();
-    while (iterator.hasNext()) {
-      Person person = iterator.next();
+    for ( int i = 0; i < count; i++ ) {
+      Person person = queryInterestAccess.readFrom("multiResultsValue", i);
       person = person.newPersonWithName(person.name + " " + person.id);
-      // person.name + " " + person.id;
       modifiedPersons.add(person);
     }
 
-    persistInterest.until = TestUntil.happenings(1);
-    objectStore.persistAll(modifiedPersons, persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    final TestPersistResultInterest updateInterest = new TestPersistResultInterest();
+    final AccessSafely updateInterestAccess = updateInterest.afterCompleting(1);
+    objectStore.persistAll(modifiedPersons, updateInterest);
+    assertEquals(Result.Success, updateInterestAccess.readFrom("result"));
 
+    final TestQueryResultInterest queryInterest2 = new TestQueryResultInterest();
+    final AccessSafely queryInterest2Access = queryInterest2.afterCompleting(1);
     queryInterest.multiResults.set(null);
-    queryInterest.until = TestUntil.happenings(1);
-    objectStore.queryAll(queryExpression, queryInterest);
-    queryInterest.until.completes();
+    objectStore.queryAll(queryExpression, queryInterest2);
 
-    Object[] queriedArray = queryInterest.multiResults.get().persistentObjects.toArray();
-    assertArrayEquals(modifiedPersons.toArray(), queriedArray);
+    assertEquals(3, (int)queryInterest2Access.readFrom("multiResultsSize"));
     for (int i = 0; i < 3; i++) {
       Person modifiedPerson = (Person) modifiedPersons.get(i);
-      Person queriedPerson = (Person) queriedArray[i];
+      Person queriedPerson = (Person) queryInterest2Access.readFrom("multiResultsValue", i);
       assertEquals(modifiedPerson.id, queriedPerson.id);
       assertEquals(modifiedPerson.age, queriedPerson.age);
       assertEquals(modifiedPerson.name, queriedPerson.name);
@@ -203,83 +180,76 @@ public class JPAObjectStoreIntegrationTest {
 
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
-    removeInterest.until = TestUntil.happenings(3);
+    final AccessSafely removeInterestAccess = removeInterest.afterCompleting(3);
     objectStore.remove(person1, person1.id, removeInterest);
     objectStore.remove(person2, person2.id, removeInterest);
     objectStore.remove(person3, person3.id, removeInterest);
-    removeInterest.until.completes();
+    assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
+    assertEquals(3, (int)removeInterestAccess.readFrom("count"));
   }
 
   @Test
   public void testMultipleEntitiesParameterizedListQuery() {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
-    persistInterest.until = TestUntil.happenings(1);
+    final AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
 
     Person person1 = new Person(1L, 21, "Jody Jones");
     Person person2 = new Person(2L, 21, "Joey Jones");
     Person person3 = new Person(3L, 25, "Mira Jones");
 
     objectStore.persistAll(Arrays.asList(person1, person2, person3), persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
+    final AccessSafely queryInterestAccess = queryInterest.afterCompleting(1);
     queryInterest.multiResults.set(null);
-    queryInterest.until = TestUntil.happenings(1);
     ListQueryExpression queryExpression = ListQueryExpression.using(Person.class, "Person.adultsParmList",
             Arrays.asList(22));
     objectStore.queryAll(queryExpression, queryInterest);
-    queryInterest.until.completes();
-    final QueryMultiResults multiResults = queryInterest.multiResults.get();
-    assertNotNull(multiResults);
-    assertEquals(1, multiResults.persistentObjects.size());
-    @SuppressWarnings("unchecked")
-    final Iterator<Person> iterator = (Iterator<Person>) multiResults.persistentObjects.iterator();
-    assertEquals(person3, iterator.next());
+    assertNotNull(queryInterestAccess.readFrom("multiResults"));
+    assertEquals(1, (int)queryInterestAccess.readFrom("multiResultsSize"));
+    assertEquals(person3, queryInterestAccess.readFrom("multiResultsValue", 0));
 
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
-    removeInterest.until = TestUntil.happenings(3);
+    final AccessSafely removeInterestAccess = removeInterest.afterCompleting(3);
     objectStore.remove(person1, person1.id, removeInterest);
     objectStore.remove(person2, person2.id, removeInterest);
     objectStore.remove(person3, person3.id, removeInterest);
-    removeInterest.until.completes();
+    assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
+    assertEquals(3, (int)removeInterestAccess.readFrom("count"));
   }
 
   @Test
   public void testMultipleEntitiesParameterizedMapQuery() {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
-    persistInterest.until = TestUntil.happenings(1);
+    final AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
 
     Person person1 = new Person(1L, 21, "Jody Jones");
     Person person2 = new Person(2L, 21, "Joey Jones");
     Person person3 = new Person(3L, 25, "Mira Jones");
 
     objectStore.persistAll(Arrays.asList(person1, person2, person3), persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
+    final AccessSafely queryInterestAccess = queryInterest.afterCompleting(1);
     queryInterest.multiResults.set(null);
-    queryInterest.until = TestUntil.happenings(1);
     Map<String, Integer> parmMap = Collections.singletonMap("age", 22);
     MapQueryExpression queryExpression = MapQueryExpression.using(Person.class, "Person.adultsParmMap", parmMap);
     objectStore.queryAll(queryExpression, queryInterest);
-    queryInterest.until.completes();
-    final QueryMultiResults multiResults = queryInterest.multiResults.get();
-    assertNotNull(multiResults);
-    assertEquals(1, multiResults.persistentObjects.size());
-    @SuppressWarnings("unchecked")
-    final Iterator<Person> iterator = (Iterator<Person>) multiResults.persistentObjects.iterator();
-    assertEquals(person3, iterator.next());
+    assertNotNull(queryInterestAccess.readFrom("multiResults"));
+    assertEquals(1, (int)queryInterestAccess.readFrom("multiResultsSize"));
+    assertEquals(person3, queryInterestAccess.readFrom("multiResultsValue", 0));
 
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
-    removeInterest.until = TestUntil.happenings(3);
+    final AccessSafely removeInterestAccess = removeInterest.afterCompleting(3);
     objectStore.remove(person1, person1.id, removeInterest);
     objectStore.remove(person2, person2.id, removeInterest);
     objectStore.remove(person3, person3.id, removeInterest);
-    removeInterest.until.completes();
+    assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
+    assertEquals(3, (int)removeInterestAccess.readFrom("count"));
   }
 
   /**
@@ -306,32 +276,67 @@ public class JPAObjectStoreIntegrationTest {
   private static class TestQueryResultInterest implements QueryResultInterest {
     public AtomicReference<QueryMultiResults> multiResults = new AtomicReference<>();
     public AtomicReference<QuerySingleResult> singleResult = new AtomicReference<>();
-    public TestUntil until;
+    private AccessSafely access = AccessSafely.afterCompleting(1);
 
     @Override
     public void queryAllResultedIn(final Outcome<StorageException, Result> outcome, final QueryMultiResults results,
             final Object object) {
-      multiResults.set(results);
-      until.happened();
+      access.writeUsing( "addAll", results );
     }
 
     @Override
     public void queryObjectResultedIn(final Outcome<StorageException, Result> outcome, final QuerySingleResult result,
             final Object object) {
-      singleResult.set(result);
-      until.happened();
+      access.writeUsing( "add", result );
+    }
+    
+    public AccessSafely afterCompleting( final int times ) {
+      access =
+              AccessSafely
+                .afterCompleting( times )
+                .writingWith("add", (value)-> singleResult.set((QuerySingleResult)value))
+                .writingWith("addAll", (values) -> multiResults.set((QueryMultiResults)values))
+                .readingWith("singleResult", () -> singleResult.get())
+                .readingWith("singleResultValue", () -> singleResult.get().persistentObject)
+                .readingWith("multiResults", () -> multiResults.get())
+                .readingWith("multiResultsValue", () -> multiResults.get().persistentObjects)
+                .readingWith("multiResultsSize", () -> multiResults.get().persistentObjects().size())
+                .readingWith("multiResultsValue", (index) -> {
+                  Person person = null;
+                  if ( multiResults.get().persistentObjects.size() > (int)index )
+                  {
+                    person = (Person)multiResults.get().persistentObjects.toArray()[(int)index];
+                  }
+                  return person;
+                })
+                .readingWith("multiResultsValueAsArray", () -> multiResults.get().persistentObjects.toArray());
+      return access;
     }
   }
 
   private static class TestPersistResultInterest implements PersistResultInterest {
     public AtomicReference<Outcome<StorageException, Result>> outcome = new AtomicReference<>();
-    public TestUntil until;
+    public AtomicInteger count = new AtomicInteger(0);
+    private AccessSafely access = AccessSafely.afterCompleting(1);
 
     @Override
     public void persistResultedIn(final Outcome<StorageException, Result> outcome, final Object persistentObject,
             final int possible, final int actual, final Object object) {
-      this.outcome.set(outcome);
-      until.happened();
+      access.writeUsing("set", outcome);
+    }
+    
+    @SuppressWarnings("unchecked")
+    public AccessSafely afterCompleting( final int times ) {
+      access =
+              AccessSafely
+                .afterCompleting(times)
+                .writingWith("set", (value) -> {
+                  outcome.set((Outcome<StorageException,Result>)value);
+                  count.getAndAdd(1);
+                })
+                .readingWith("result", () -> outcome.get().andThen(success -> success).get())
+                .readingWith("count", () -> count.get());
+      return access;
     }
   }
 
