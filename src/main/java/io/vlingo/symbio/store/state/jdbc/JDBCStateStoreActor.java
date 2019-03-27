@@ -9,7 +9,6 @@ package io.vlingo.symbio.store.state.jdbc;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.util.Collections;
 import java.util.List;
 
 import io.vlingo.actors.Actor;
@@ -42,14 +41,14 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     this.delegate = delegate;
 
     this.adapterAssistant = new StateStoreAdapterAssistant();
-    
+
     this.dispatcherControl = stage().actorFor(
       DispatcherControl.class,
       Definition.has(
         JDBCDispatcherControlActor.class,
         Definition.parameters(dispatcher, delegate, checkConfirmationExpirationInterval, confirmationExpiration))
     );
-    
+
     dispatcher.controlWith(dispatcherControl);
     dispatcherControl.dispatchUnconfirmed();
   }
@@ -60,11 +59,6 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
       dispatcherControl.stop();
     }
     super.stop();
-  }
-  
-  @Override
-  public void read(final String id, Class<?> type, final ReadResultInterest interest) {
-    read(id, type, interest, null);
   }
 
   @Override
@@ -113,26 +107,6 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   }
 
   @Override
-  public <S> void write(final String id, final S state, final int stateVersion, final WriteResultInterest interest) {
-    this.write(id, state, stateVersion, Metadata.nullMetadata(), interest, null);
-  }
-
-  @Override
-  public <S> void write(final String id, final S state, final int stateVersion, final Metadata metadata, final WriteResultInterest interest) {
-    this.write(id, state, stateVersion, metadata, interest, null);
-  }
-
-  @Override
-  public <S> void write(final String id, final S state, final int stateVersion, final WriteResultInterest interest, final Object object) {
-    this.write(id, state, stateVersion, Metadata.nullMetadata(), interest, object);
-  }
-
-  @Override
-  public <S> void write(final String id, final S state, final int stateVersion, final Metadata metadata, final WriteResultInterest interest, final Object object) {
-    this.write(id, state, stateVersion, Collections.emptyList(), metadata, interest, object);
-  }
-
-  @Override
   public <S> void write(final String id, final S state, final int stateVersion, final List<Source<?>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {
     if (interest != null) {
       if (state == null) {
@@ -149,6 +123,8 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
           final TextState raw = metadata == null ?
                   adapterAssistant.adaptToRawState(state, stateVersion) :
                   adapterAssistant.adaptToRawState(state, stateVersion, metadata);
+
+          // TODO: Write sources
 
           delegate.beginWrite();
           final PreparedStatement writeStatement = delegate.writeExpressionFor(storeName, raw);

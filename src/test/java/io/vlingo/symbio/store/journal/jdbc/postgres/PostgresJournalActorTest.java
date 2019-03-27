@@ -178,6 +178,11 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
       }
 
       @Override
+      public <ST> ST fromRawState(final TextState raw, final Class<ST> stateType) {
+        return JsonSerialization.deserialized(raw.data, stateType);
+      }
+
+      @Override
       public TextState toRawState(Entity1 state, int stateVersion, Metadata metadata) {
         final String serialization = JsonSerialization.serialized(state);
         return new TextState(state.id, Entity1.class, typeVersion(), serialization, stateVersion, metadata);

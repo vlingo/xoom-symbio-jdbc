@@ -7,12 +7,12 @@
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
 /**
- * ReferenceObject an object identified primarily by its identity.  
+ * ReferenceObject an object identified primarily by its identity.
  */
 public interface ReferenceObject {
   /**
    * id is the generic representation of the identity that represents a reference object.
-   * 
+   * @param <T> the type of the id
    * @return T inferred identity type of implementing persistent object.
    */
   <T> T id();
