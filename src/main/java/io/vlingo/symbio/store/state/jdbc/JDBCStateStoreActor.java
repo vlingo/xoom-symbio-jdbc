@@ -9,12 +9,15 @@ package io.vlingo.symbio.store.state.jdbc;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.Collections;
+import java.util.List;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.StateAdapter;
@@ -111,7 +114,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
 
   @Override
   public <S> void write(final String id, final S state, final int stateVersion, final WriteResultInterest interest) {
-    this.write(id, state, stateVersion, null, interest, null);
+    this.write(id, state, stateVersion, Metadata.nullMetadata(), interest, null);
   }
 
   @Override
@@ -121,11 +124,16 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
 
   @Override
   public <S> void write(final String id, final S state, final int stateVersion, final WriteResultInterest interest, final Object object) {
-    this.write(id, state, stateVersion, null, interest, object);
+    this.write(id, state, stateVersion, Metadata.nullMetadata(), interest, object);
   }
 
   @Override
   public <S> void write(final String id, final S state, final int stateVersion, final Metadata metadata, final WriteResultInterest interest, final Object object) {
+    this.write(id, state, stateVersion, Collections.emptyList(), metadata, interest, object);
+  }
+
+  @Override
+  public <S> void write(final String id, final S state, final int stateVersion, final List<Source<?>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {
     if (interest != null) {
       if (state == null) {
         interest.writeResultedIn(Failure.of(new StorageException(Result.Error, "The state is null.")), id, state, stateVersion, object);
