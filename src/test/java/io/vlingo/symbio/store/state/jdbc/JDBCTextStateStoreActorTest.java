@@ -18,7 +18,9 @@ import org.junit.Test;
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.State;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
@@ -50,7 +52,7 @@ public abstract class JDBCTextStateStoreActorTest {
     store.write(entity2.id, entity2, 1, interest);
     final Entity1 entity3 = new Entity1("345", 3);
     store.write(entity3.id, entity3, 1, interest);
-          
+
     assertEquals(3, (int) accessDispatcher1.readFrom("dispatchedStateCount"));
     assertEquals(3, (int) accessInterest1.readFrom("confirmDispatchedResultedIn"));
     final State<?> state123 = accessDispatcher1.readFrom("dispatchedState", dispatchId("123"));
@@ -59,7 +61,7 @@ public abstract class JDBCTextStateStoreActorTest {
     assertEquals("234", state234.id);
     final State<?> state345 = accessDispatcher1.readFrom("dispatchedState", dispatchId("345"));
     assertEquals("345", state345.id);
-    
+
     final AccessSafely accessInterest2 = interest.afterCompleting(4);
     final AccessSafely accessDispatcher2 = dispatcher.afterCompleting(4);
 
@@ -68,9 +70,9 @@ public abstract class JDBCTextStateStoreActorTest {
     store.write(entity4.id, entity4, 1, interest);
     final Entity1 entity5 = new Entity1("567", 5);
     store.write(entity5.id, entity5, 1, interest);
-    
+
     accessDispatcher2.writeUsing("processDispatch", true);
-    
+
     assertEquals(5, (int) accessDispatcher2.readFrom("dispatchedStateCount"));
     assertEquals(5, (int) accessInterest2.readFrom("confirmDispatchedResultedIn"));
     final State<?> state456 = accessDispatcher2.readFrom("dispatchedState", dispatchId("456"));
@@ -83,24 +85,24 @@ public abstract class JDBCTextStateStoreActorTest {
   public void testThatReadErrorIsReported() {
     final AccessSafely accessInterest1 = interest.afterCompleting(3);
     dispatcher.afterCompleting(2);
-    
+
     final Entity1 entity = new Entity1("123", 1);
     store.write(entity.id, entity, 1, interest);
     store.read(null, Entity1.class, interest);
-    
+
     assertEquals(1, (int) accessInterest1.readFrom("errorCausesCount"));
     final Exception cause1 = accessInterest1.readFrom("errorCauses");
     assertEquals("The id is null.", cause1.getMessage());
     Result result1 = accessInterest1.readFrom("textReadResult");
     assertTrue(result1.isError());
     assertNull(accessInterest1.readFrom("stateHolder"));
-    
+
     interest = new MockResultInterest();
     final AccessSafely accessInterest2 = interest.afterCompleting(1);
     dispatcher.afterCompleting(1);
-    
+
     store.read(entity.id, null, interest);  // includes read
-    
+
     assertEquals(1, (int) accessInterest2.readFrom("errorCausesCount"));
     final Exception cause2 = accessInterest2.readFrom("errorCauses");
     assertEquals("The type is null.", cause2.getMessage());
@@ -116,7 +118,7 @@ public abstract class JDBCTextStateStoreActorTest {
     dispatcher.afterCompleting(1);
 
     store.write(null, null, 0, interest);
-    
+
     assertEquals(1, (int) accessInterest1.readFrom("errorCausesCount"));
     final Exception cause1 = accessInterest1.readFrom("errorCauses");
     assertEquals("The state is null.", cause1.getMessage());
@@ -125,14 +127,14 @@ public abstract class JDBCTextStateStoreActorTest {
     final Object objectState = accessInterest1.readFrom("stateHolder");
     assertNull(objectState);
   }
-  
+
   @Test
   public void testRedispatch() {
     interest.afterCompleting(3);
     final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
 
     accessDispatcher.writeUsing("processDispatch", false);
-    
+
     final Entity1 entity1 = new Entity1("123", 1);
     store.write(entity1.id, entity1, 1, interest);
     final Entity1 entity2 = new Entity1("234", 2);
@@ -146,12 +148,12 @@ public abstract class JDBCTextStateStoreActorTest {
     catch (InterruptedException ex) {
       //ignored
     }
-    
+
     accessDispatcher.writeUsing("processDispatch", true);
 
     int dispatchedStateCount = accessDispatcher.readFrom("dispatchedStateCount");
     assertTrue("dispatchedStateCount", dispatchedStateCount == 3);
-    
+
     int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
     assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
   }
@@ -170,10 +172,15 @@ public abstract class JDBCTextStateStoreActorTest {
     interest = new MockResultInterest();
     dispatcher = new MockTextDispatcher(0, interest);
 
+    final StateAdapterProvider stateAdapterProvider = new StateAdapterProvider(world);
+    new EntryAdapterProvider(world);
+
+    stateAdapterProvider.registerAdapter(Entity1.class, new Entity1StateAdapter());
+    // NOTE: No adapter registered for Entity2.class because it will use the default
+
     store = world.actorFor(
             StateStore.class,
             Definition.has(JDBCStateStoreActor.class, Definition.parameters(dispatcher, delegate)));
-    store.registerAdapter(Entity1.class, new Entity1StateAdapter());
   }
 
   @After

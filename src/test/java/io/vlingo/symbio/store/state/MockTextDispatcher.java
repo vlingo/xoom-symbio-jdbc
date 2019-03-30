@@ -6,12 +6,14 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.vlingo.actors.testkit.AccessSafely;
+import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.state.StateStore.ConfirmDispatchedResultInterest;
 import io.vlingo.symbio.store.state.StateStore.Dispatcher;
@@ -37,7 +39,7 @@ public class MockTextDispatcher implements Dispatcher {
   }
 
   @Override
-  public <S extends State<?>>  void dispatch(final String dispatchId, final S state) {
+  public <S extends State<?>, C extends Source<?>> void dispatch(final String dispatchId, final S state, final Collection<C> sources) {
     dispatchAttemptCount.getAndIncrement();
     if (processDispatch.get()) {
       access.writeUsing("dispatchedState", dispatchId, (State<?>) state);

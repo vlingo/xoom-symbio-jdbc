@@ -9,28 +9,31 @@ package io.vlingo.symbio.store.state.jdbc;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.Collection;
 import java.util.List;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.TextState;
-import io.vlingo.symbio.StateAdapter;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.StateStoreAdapterAssistant;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 
 public class JDBCStateStoreActor extends Actor implements StateStore {
-  private final StateStoreAdapterAssistant adapterAssistant;
   private final StorageDelegate delegate;
   private final Dispatcher dispatcher;
   private final DispatcherControl dispatcherControl;
+  private final EntryAdapterProvider entryAdapterProvider;
+  private final StateAdapterProvider stateAdapterProvider;
 
   public JDBCStateStoreActor(final Dispatcher dispatcher, final StorageDelegate delegate) {
     this(dispatcher, delegate, 1000L, 1000L);
@@ -40,7 +43,8 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     this.dispatcher = dispatcher;
     this.delegate = delegate;
 
-    this.adapterAssistant = new StateStoreAdapterAssistant();
+    this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
+    this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
 
     this.dispatcherControl = stage().actorFor(
       DispatcherControl.class,
@@ -82,7 +86,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
         try (final ResultSet result = readStatement.executeQuery()) {
           if (result.first()) {
             final TextState raw = delegate.stateFrom(result, id);
-            final Object state = adapterAssistant.adaptFromRawState(raw);
+            final Object state = stateAdapterProvider.fromRaw(raw);
             interest.readResultedIn(Success.of(Result.Success), id, state, raw.dataVersion, raw.metadata, object);
           } else {
             interest.readResultedIn(Failure.of(new StorageException(Result.NotFound, "Not found for: " + id)), id, null, -1, null, object);
@@ -107,22 +111,22 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   }
 
   @Override
-  public <S> void write(final String id, final S state, final int stateVersion, final List<Source<?>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {
+  public <S,C> void write(final String id, final S state, final int stateVersion, final List<Source<C>> sources, final Metadata metadata, final WriteResultInterest interest, final Object object) {
     if (interest != null) {
       if (state == null) {
-        interest.writeResultedIn(Failure.of(new StorageException(Result.Error, "The state is null.")), id, state, stateVersion, object);
+        interest.writeResultedIn(Failure.of(new StorageException(Result.Error, "The state is null.")), id, state, stateVersion, sources, object);
       } else {
         try {
           final String storeName = StateTypeStateStoreMap.storeNameFrom(state.getClass());
 
           if (storeName == null) {
-            interest.writeResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "No type store.")), id, state, stateVersion, object);
+            interest.writeResultedIn(Failure.of(new StorageException(Result.NoTypeStore, "No type store.")), id, state, stateVersion, sources, object);
             return;
           }
 
           final TextState raw = metadata == null ?
-                  adapterAssistant.adaptToRawState(state, stateVersion) :
-                  adapterAssistant.adaptToRawState(state, stateVersion, metadata);
+                  stateAdapterProvider.asRaw(id, state, stateVersion) :
+                  stateAdapterProvider.asRaw(id, state, stateVersion, metadata);
 
           // TODO: Write sources
 
@@ -135,11 +139,11 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
           delegate.complete();
           dispatch(dispatchId, raw);
 
-          interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, object);
+          interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, sources, object);
         } catch (Exception e) {
           logger().log(getClass().getSimpleName() + " writeText() error because: " + e.getMessage(), e);
           delegate.fail();
-          interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, object);
+          interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, sources, object);
         }
       }
     } else {
@@ -150,9 +154,9 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     }
   }
 
-  @Override
-  public <S, R extends State<?>> void registerAdapter(final Class<S> stateType, final StateAdapter<S, R> adapter) {
-    adapterAssistant.registerAdapter(stateType, adapter);
+  private <C> void appendEntries(final List<Source<C>> sources) {
+    final Collection<Entry<?>> all = entryAdapterProvider.asEntries(sources);
+    // TODO: entries.addAll(all);
   }
 
   private void dispatch(final String dispatchId, final State<String> state) {
