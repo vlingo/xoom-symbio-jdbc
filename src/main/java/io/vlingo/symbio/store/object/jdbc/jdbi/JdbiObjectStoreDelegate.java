@@ -26,7 +26,7 @@ import io.vlingo.common.Success;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.object.ObjectStore;
+import io.vlingo.symbio.store.object.ObjectStoreReader;
 import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
@@ -79,7 +79,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
    */
   @Override
   public void persist(final Object persistentObject, final long updateId, final PersistResultInterest interest, final Object object) {
-    final boolean create = ObjectStore.isNoId(updateId);
+    final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
     try {
@@ -103,7 +103,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
    */
   @Override
   public void persistAll(final Collection<Object> persistentObjects, final long updateId, final PersistResultInterest interest, final Object object) {
-    final boolean create = ObjectStore.isNoId(updateId);
+    final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
     try {

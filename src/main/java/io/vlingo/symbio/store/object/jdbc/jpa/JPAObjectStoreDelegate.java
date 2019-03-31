@@ -24,7 +24,7 @@ import io.vlingo.common.Success;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.object.MapQueryExpression;
-import io.vlingo.symbio.store.object.ObjectStore;
+import io.vlingo.symbio.store.object.ObjectStoreReader;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 
@@ -225,7 +225,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
    * @param updateId the primary key to be used to find the managed entity.
    */
   protected void createOrUpdate(final Object detachedEntity, final long updateId) {
-    if (ObjectStore.isNoId(updateId)) {
+    if (ObjectStoreReader.isNoId(updateId)) {
       /*
        * RDB is expected to provide the id in this case.
        */
