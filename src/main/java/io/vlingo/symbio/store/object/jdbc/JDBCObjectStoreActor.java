@@ -8,9 +8,11 @@
 package io.vlingo.symbio.store.object.jdbc;
 
 import java.util.Collection;
+import java.util.List;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Scheduled;
+import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
@@ -43,16 +45,13 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
     }
   }
 
-  /*
-   * @see io.vlingo.symbio.store.object.ObjectStore#persist(java.lang.Object, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object)
-   */
   @Override
-  public void persist(final Object persistentObject, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <E> void persist(final Object persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     delegate.persist(persistentObject, updateId, interest, object);
   }
 
   @Override
-  public void persistAll(final Collection<Object> persistentObjects, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <E> void persistAll(final Collection<Object> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     delegate.persistAll(persistentObjects, updateId, interest, object);    
   }
 
@@ -60,7 +59,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
    * @see io.vlingo.symbio.store.object.ObjectStore#queryAll(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStore.QueryResultInterest, java.lang.Object)
    */
   @Override
-  public void queryAll(QueryExpression expression, QueryResultInterest interest, Object object) {
+  public void queryAll(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
     delegate.queryAll(expression, interest, object);
   }
 
@@ -68,7 +67,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
    * @see io.vlingo.symbio.store.object.ObjectStore#queryObject(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStore.QueryResultInterest, java.lang.Object)
    */
   @Override
-  public void queryObject(QueryExpression expression, QueryResultInterest interest, Object object) {
+  public void queryObject(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
     delegate.queryObject(expression, interest, object);
   }
 
@@ -76,7 +75,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
    * @see io.vlingo.symbio.store.object.ObjectStore#registerMapper(java.lang.Object)
    */
   @Override
-  public void registerMapper(PersistentObjectMapper mapper) {
+  public void registerMapper(final PersistentObjectMapper mapper) {
     delegate.registerMapper(mapper);
   }
 

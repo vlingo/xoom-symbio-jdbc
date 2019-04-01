@@ -7,8 +7,13 @@
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
 import java.util.Collection;
+import java.util.List;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.common.Completes;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapter;
+import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 
@@ -34,25 +39,15 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
     }
   }
 
-  /*
-   * @see io.vlingo.symbio.store.object.ObjectStore#persist(java.lang.Object,
-   * long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest,
-   * java.lang.Object)
-   */
+  /* @see io.vlingo.symbio.store.object.ObjectStore#persist(java.lang.Object, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public void persist(Object persistentObject, long updateId, PersistResultInterest interest, Object object) {
+  public <E> void persist(final Object persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     delegate.persist(persistentObject, updateId, interest, object);
   }
 
-  /*
-   * @see
-   * io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection,
-   * long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest,
-   * java.lang.Object)
-   */
+  /* @see io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public void persistAll(Collection<Object> persistentObjects, long updateId, PersistResultInterest interest,
-          Object object) {
+  public <E> void persistAll(final Collection<Object> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     delegate.persistAll(persistentObjects, updateId, interest, object);
   }
 
@@ -64,7 +59,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
    * java.lang.Object)
    */
   @Override
-  public void queryAll(QueryExpression expression, QueryResultInterest interest, Object object) {
+  public void queryAll(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
     delegate.queryAll(expression, interest, object);
   }
 
@@ -76,7 +71,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
    * java.lang.Object)
    */
   @Override
-  public void queryObject(QueryExpression expression, QueryResultInterest interest, Object object) {
+  public void queryObject(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
     delegate.queryObject(expression, interest, object);
   }
 
@@ -86,7 +81,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
    * store.object.PersistentObjectMapper)
    */
   @Override
-  public void registerMapper(PersistentObjectMapper mapper) {
+  public void registerMapper(final PersistentObjectMapper mapper) {
     delegate.registerMapper(mapper);
   }
 
@@ -97,7 +92,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
    * java.lang.Object)
    */
   @Override
-  public void remove(Object persistentObject, long removeId, PersistResultInterest interest, Object object) {
+  public void remove(final Object persistentObject, final long removeId, final PersistResultInterest interest, final Object object) {
     delegate.remove(persistentObject, removeId, interest);
   }
 

@@ -21,6 +21,7 @@ import io.vlingo.actors.Logger;
 import io.vlingo.actors.Stage;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.object.MapQueryExpression;
@@ -67,14 +68,9 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     }
   }
 
-  /*
-   * @see io.vlingo.symbio.store.object.ObjectStore#persist(java.lang.Object,
-   * long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest,
-   * java.lang.Object)
-   */
+  /* @see io.vlingo.symbio.store.object.ObjectStore#persist(java.lang.Object, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public void persist(final Object persistentObject, final long updateId, final PersistResultInterest interest,
-          final Object object) {
+  public <E> void persist(Object persistentObject, List<Source<E>> sources, long updateId, PersistResultInterest interest, Object object) {
     try {
       em.getTransaction().begin();
       createOrUpdate(persistentObject, updateId);
@@ -89,15 +85,9 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     }
   }
 
-  /*
-   * @see
-   * io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection,
-   * long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest,
-   * java.lang.Object)
-   */
+  /* @see io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public void persistAll(final Collection<Object> persistentObjects, final long updateId,
-          final PersistResultInterest interest, final Object object) {
+  public <E> void persistAll(Collection<Object> persistentObjects, List<Source<E>> sources, long updateId, PersistResultInterest interest, Object object) {
     try {
       int count = 0;
       em.getTransaction().begin();
@@ -245,5 +235,4 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
       }
     }
   }
-
 }

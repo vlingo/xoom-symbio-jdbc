@@ -23,6 +23,7 @@ import io.vlingo.actors.Logger;
 import io.vlingo.actors.Stage;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
@@ -74,11 +75,9 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     }
   }
 
-  /*
-   * @see io.vlingo.symbio.store.object.ObjectStore#persist(java.lang.Object, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object)
-   */
+  /* @see io.vlingo.symbio.store.object.ObjectStore#persist(java.lang.Object, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public void persist(final Object persistentObject, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <E> void persist(final Object persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
@@ -98,11 +97,9 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     }
   }
 
-  /*
-   * @see io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object)
-   */
+  /* @see io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public void persistAll(final Collection<Object> persistentObjects, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <E> void persistAll(final Collection<Object> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
