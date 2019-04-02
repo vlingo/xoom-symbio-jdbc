@@ -7,6 +7,8 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
+import com.google.gson.Gson;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -18,8 +20,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
-import com.google.gson.Gson;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Address;
 import io.vlingo.actors.Definition;
@@ -28,6 +28,7 @@ import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.common.Tuple2;
 import io.vlingo.common.identity.IdentityGenerator;
+import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapter;
 import io.vlingo.symbio.Source;
@@ -221,10 +222,10 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
             final UUID id = identityGenerator.generate();
             final long timestamp = id.timestamp();
 
-            insertEvent.setString(1, entry.entryData);
-            insertEvent.setString(2, gson.toJson(entry.metadata));
-            insertEvent.setString(3, entry.type);
-            insertEvent.setInt(4, entry.typeVersion);
+            insertEvent.setString(1, entry.entryData());
+            insertEvent.setString(2, gson.toJson(entry.metadata()));
+            insertEvent.setString(3, entry.type());
+            insertEvent.setInt(4, entry.typeVersion());
             insertEvent.setString(5, streamName);
             insertEvent.setInt(6, streamVersion);
             insertEvent.setObject(7, id);
@@ -235,7 +236,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
                 throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert event");
             }
 
-            entry.__internal__setId(id.toString());
+            ((BaseEntry<String>) entry).__internal__setId(id.toString()); //questionable cast
         } catch (SQLException e) {
             whenFailed.accept(e);
             logger().log("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString(), e);

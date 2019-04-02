@@ -68,7 +68,7 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
         until.completes();
 
         Entry<String> entry = journalReader.readNext().await();
-        TestEvent event = gson.fromJson(entry.entryData, TestEvent.class);
+        TestEvent event = gson.fromJson(entry.entryData(), TestEvent.class);
         assertEquals(appendedEvent, event);
     }
 
@@ -81,11 +81,11 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
 
         List<Entry<String>> eventStream = journalReader.readNext(2).await();
         Entry<String> entry1 = eventStream.get(0);
-        TestEvent event1 = gson.fromJson(entry1.entryData, TestEvent.class);
+        TestEvent event1 = gson.fromJson(entry1.entryData(), TestEvent.class);
         assertEquals(appendedEvent1, event1);
 
         Entry<String> entry2 = eventStream.get(1);
-        TestEvent event2 = gson.fromJson(entry2.entryData, TestEvent.class);
+        TestEvent event2 = gson.fromJson(entry2.entryData(), TestEvent.class);
         assertEquals(appendedEvent2, event2);
     }
 

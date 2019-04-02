@@ -7,6 +7,8 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
+import com.google.gson.Gson;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,10 +16,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.gson.Gson;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
+import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
@@ -153,7 +154,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<S
         final Class<?> classOfEvent = Class.forName(entryType);
 
         final Metadata eventMetadataDeserialized = gson.fromJson(entryMetadata, Metadata.class);
-        return new Entry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, eventMetadataDeserialized);
+        return new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, eventMetadataDeserialized);
     }
 
     private void retrieveCurrentOffset() {

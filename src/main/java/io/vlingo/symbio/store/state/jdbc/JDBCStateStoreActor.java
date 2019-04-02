@@ -16,7 +16,7 @@ import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
-import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
@@ -155,7 +155,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   }
 
   private <C> void appendEntries(final List<Source<C>> sources) {
-    final Collection<Entry<?>> all = entryAdapterProvider.asEntries(sources);
+    final Collection<BaseEntry<?>> all = entryAdapterProvider.asEntries(sources);
     // TODO: entries.addAll(all);
   }
 

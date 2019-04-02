@@ -10,6 +10,8 @@ package io.vlingo.symbio.store.journal.jdbc.postgres;
 import static io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
 import static org.junit.Assert.assertEquals;
 
+import com.google.gson.Gson;
+
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -18,8 +20,6 @@ import java.util.UUID;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-
-import com.google.gson.Gson;
 
 import io.vlingo.actors.World;
 import io.vlingo.common.identity.IdentityGenerator;
@@ -182,7 +182,7 @@ public abstract class BasePostgresJournalTest {
 
 
     protected final TestEvent parse(Entry<String> event) {
-        return gson.fromJson(event.entryData, TestEvent.class);
+        return gson.fromJson(event.entryData(), TestEvent.class);
     }
 
 }
