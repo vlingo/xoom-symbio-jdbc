@@ -10,7 +10,7 @@ package io.vlingo.symbio.store.journal.jdbc.postgres;
 import com.google.gson.Gson;
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
-import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.TextState;
@@ -67,7 +67,7 @@ public class PostgresStreamReaderActor extends Actor implements StreamReader<Str
 
     private Stream<String> eventsFromOffset(final String streamName, final int offset) throws Exception {
         final State<String> snapshot = latestSnapshotOf(streamName);
-        final List<Entry<String>> events = new ArrayList<>();
+        final List<BaseEntry<String>> events = new ArrayList<>();
 
         int dataVersion = offset;
         State<String> referenceSnapshot = TextState.Null;
@@ -92,7 +92,7 @@ public class PostgresStreamReaderActor extends Actor implements StreamReader<Str
             final Class<?> classOfEvent = Class.forName(eventType);
             final Metadata eventMetadataDeserialized = gson.fromJson(eventMetadata, Metadata.class);
 
-            events.add(new Entry.TextEntry(id, classOfEvent, eventTypeVersion, eventData, eventMetadataDeserialized));
+            events.add(new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, eventData, eventMetadataDeserialized));
         }
 
         return new Stream<>(streamName, dataVersion + events.size(), events, referenceSnapshot);

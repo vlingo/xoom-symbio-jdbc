@@ -11,7 +11,7 @@ import java.util.List;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
-import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.EntryAdapter;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
