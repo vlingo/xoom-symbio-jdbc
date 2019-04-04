@@ -63,10 +63,11 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
   public <A, E> A appendExpressionFor(final List<Entry<E>> entries) throws Exception {
-    final PreparedStatement preparedStatement = dispatchableCachedStatements.appendEntryStatement().preparedStatement;
-
-    return null;
+    final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendEntryStatement();
+    prepareForAppend(cachedStatement, entries);
+    return (A) cachedStatement.preparedStatement;
   }
 
   @Override
@@ -350,22 +351,23 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     cached.preparedStatement.setString(1, id);
   }
 
-  private <E> void prepareForAppend(final CachedStatement<T> cached, final Entry<E> entry) throws Exception {
+  private <E> void prepareForAppend(final CachedStatement<T> cached, final List<Entry<E>> entries) throws Exception {
     cached.preparedStatement.clearParameters();
 
-    // (E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP)
+    for (final Entry<E> entry : entries) {
+      cached.preparedStatement.setString(1, "");
+      cached.preparedStatement.setString(2, entry.type());
+      cached.preparedStatement.setInt(3, entry.typeVersion());
+      if (format.isBinary()) {
+        this.setBinaryObject(cached, 4, entry);
+      } else if (entry.isText()) {
+        this.setTextObject(cached, 4, entry);
+      }
+      cached.preparedStatement.setString(5, entry.metadata().value);
+      cached.preparedStatement.setString(6, entry.metadata().operation);
 
-    cached.preparedStatement.setString(1, "");
-    cached.preparedStatement.setString(2, entry.type);
-    cached.preparedStatement.setInt(3, entry.typeVersion);
-    if (format.isBinary()) {
-      this.setBinaryObject(cached, 4, entry);
-    } else if (entry.isText()) {
-      this.setTextObject(cached, 4, entry);
+      cached.preparedStatement.addBatch();
     }
-    cached.preparedStatement.setInt(5, state.dataVersion);
-    cached.preparedStatement.setString(6, state.metadata.value);
-    cached.preparedStatement.setString(7, state.metadata.operation);
   }
 
   private <S> void prepareForWrite(final CachedStatement<T> cached, final State<S> state) throws Exception {
