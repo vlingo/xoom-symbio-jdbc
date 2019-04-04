@@ -130,12 +130,6 @@ public class Configuration {
 
   public static class TestConfiguration extends Configuration {
     static private final AtomicInteger uniqueNumber = new AtomicInteger(0);
-    static private String testDatabaseName(final DataFormat format, final String databaseName) {
-      return databaseName +
-              "_" +
-              uniqueNumber.incrementAndGet() +
-              (format.isBinary() ? "b":"t");
-    }
 
     private String testDatabaseName;
 
@@ -181,6 +175,13 @@ public class Configuration {
       }  catch (Exception e) {
         throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because the server or database unavilable, or wrong credentials.", e);
       }
+    }
+    
+    protected String testDatabaseName(final DataFormat format, final String databaseName) {
+      return databaseName +
+              "_" +
+              uniqueNumber.incrementAndGet() +
+              (format.isBinary() ? "b":"t");
     }
 
     private Connection swapConnections() {
