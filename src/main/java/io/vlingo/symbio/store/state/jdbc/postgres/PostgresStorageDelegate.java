@@ -14,8 +14,10 @@ import java.text.MessageFormat;
 import org.postgresql.util.PGobject;
 
 import io.vlingo.actors.Logger;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.EntryReader.Advice;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.jdbc.CachedStatement;
@@ -48,10 +50,12 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
     return new PostgresDispatchableCachedStatements<Object>(originatorId, connection, format, logger);
   }
 
+  @Override
   protected String dispatchableIdIndexCreateExpression() {
     return namedDispatchable(SQL_DISPATCH_ID_INDEX);
   }
 
+  @Override
   protected String dispatchableOriginatorIdIndexCreateExpression() {
     return namedDispatchable(SQL_ORIGINATOR_ID_INDEX);
   }
@@ -118,7 +122,7 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
             final Connection connection,
             final DataFormat format,
             final Logger logger) {
-  
+
       super(originatorId, connection, format, null, logger);
     }
 
@@ -136,5 +140,40 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
     protected String selectExpression() {
       return namedDispatchable(SQL_DISPATCHABLE_SELECT);
     }
+
+    @Override
+    protected String appendEntryExpression() {
+      return null;
+    }
+  }
+
+  @Override
+  public Advice entryReaderAdvice() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  protected String entryTableCreateExpression() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  protected String entryTableName() {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  protected <E> void setBinaryObject(CachedStatement<Object> cached, int columnIndex, Entry<E> entry) throws Exception {
+    // TODO Auto-generated method stub
+
+  }
+
+  @Override
+  protected <E> void setTextObject(CachedStatement<Object> cached, int columnIndex, Entry<E> entry) throws Exception {
+    // TODO Auto-generated method stub
+
   }
 }
