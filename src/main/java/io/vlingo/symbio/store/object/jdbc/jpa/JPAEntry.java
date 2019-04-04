@@ -27,7 +27,7 @@ import io.vlingo.symbio.Metadata;
 @Entity
 @Table(name="tbl_objectstore_event_journal")
 public class JPAEntry implements Entry<String> {
-  
+
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   @Column(name = "id", updatable = false, nullable = false)
@@ -36,10 +36,10 @@ public class JPAEntry implements Entry<String> {
   @Column(name="entry_timestamp", updatable = false, nullable = false)
   @Convert(converter=LocalDateConverter.class)
   private LocalDate entryTimestamp;
-  
+
   @Column(name="entry_data", updatable = false, nullable = false)
   private String entryData;
-  
+
   @Column(name="metadata", updatable = false, nullable = false)
   @Convert(converter=EntryMetadataConverter.class)
   private Metadata metadata;
@@ -49,11 +49,11 @@ public class JPAEntry implements Entry<String> {
 
   @Column(name="entry_type_version", updatable = false, nullable = false)
   private int typeVersion;
-  
+
   public JPAEntry() {
     super();
   }
-  
+
   public JPAEntry(final Entry<String> entry) {
     this.entryTimestamp = LocalDate.now();
     this.entryData = entry.entryData();
@@ -61,7 +61,7 @@ public class JPAEntry implements Entry<String> {
     this.type = entry.type();
     this.typeVersion = entry.typeVersion();
   }
-  
+
   public JPAEntry(final Class<?> type, final int typeVersion, final String entryData, final Metadata metadata) {
     this.entryTimestamp = LocalDate.now();
     if (type == null) throw new IllegalArgumentException("Entry type must not be null.");
@@ -73,7 +73,7 @@ public class JPAEntry implements Entry<String> {
     if (metadata == null) throw new IllegalArgumentException("Entry metadata must not be null.");
     this.metadata = metadata;
   }
-  
+
   public JPAEntry(final String id, final Class<?> type, final int typeVersion, final String entryData, final Metadata metadata) {
     if (id == null) throw new IllegalArgumentException("Entry id must not be null.");
     this.id = id;
@@ -93,7 +93,7 @@ public class JPAEntry implements Entry<String> {
   public String id() {
     return id;
   }
-  
+
   public LocalDate entryTimestamp() {
     return entryTimestamp;
   }
@@ -180,4 +180,8 @@ public class JPAEntry implements Entry<String> {
       .toString();
   }
 
+  @Override
+  public Entry<String> withId(final String id) {
+    return new JPAEntry(id, typed(), typeVersion, entryData, metadata);
+  }
 }
