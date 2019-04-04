@@ -9,29 +9,34 @@ package io.vlingo.symbio.store.state.jdbc;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
+import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
-import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.StateAdapterProvider;
+import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.state.StateStore;
+import io.vlingo.symbio.store.state.StateStoreEntryReader;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 
 public class JDBCStateStoreActor extends Actor implements StateStore {
   private final StorageDelegate delegate;
   private final Dispatcher dispatcher;
   private final DispatcherControl dispatcherControl;
+  private final Map<String,StateStoreEntryReader<?>> entryReaders;
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
 
@@ -42,6 +47,8 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   public JDBCStateStoreActor(final Dispatcher dispatcher, final StorageDelegate delegate, final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.dispatcher = dispatcher;
     this.delegate = delegate;
+
+    this.entryReaders = new HashMap<>();
 
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
@@ -63,6 +70,18 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
       dispatcherControl.stop();
     }
     super.stop();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public <ET> Completes<StateStoreEntryReader<ET>> entryReader(final String name) {
+    StateStoreEntryReader<?> reader = entryReaders.get(name);
+    if (reader == null) {
+      final EntryReader.Advice advice = delegate.entryReaderAdvice();
+      reader = childActorFor(StateStoreEntryReader.class, Definition.has(advice.entryReaderClass, Definition.parameters(advice, name)));
+      entryReaders.put(name, reader);
+    }
+    return completes().with((StateStoreEntryReader<ET>) reader);
   }
 
   @Override
@@ -128,14 +147,13 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
                   stateAdapterProvider.asRaw(id, state, stateVersion) :
                   stateAdapterProvider.asRaw(id, state, stateVersion, metadata);
 
-          // TODO: Write sources
-
           delegate.beginWrite();
           final PreparedStatement writeStatement = delegate.writeExpressionFor(storeName, raw);
           writeStatement.execute();
           final String dispatchId = storeName + ":" + id;
           final PreparedStatement dispatchableStatement = delegate.dispatchableWriteExpressionFor(dispatchId, raw);
           dispatchableStatement.execute();
+          appendEntries(sources);
           delegate.complete();
           dispatch(dispatchId, raw);
 
@@ -154,9 +172,10 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     }
   }
 
-  private <C> void appendEntries(final List<Source<C>> sources) {
-    final Collection<BaseEntry<?>> all = entryAdapterProvider.asEntries(sources);
-    // TODO: entries.addAll(all);
+  private <C> void appendEntries(final List<Source<C>> sources) throws Exception {
+    final List<Entry<Object>> all = entryAdapterProvider.asEntries(sources);
+    final PreparedStatement appendStatement = delegate.appendExpressionFor(all);
+    appendStatement.execute();
   }
 
   private void dispatch(final String dispatchId, final State<String> state) {

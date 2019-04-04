@@ -14,7 +14,8 @@ import io.vlingo.actors.Logger;
 import io.vlingo.symbio.store.DataFormat;
 
 public abstract class JDBCDispatchableCachedStatements<T> {
-  private final CachedStatement<T> append;
+  private final CachedStatement<T> appendDispatchable;
+  private final CachedStatement<T> appendEntry;
   private final CachedStatement<T> delete;
   private final CachedStatement<T> queryAll;
 
@@ -24,13 +25,18 @@ public abstract class JDBCDispatchableCachedStatements<T> {
           final DataFormat format,
           final T appendDataObject,
           final Logger logger) {
-    this.append = createStatement(appendExpression(), appendDataObject, connection, logger);
+    this.appendDispatchable = createStatement(appendDispatchableExpression(), appendDataObject, connection, logger);
+    this.appendEntry = createStatement(appendEntryExpression(), appendDataObject, connection, logger);
     this.delete = createStatement(deleteExpression(), null, connection, logger);
     this.queryAll = prepareQuery(createStatement(selectExpression(), null, connection, logger), originatorId, logger);
   }
 
-  public final CachedStatement<T> appendStatement() {
-    return append;
+  public final CachedStatement<T> appendDispatchableStatement() {
+    return appendDispatchable;
+  }
+
+  public final CachedStatement<T> appendEntryStatement() {
+    return appendEntry;
   }
 
   public final CachedStatement<T> deleteStatement() {
@@ -41,7 +47,8 @@ public abstract class JDBCDispatchableCachedStatements<T> {
     return queryAll;
   }
 
-  protected abstract String appendExpression();
+  protected abstract String appendDispatchableExpression();
+  protected abstract String appendEntryExpression();
   protected abstract String deleteExpression();
   protected abstract String selectExpression();
 
@@ -74,6 +81,6 @@ public abstract class JDBCDispatchableCachedStatements<T> {
               getClass().getSimpleName() + ": Failed to prepare query=all because: " + e.getMessage();
       logger.log(message, e);
       throw new IllegalStateException(message);
-    }     
+    }
   }
 }

@@ -14,15 +14,19 @@ import java.sql.SQLException;
 import java.text.MessageFormat;
 
 import io.vlingo.actors.Logger;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.common.jdbc.hsqldb.HSQLDBStateStoreEntryReaderActor;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.jdbc.CachedStatement;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 
 public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements StorageDelegate, HSQLDBQueries {
+  private final Configuration configuration;
 
   public HSQLDBStorageDelegate(final Configuration configuration, final Logger logger) {
 
@@ -31,6 +35,21 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
           configuration.originatorId,
           configuration.createTables,
           logger);
+
+    this.configuration = configuration;
+  }
+
+  @Override
+  public EntryReader.Advice entryReaderAdvice() {
+    try {
+      return new EntryReader.Advice(
+              Configuration.cloneOf(configuration),
+              HSQLDBStateStoreEntryReaderActor.class,
+              SQL_QUERY_ENTRY_BATCH,
+              SQL_QUERY_ENTRY);
+    } catch (Exception e) {
+      throw new IllegalStateException("Cannot create EntryReader.Advice because: " + e.getMessage(), e);
+    }
   }
 
   @Override
@@ -73,6 +92,17 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
   }
 
   @Override
+  protected String entryTableCreateExpression() {
+    return MessageFormat.format(SQL_CREATE_ENTRY_STORE, entryTableName(),
+            format.isBinary() ? SQL_FORMAT_BINARY : SQL_FORMAT_TEXT);
+  }
+
+  @Override
+  protected String entryTableName() {
+    return TBL_VLINGO_SYMBIO_STATE_ENTRY;
+  }
+
+  @Override
   protected String readExpression(final String storeName, final String id) {
     return MessageFormat.format(SQL_STATE_READ, storeName.toUpperCase());
   }
@@ -85,8 +115,20 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
   }
 
   @Override
+  protected <E> void setBinaryObject(final CachedStatement<Blob> cached, int columnIndex, Entry<E> entry) throws Exception {
+    final byte[] data = (byte[]) entry.entryData;
+    cached.data.setBytes(1, data);
+    cached.preparedStatement.setBlob(columnIndex, cached.data);
+  }
+
+  @Override
   protected <S> void setTextObject(final CachedStatement<Blob> cached, int columnIndex, State<S> state) throws Exception {
     cached.preparedStatement.setString(columnIndex, (String) state.data);
+  }
+
+  @Override
+  protected <E> void setTextObject(final CachedStatement<Blob> cached, int columnIndex, Entry<E> entry) throws Exception {
+    cached.preparedStatement.setString(columnIndex, (String) entry.entryData);
   }
 
   @Override
@@ -116,6 +158,10 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
     return MessageFormat.format(sql, dispatchableTableName());
   }
 
+  private String namedEntry(final String sql) {
+    return MessageFormat.format(sql, entryTableName());
+  }
+
   private static Blob blobIfBinary(final Connection connection, DataFormat format, final Logger logger) {
     try {
       return format.isBinary() ? connection.createBlob() : null;
@@ -138,8 +184,13 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
     }
 
     @Override
-    protected String appendExpression() {
+    protected String appendDispatchableExpression() {
       return namedDispatchable(SQL_DISPATCHABLE_APPEND);
+    }
+
+    @Override
+    protected String appendEntryExpression() {
+      return namedEntry(SQL_APPEND_ENTRY);
     }
 
     @Override

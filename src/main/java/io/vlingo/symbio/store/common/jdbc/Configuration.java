@@ -29,10 +29,10 @@ public class Configuration {
    * but can be overridden by using the constructor that accepts the
    * {@code transactionTimeoutMillis} value. For a practical use of this
    * see the following implementations, where this timeout represents the
-   * time between creation of the {@code UnitOfWork} and its expiration: 
+   * time between creation of the {@code UnitOfWork} and its expiration:
    * <p>
-   * {@code io.vlingo.symbio.io.vlingo.symbio.store.object.jdbc.jdbi.JdbiObjectStoreDelegate}
-   * {@code io.vlingo.symbio.io.vlingo.symbio.store.object.jdbc.jdbi.UnitOfWork}
+   * {@code io.vlingo.symbio.store.object.jdbc.jdbi.JdbiObjectStoreDelegate}
+   * {@code io.vlingo.symbio.store.object.jdbc.jdbi.UnitOfWork}
    * </p>
    */
   public static final long DefaultTransactionTimeout = 5 * 60 * 1000L; // 5 minutes
@@ -51,6 +51,11 @@ public class Configuration {
 
   protected final ConfigurationInterest interest;
 
+  public static Configuration cloneOf(final Configuration other) throws Exception {
+    return new Configuration(other.interest, other.driverClassname, other.format,
+            other.url, other.databaseName, other.username, other.password,
+            other.useSSL, other.originatorId, other.createTables, other.transactionTimeoutMillis);
+  }
 
   public Configuration(
           final ConfigurationInterest interest,

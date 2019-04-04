@@ -123,7 +123,7 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
     }
 
     @Override
-    protected String appendExpression() {
+    protected String appendDispatchableExpression() {
       return namedDispatchable(SQL_DISPATCHABLE_APPEND);
     }
 

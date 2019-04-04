@@ -24,6 +24,7 @@ import java.util.Map;
 import io.vlingo.actors.Logger;
 import io.vlingo.common.Tuple2;
 import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.BinaryState;
@@ -59,6 +60,13 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     this.dispatchableCachedStatements = dispatchableCachedStatements();
     this.readStatements = new HashMap<>();
     this.writeStatements = new HashMap<>();
+  }
+
+  @Override
+  public <A, E> A appendExpressionFor(final List<Entry<E>> entries) throws Exception {
+    final PreparedStatement preparedStatement = dispatchableCachedStatements.appendEntryStatement().preparedStatement;
+
+    return null;
   }
 
   @Override
@@ -147,7 +155,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   @Override
   @SuppressWarnings("unchecked")
   public <W, S> W dispatchableWriteExpressionFor(final String dispatchId, final State<S> state) throws Exception {
-    final PreparedStatement preparedStatement = dispatchableCachedStatements.appendStatement().preparedStatement;
+    final PreparedStatement preparedStatement = dispatchableCachedStatements.appendDispatchableStatement().preparedStatement;
 
     preparedStatement.clearParameters();
     preparedStatement.setObject(1, Timestamp.valueOf(LocalDateTime.now()));
@@ -157,9 +165,9 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     preparedStatement.setString(5, state.type);
     preparedStatement.setInt(6, state.typeVersion);
     if (format.isBinary()) {
-      setBinaryObject(dispatchableCachedStatements.appendStatement(), 7, state);
+      setBinaryObject(dispatchableCachedStatements.appendDispatchableStatement(), 7, state);
     } else if (state.isText()) {
-      setTextObject(dispatchableCachedStatements.appendStatement(), 7, state);
+      setTextObject(dispatchableCachedStatements.appendDispatchableStatement(), 7, state);
     }
     preparedStatement.setInt(8, state.dataVersion);
     preparedStatement.setString(9, state.metadata.value);
@@ -263,9 +271,13 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   protected abstract String dispatchableOriginatorIdIndexCreateExpression();
   protected abstract String dispatchableTableCreateExpression();
   protected abstract String dispatchableTableName();
+  protected abstract String entryTableCreateExpression();
+  protected abstract String entryTableName();
   protected abstract String readExpression(final String storeName, final String id);
   protected abstract <S> void setBinaryObject(final CachedStatement<T> cached, int columnIndex, final State<S> state) throws Exception;
+  protected abstract <E> void setBinaryObject(final CachedStatement<T> cached, int columnIndex, final Entry<E> entry) throws Exception;
   protected abstract <S> void setTextObject(final CachedStatement<T> cached, int columnIndex, final State<S> state) throws Exception;
+  protected abstract <E> void setTextObject(final CachedStatement<T> cached, int columnIndex, final Entry<E> entry) throws Exception;
   protected abstract String stateStoreTableCreateExpression(final String storeName);
   protected abstract String tableNameFor(final String storeName);
   protected abstract String textDataFrom(final ResultSet resultSet, final int columnIndex) throws Exception;
@@ -284,7 +296,19 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       }
     }
   }
-  
+
+  private void createEntryTable() throws Exception {
+    final String tableName = entryTableName();
+    if (!tableExists(tableName)) {
+      try (final Statement statement = connection.createStatement()) {
+        statement.executeUpdate(entryTableCreateExpression());
+        connection.commit();
+      } catch (Exception e) {
+        throw new IllegalStateException("Cannot create table " + tableName + " because: " + e, e);
+      }
+    }
+  }
+
   private void createStateStoreTable(final String storeName) throws Exception {
     final String sql = stateStoreTableCreateExpression(storeName);
     try (final Statement statement = connection.createStatement()) {
@@ -299,6 +323,13 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     } catch (Exception e) {
       // assume table exists; could look at metadata
       logger.log("Could not create dispatchables table because: " + e.getMessage(), e);
+    }
+
+    try {
+      createEntryTable();
+    } catch (Exception e) {
+      // assume table exists; could look at metadata
+      logger.log("Could not create entry table because: " + e.getMessage(), e);
     }
 
     for (final String storeName : StateTypeStateStoreMap.allStoreNames()) {
@@ -317,6 +348,24 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   private void prepareForRead(final CachedStatement<T> cached, final String id) throws Exception {
     cached.preparedStatement.clearParameters();
     cached.preparedStatement.setString(1, id);
+  }
+
+  private <E> void prepareForAppend(final CachedStatement<T> cached, final Entry<E> entry) throws Exception {
+    cached.preparedStatement.clearParameters();
+
+    // (E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP)
+
+    cached.preparedStatement.setString(1, "");
+    cached.preparedStatement.setString(2, entry.type);
+    cached.preparedStatement.setInt(3, entry.typeVersion);
+    if (format.isBinary()) {
+      this.setBinaryObject(cached, 4, entry);
+    } else if (entry.isText()) {
+      this.setTextObject(cached, 4, entry);
+    }
+    cached.preparedStatement.setInt(5, state.dataVersion);
+    cached.preparedStatement.setString(6, state.metadata.value);
+    cached.preparedStatement.setString(7, state.metadata.operation);
   }
 
   private <S> void prepareForWrite(final CachedStatement<T> cached, final State<S> state) throws Exception {

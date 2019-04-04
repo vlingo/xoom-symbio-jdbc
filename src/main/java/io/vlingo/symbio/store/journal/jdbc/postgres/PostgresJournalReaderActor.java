@@ -54,7 +54,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<S
 
     private long offset;
 
-    public PostgresJournalReaderActor(final Configuration configuration, final String name) throws SQLException {
+    public PostgresJournalReaderActor(final Advice configuration, final String name) throws SQLException {
         this.connection = configuration.connection;
         this.name = name;
 
