@@ -395,7 +395,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   private <S extends State<?>> Dispatchable<S> stateFrom(final ResultSet resultSet) throws Exception {
-    final LocalDateTime createdAt = resultSet.getObject(1, Timestamp.class).toLocalDateTime();
+    final LocalDateTime createdAt = resultSet.getTimestamp(1).toLocalDateTime();
     final String dispatchId = resultSet.getString(2);
     final String id = resultSet.getString(3);
     final Class<?> type = Class.forName(resultSet.getString(4));

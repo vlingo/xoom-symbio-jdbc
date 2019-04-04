@@ -10,9 +10,6 @@ import java.util.Collection;
 import java.util.List;
 
 import io.vlingo.actors.Actor;
-import io.vlingo.common.Completes;
-import io.vlingo.symbio.BaseEntry;
-import io.vlingo.symbio.EntryAdapter;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
@@ -42,13 +39,13 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   /* @see io.vlingo.symbio.store.object.ObjectStore#persist(java.lang.Object, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
   public <E> void persist(final Object persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
-    delegate.persist(persistentObject, updateId, interest, object);
+    delegate.persist(persistentObject, sources, updateId, interest, object);
   }
 
   /* @see io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
   public <E> void persistAll(final Collection<Object> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
-    delegate.persistAll(persistentObjects, updateId, interest, object);
+    delegate.persistAll(persistentObjects, sources, updateId, interest, object);
   }
 
   /*

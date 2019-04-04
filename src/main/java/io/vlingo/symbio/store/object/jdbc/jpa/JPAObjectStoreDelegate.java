@@ -21,6 +21,8 @@ import io.vlingo.actors.Logger;
 import io.vlingo.actors.Stage;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -38,9 +40,11 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   public static final String JPA_HSQLDB_PERSISTENCE_UNIT = "JpaHsqldbService";
   public static final String JPA_POSTGRES_PERSISTENCE_UNIT = "JpaPostgresService";
 
-  private final EntityManagerFactory emf = Persistence.createEntityManagerFactory(JPA_HSQLDB_PERSISTENCE_UNIT);
+  private final EntityManagerFactory emf = Persistence.createEntityManagerFactory(JPA_POSTGRES_PERSISTENCE_UNIT);
   private final EntityManager em = emf.createEntityManager();
   private final Logger logger;
+  private final EntryAdapterProvider entryAdapterProvider;
+
 
   /**
    * Constructs my default state.
@@ -54,6 +58,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
       em.setFlushMode(FlushModeType.COMMIT);
     flushMode = em.getFlushMode();
     assert flushMode.equals(FlushModeType.COMMIT);
+    this.entryAdapterProvider = EntryAdapterProvider.instance(stage.world());
   }
 
   /*
@@ -74,6 +79,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     try {
       em.getTransaction().begin();
       createOrUpdate(persistentObject, updateId);
+      appendSources(sources);
       em.getTransaction().commit();
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, 1, object);
     } catch (Exception e) {
@@ -96,6 +102,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
         createOrUpdate(detachedEntity, detachedEntity.id());
         count++;
       }
+      appendSources(sources);
       em.getTransaction().commit();
       interest.persistResultedIn(Success.of(Result.Success), persistentObjects, persistentObjects.size(), count,
               object);
@@ -233,6 +240,20 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
          */
         em.merge(detachedEntity);
       }
+    }
+  }
+
+  /**
+   * Convert each {@link Source} in {@code sources} to a {@link 
+   */
+  private <E> void appendSources(List<Source<E>> sources) {
+    final Collection<Entry<String>> entries = entryAdapterProvider.asEntries(sources);
+    for (Entry<String> entry : entries) {
+      JPAEntry jpaEntry = entry instanceof JPAEntry
+        ? (JPAEntry) entry
+        : new JPAEntry(entry);
+      em.persist(jpaEntry);
+      logger.log("em.persist(" + jpaEntry + ")");
     }
   }
 }
