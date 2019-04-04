@@ -21,6 +21,7 @@ import io.vlingo.common.Completes;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.journal.JournalReader;
 
 public class PostgresJournalReaderActor extends Actor implements JournalReader<String> {
@@ -53,8 +54,8 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<S
 
     private long offset;
 
-    public PostgresJournalReaderActor(final Advice advice, final String name) throws SQLException {
-        this.connection = advice.connection;
+    public PostgresJournalReaderActor(final Configuration configuration, final String name) throws SQLException {
+        this.connection = configuration.connection;
         this.name = name;
 
         this.queryCurrentOffset = this.connection.prepareStatement(QUERY_CURRENT_OFFSET);
