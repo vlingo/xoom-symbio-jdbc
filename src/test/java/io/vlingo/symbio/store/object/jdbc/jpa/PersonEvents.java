@@ -6,13 +6,13 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
-import io.vlingo.lattice.model.DomainEvent;
+import io.vlingo.symbio.Source;
 /**
  * PersonEvents
  */
 public final class PersonEvents {
   
-  public static class PersonAdded extends DomainEvent {
+  public static class PersonAdded extends Source<PersonAdded> {
     public final String personId;
     public final int age;
     public final String name;
@@ -31,7 +31,7 @@ public final class PersonEvents {
     }
   }
 
-  public static class PersonRenamed extends DomainEvent {
+  public static class PersonRenamed extends Source<PersonRenamed> {
     
     public final String personId;
     public final String name;
