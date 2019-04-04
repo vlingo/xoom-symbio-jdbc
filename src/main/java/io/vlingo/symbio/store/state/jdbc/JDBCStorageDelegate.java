@@ -360,7 +360,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       cached.preparedStatement.setInt(3, entry.typeVersion());
       if (format.isBinary()) {
         this.setBinaryObject(cached, 4, entry);
-      } else if (entry.isText()) {
+      } else if (format.isText()) {
         this.setTextObject(cached, 4, entry);
       }
       cached.preparedStatement.setString(5, entry.metadata().value);
