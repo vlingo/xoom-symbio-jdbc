@@ -116,7 +116,7 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
 
   @Override
   protected <E> void setBinaryObject(final CachedStatement<Blob> cached, int columnIndex, Entry<E> entry) throws Exception {
-    final byte[] data = (byte[]) entry.entryData;
+    final byte[] data = (byte[]) entry.entryData();
     cached.data.setBytes(1, data);
     cached.preparedStatement.setBlob(columnIndex, cached.data);
   }
@@ -128,7 +128,7 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
 
   @Override
   protected <E> void setTextObject(final CachedStatement<Blob> cached, int columnIndex, Entry<E> entry) throws Exception {
-    cached.preparedStatement.setString(columnIndex, (String) entry.entryData);
+    cached.preparedStatement.setString(columnIndex, (String) entry.entryData());
   }
 
   @Override
