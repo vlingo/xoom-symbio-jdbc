@@ -48,7 +48,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
 
   /**
    * Constructs my default state.
-   * 
+   *
    * @param stage from which to obtain the default logger.
    */
   public JPAObjectStoreDelegate(final Stage stage) {
@@ -244,7 +244,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   }
 
   /**
-   * Convert each {@link Source} in {@code sources} to a {@link 
+   * Convert each {@link Source} in {@code sources} to a {@link
    */
   private <E> void appendSources(List<Source<E>> sources) {
     final Collection<Entry<String>> entries = entryAdapterProvider.asEntries(sources);
