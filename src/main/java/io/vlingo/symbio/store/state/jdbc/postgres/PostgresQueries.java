@@ -17,7 +17,7 @@ public interface PostgresQueries {
           "INSERT INTO tbl_{0} \n" +
           "(s_id, s_type, s_type_version, s_data, s_data_version, s_metadata_value, s_metadata_op) \n" +
           "VALUES (?, ?, ?, {1}, ?, ?, ?) \n" +
-          "ON CONFLICT (s_id) DO UPDATE SET \n" + 
+          "ON CONFLICT (s_id) DO UPDATE SET \n" +
               "s_type = EXCLUDED.s_type, \n" +
               "s_type_version = EXCLUDED.s_type_version, \n" +
               "s_data = EXCLUDED.s_data, \n" +
@@ -64,11 +64,11 @@ public interface PostgresQueries {
           ");";
 
   final static String SQL_DISPATCH_ID_INDEX =
-          "CREATE INDEX idx_dispatchables_dispatch_id \n" + 
+          "CREATE INDEX idx_dispatchables_dispatch_id \n" +
           "ON {0} (d_dispatch_id);";
 
   final static String SQL_ORIGINATOR_ID_INDEX =
-          "CREATE INDEX idx_dispatchables_originator_id \n" + 
+          "CREATE INDEX idx_dispatchables_originator_id \n" +
           "ON {0} (d_originator_id);";
 
   final static String SQL_DISPATCHABLE_APPEND =
@@ -87,4 +87,31 @@ public interface PostgresQueries {
           "       d_state_metadata_value, d_state_metadata_op, d_state_metadata_object, d_state_metadata_object_type \n" +
           "FROM {0} \n" +
           "WHERE d_originator_id = ? ORDER BY D_ID";
+
+
+  final static String SQL_CREATE_ENTRY_STORE =
+          "CREATE TABLE {0} (\n" +
+          "   e_id BIGSERIAL PRIMARY KEY," +
+          "   e_type VARCHAR(256) NOT NULL,\n" +
+          "   e_type_version INT NOT NULL,\n" +
+          "   e_data {1} NOT NULL,\n" +
+          "   e_metadata_value VARCHAR(4000) NOT NULL,\n" +
+          "   e_metadata_op VARCHAR(128) NOT NULL\n" +
+          ");";
+
+  final static String TBL_VLINGO_SYMBIO_STATE_ENTRY = "tbl_vlingo_symbio_state_entry";
+
+  final static String SQL_APPEND_ENTRY =
+          "INSERT INTO {0} \n" +
+               "(e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op) \n" +
+               "VALUES (DEFAULT, ?, ?, ?, ?, ?)";
+
+  final static String SQL_QUERY_ENTRY_BATCH =
+          "SELECT e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op FROM " +
+                  TBL_VLINGO_SYMBIO_STATE_ENTRY + " WHERE E_ID >= ? " +
+                  "ORDER BY e_id LIMIT ?";
+
+  final static String SQL_QUERY_ENTRY =
+          "SELECT e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op FROM " +
+                  TBL_VLINGO_SYMBIO_STATE_ENTRY + " WHERE e_id = ? ";
 }
