@@ -17,6 +17,7 @@ import io.vlingo.actors.Logger;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.EntryReader.Advice;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
@@ -25,6 +26,8 @@ import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 
 public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> implements StorageDelegate, PostgresQueries {
+  private final Configuration configuration;
+
   public PostgresStorageDelegate(final Configuration configuration, final Logger logger) {
 
     super(configuration.connection,
@@ -32,6 +35,21 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
           configuration.originatorId,
           configuration.createTables,
           logger);
+
+    this.configuration = configuration;
+  }
+
+  @Override
+  public Advice entryReaderAdvice() {
+    try {
+      return new EntryReader.Advice(
+              Configuration.cloneOf(configuration),
+              PostgresStateStoreEntryReaderActor.class,
+              SQL_QUERY_ENTRY_BATCH,
+              SQL_QUERY_ENTRY);
+    } catch (Exception e) {
+      throw new IllegalStateException("Cannot create EntryReader.Advice because: " + e.getMessage(), e);
+    }
   }
 
   @Override
@@ -41,7 +59,7 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
   }
 
   @Override
-  protected <D> D binaryDataTypeObject() {
+  protected <D> D binaryDataTypeObject() throws Exception {
     return null;
   }
 
@@ -72,13 +90,37 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
   }
 
   @Override
+  protected String entryTableCreateExpression() {
+    return MessageFormat.format(SQL_CREATE_ENTRY_STORE, entryTableName(),
+            format.isBinary() ? SQL_FORMAT_BINARY : SQL_FORMAT_TEXT1);
+  }
+
+  @Override
+  protected String entryTableName() {
+    return TBL_VLINGO_SYMBIO_STATE_ENTRY;
+  }
+
+  @Override
   protected String readExpression(final String storeName, final String id) {
     return MessageFormat.format(SQL_STATE_READ, storeName.toLowerCase());
   }
 
   @Override
+  protected <E> void setBinaryObject(final CachedStatement<Object> cached, final int columnIndex, final Entry<E> entry) throws Exception {
+    cached.preparedStatement.setBytes(columnIndex, (byte[]) entry.entryData());
+  }
+
+  @Override
   protected <S> void setBinaryObject(final CachedStatement<Object> cached, int columnIndex, final State<S> state) throws Exception {
     cached.preparedStatement.setBytes(columnIndex, (byte[]) state.data);
+  }
+
+  @Override
+  protected <E> void setTextObject(final CachedStatement<Object> cached, final int columnIndex, final Entry<E> entry) throws Exception {
+    final PGobject jsonObject = new PGobject();
+    jsonObject.setType("json");
+    jsonObject.setValue((String) entry.entryData());
+    cached.preparedStatement.setObject(columnIndex, jsonObject);
   }
 
   @Override
@@ -116,6 +158,10 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
     return MessageFormat.format(sql, dispatchableTableName());
   }
 
+  private String namedEntry(final String sql) {
+    return MessageFormat.format(sql, entryTableName());
+  }
+
   class PostgresDispatchableCachedStatements<T> extends JDBCDispatchableCachedStatements<T> {
     PostgresDispatchableCachedStatements(
             final String originatorId,
@@ -143,37 +189,7 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
 
     @Override
     protected String appendEntryExpression() {
-      return null;
+      return namedEntry(SQL_APPEND_ENTRY);
     }
-  }
-
-  @Override
-  public Advice entryReaderAdvice() {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  protected String entryTableCreateExpression() {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  protected String entryTableName() {
-    // TODO Auto-generated method stub
-    return null;
-  }
-
-  @Override
-  protected <E> void setBinaryObject(CachedStatement<Object> cached, int columnIndex, Entry<E> entry) throws Exception {
-    // TODO Auto-generated method stub
-
-  }
-
-  @Override
-  protected <E> void setTextObject(CachedStatement<Object> cached, int columnIndex, Entry<E> entry) throws Exception {
-    // TODO Auto-generated method stub
-
   }
 }
