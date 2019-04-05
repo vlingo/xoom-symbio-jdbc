@@ -173,6 +173,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   }
 
   private <C> void appendEntries(final List<Source<C>> sources) throws Exception {
+    if (sources.isEmpty()) return;
     final List<Entry<Object>> all = entryAdapterProvider.asEntries(sources);
     final PreparedStatement appendStatement = delegate.appendExpressionFor(all);
     appendStatement.execute();
