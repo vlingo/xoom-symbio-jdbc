@@ -191,5 +191,10 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
     protected String appendEntryExpression() {
       return namedEntry(SQL_APPEND_ENTRY);
     }
+
+    @Override
+    protected String appendEntryIdentityExpression() {
+      return SQL_APPEND_ENTRY_IDENTITY;
+    }
   }
 }

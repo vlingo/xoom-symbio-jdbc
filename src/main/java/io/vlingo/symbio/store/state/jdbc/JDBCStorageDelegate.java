@@ -64,9 +64,16 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
 
   @Override
   @SuppressWarnings("unchecked")
-  public <A, E> A appendExpressionFor(final List<Entry<E>> entries) throws Exception {
+  public <A, E> A appendExpressionFor(final Entry<E> entry) throws Exception {
     final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendEntryStatement();
-    prepareForAppend(cachedStatement, entries);
+    prepareForAppend(cachedStatement, entry);
+    return (A) cachedStatement.preparedStatement;
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public <A> A appendIdentityExpression() {
+    final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendEntryIdentityStatement();
     return (A) cachedStatement.preparedStatement;
   }
 
@@ -96,8 +103,12 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   @Override
   public void beginWrite() throws Exception {
     if (mode != Mode.None) {
+//      System.out.println("ALREADY IN WRITING MODE");
+//      (new IllegalStateException()).printStackTrace();
       logger.log(getClass().getSimpleName() + ": Cannot begin write because currently: " + mode.name());
     } else {
+//      System.out.println("SET WRITING MODE");
+//      (new IllegalStateException()).printStackTrace();
       mode = Mode.Writing;
     }
   }
@@ -351,23 +362,17 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     cached.preparedStatement.setString(1, id);
   }
 
-  private <E> void prepareForAppend(final CachedStatement<T> cached, final List<Entry<E>> entries) throws Exception {
+  private <E> void prepareForAppend(final CachedStatement<T> cached, final Entry<E> entry) throws Exception {
     cached.preparedStatement.clearParameters();
-
-    for (final Entry<E> entry : entries) {
-      cached.preparedStatement.setString(1, "");
-      cached.preparedStatement.setString(2, entry.type());
-      cached.preparedStatement.setInt(3, entry.typeVersion());
-      if (format.isBinary()) {
-        this.setBinaryObject(cached, 4, entry);
-      } else if (format.isText()) {
-        this.setTextObject(cached, 4, entry);
-      }
-      cached.preparedStatement.setString(5, entry.metadata().value);
-      cached.preparedStatement.setString(6, entry.metadata().operation);
-
-      cached.preparedStatement.addBatch();
+    cached.preparedStatement.setString(1, entry.type());
+    cached.preparedStatement.setInt(2, entry.typeVersion());
+    if (format.isBinary()) {
+      this.setBinaryObject(cached, 3, entry);
+    } else if (format.isText()) {
+      this.setTextObject(cached, 3, entry);
     }
+    cached.preparedStatement.setString(4, entry.metadata().value);
+    cached.preparedStatement.setString(5, entry.metadata().operation);
   }
 
   private <S> void prepareForWrite(final CachedStatement<T> cached, final State<S> state) throws Exception {

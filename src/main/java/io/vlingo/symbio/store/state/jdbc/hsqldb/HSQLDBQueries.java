@@ -97,16 +97,18 @@ public interface HSQLDBQueries {
           "   E_TYPE VARCHAR(256) NOT NULL,\n" +
           "   E_TYPE_VERSION INT NOT NULL,\n" +
           "   E_DATA {1} NOT NULL,\n" +
-          "   E_METADATA_VALUE VARCHAR(4000) NOT NULL,\n" +
-          "   E_METADATA_OP VARCHAR(128) NOT NULL\n" +
+          "   E_METADATA_VALUE VARCHAR(4000) NULL,\n" +
+          "   E_METADATA_OP VARCHAR(128) NULL\n" +
           ");";
 
   final static String TBL_VLINGO_SYMBIO_STATE_ENTRY = "TBL_VLINGO_SYMBIO_STATE_ENTRY";
 
   final static String SQL_APPEND_ENTRY =
           "INSERT INTO {0} \n" +
-               "(E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP) \n" +
-               "VALUES (DEFAULT, ?, ?, ?, ?, ?)";
+               "(E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP) \n" +
+               "VALUES (?, ?, ?, ?, ?)";
+
+  final static String SQL_APPEND_ENTRY_IDENTITY = "CALL IDENTITY()";
 
   final static String SQL_QUERY_ENTRY_BATCH =
           "SELECT E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP FROM " +

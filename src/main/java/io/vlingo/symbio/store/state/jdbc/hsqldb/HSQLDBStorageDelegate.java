@@ -19,7 +19,6 @@ import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.hsqldb.HSQLDBStateStoreEntryReaderActor;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.jdbc.CachedStatement;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
@@ -191,6 +190,11 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
     @Override
     protected String appendEntryExpression() {
       return namedEntry(SQL_APPEND_ENTRY);
+    }
+
+    @Override
+    protected String appendEntryIdentityExpression() {
+      return SQL_APPEND_ENTRY_IDENTITY;
     }
 
     @Override

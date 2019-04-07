@@ -18,6 +18,7 @@ import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
@@ -74,7 +75,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
 
   @Override
   @SuppressWarnings("unchecked")
-  public <ET> Completes<StateStoreEntryReader<ET>> entryReader(final String name) {
+  public <ET extends Entry<?>> Completes<StateStoreEntryReader<ET>> entryReader(final String name) {
     StateStoreEntryReader<?> reader = entryReaders.get(name);
     if (reader == null) {
       final EntryReader.Advice advice = delegate.entryReaderAdvice();
@@ -172,11 +173,33 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     }
   }
 
+  @SuppressWarnings("rawtypes")
   private <C> void appendEntries(final List<Source<C>> sources) throws Exception {
     if (sources.isEmpty()) return;
-    final List<Entry<Object>> all = entryAdapterProvider.asEntries(sources);
-    final PreparedStatement appendStatement = delegate.appendExpressionFor(all);
-    appendStatement.execute();
+    try {
+      for (final Entry<?> entry : entryAdapterProvider.asEntries(sources)) {
+        long id = -1L;
+        final PreparedStatement appendStatement = delegate.appendExpressionFor(entry);
+        final int count = appendStatement.executeUpdate();
+        if (count == 1) {
+          PreparedStatement queryLastIdentityStatement = delegate.appendIdentityExpression();
+          final ResultSet result = queryLastIdentityStatement.executeQuery();
+          if (result.next()) {
+            id = result.getLong(1);
+            ((BaseEntry) entry).__internal__setId(Long.toString(id));
+          }
+        }
+        if (id == -1L) {
+          final String message = "Could not retrieve entry id.";
+          logger().log(message);
+          throw new IllegalStateException(message);
+        }
+      }
+    } catch (Exception e) {
+      final String message = "Failed to append entry because: " + e.getMessage();
+      logger().log(message, e);
+      throw new IllegalStateException(message, e);
+    }
   }
 
   private void dispatch(final String dispatchId, final State<String> state) {

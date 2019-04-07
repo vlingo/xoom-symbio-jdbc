@@ -21,7 +21,9 @@ import org.mockito.Mockito;
 
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.actors.testkit.TestUntil;
+import io.vlingo.common.Completes;
 import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State.TextState;
@@ -38,7 +40,7 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
     private MockAppendResultInterest interest;
     private Journal<String> journal;
     private JournalListener<String> listener;
-    private JournalReader<String> journalReader;
+    private JournalReader<TextEntry> journalReader;
     private StreamReader<String> streamReader;
     private TestUntil until;
 
@@ -57,7 +59,8 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
         Mockito.doAnswer(x -> until.happened()).when(listener).appendedWith(any(), any());
         Mockito.doAnswer(x -> until.happened()).when(listener).appendedAllWith(any(), any());
 
-        journalReader = journal.journalReader(streamName).await();
+        Completes<JournalReader<TextEntry>> completesJournalReader = journal.journalReader(streamName);
+        journalReader = completesJournalReader.await();
         streamReader = journal.streamReader(streamName).await();
     }
 
@@ -79,7 +82,7 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
         journal.appendAll(streamName, 1, asList(appendedEvent1, appendedEvent2), interest, object);
         until.completes();
 
-        List<Entry<String>> eventStream = journalReader.readNext(2).await();
+        List<TextEntry> eventStream = journalReader.readNext(2).await();
         Entry<String> entry1 = eventStream.get(0);
         TestEvent event1 = gson.fromJson(entry1.entryData(), TestEvent.class);
         assertEquals(appendedEvent1, event1);

@@ -19,12 +19,12 @@ import com.google.gson.Gson;
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.BaseEntry;
-import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.journal.JournalReader;
 
-public class PostgresJournalReaderActor extends Actor implements JournalReader<String> {
+public class PostgresJournalReaderActor extends Actor implements JournalReader<TextEntry> {
     private static final String QUERY_CURRENT_OFFSET =
             "SELECT reader_offset FROM vlingo_symbio_journal_offsets WHERE reader_name=?";
 
@@ -74,7 +74,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<S
     }
 
     @Override
-    public Completes<Entry<String>> readNext() {
+    public Completes<TextEntry> readNext() {
         try {
             querySingleEvent.setLong(1, offset);
             final ResultSet resultSet = querySingleEvent.executeQuery();
@@ -91,9 +91,9 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<S
     }
 
     @Override
-    public Completes<List<Entry<String>>> readNext(int maximumEvents) {
+    public Completes<List<TextEntry>> readNext(int maximumEvents) {
         try {
-            List<Entry<String>> events = new ArrayList<>(maximumEvents);
+            List<TextEntry> events = new ArrayList<>(maximumEvents);
             queryEventBatch.setLong(1, offset);
             queryEventBatch.setMaxRows(maximumEvents);
 
@@ -144,7 +144,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<S
     }
 
 
-    private Entry<String> eventFromResultSet(ResultSet resultSet) throws SQLException, ClassNotFoundException {
+    private TextEntry eventFromResultSet(ResultSet resultSet) throws SQLException, ClassNotFoundException {
         final String id = resultSet.getString(1);
         final String entryData = resultSet.getString(2);
         final String entryMetadata = resultSet.getString(3);

@@ -106,6 +106,8 @@ public interface PostgresQueries {
                "(e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op) \n" +
                "VALUES (DEFAULT, ?, ?, ?, ?, ?)";
 
+  final static String SQL_APPEND_ENTRY_IDENTITY = "SELECT lastval()";
+
   final static String SQL_QUERY_ENTRY_BATCH =
           "SELECT e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op FROM " +
                   TBL_VLINGO_SYMBIO_STATE_ENTRY + " WHERE E_ID >= ? " +

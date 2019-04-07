@@ -9,6 +9,8 @@ package io.vlingo.symbio.store.common.jdbc.postgres;
 
 import java.sql.Connection;
 import java.sql.Statement;
+import java.util.Arrays;
+import java.util.List;
 
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
@@ -31,6 +33,12 @@ public class PostgresConfigurationProvider {
         connection.setAutoCommit(true);
         statement.executeUpdate("CREATE DATABASE " + databaseName + " WITH OWNER = " + configuration.username);
         connection.setAutoCommit(false);
+      } catch (Exception e) {
+        final List<String> message = Arrays.asList(e.getMessage().split(" "));
+        if (message.contains("database") && message.contains("already") && message.contains("exists")) return;
+        System.out.println("Postgres database " + databaseName + " could not be created because: " + e.getMessage());
+
+        throw e;
       }
     }
 
@@ -40,6 +48,8 @@ public class PostgresConfigurationProvider {
         connection.setAutoCommit(true);
         statement.executeUpdate("DROP DATABASE " + databaseName);
         connection.setAutoCommit(false);
+      } catch (Exception e) {
+        System.out.println("Postgres database " + databaseName + " could not be dropped because: " + e.getMessage());
       }
     }
   };

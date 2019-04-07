@@ -5,7 +5,7 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.state.jdbc.postgres;
+package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
 import java.sql.Blob;
 import java.sql.PreparedStatement;
@@ -22,7 +22,7 @@ import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 
-public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
+public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
   private final Advice advice;
   private final Configuration configuration;
   private long currentId;
@@ -30,7 +30,7 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
   private final PreparedStatement queryBatch;
   private final PreparedStatement queryOne;
 
-  public PostgresStateStoreEntryReaderActor(final Advice advice, final String name) throws Exception {
+  public HSQLDBStateStoreEntryReaderActor(final Advice advice, final String name) throws Exception {
     this.advice = advice;
     this.name = name;
     this.configuration = advice.specificConfiguration();
@@ -53,7 +53,7 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
 
   @Override
   @SuppressWarnings("unchecked")
-  public Completes<List<T>> readNext(int maximumEntries) {
+  public Completes<List<T>> readNext(final int maximumEntries) {
     return completes().with((List<T>) queryNext(maximumEntries));
   }
 
@@ -63,7 +63,7 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
   }
 
   @Override
-  public Completes<String> seekTo(String id) {
+  public Completes<String> seekTo(final String id) {
     return null;
   }
 

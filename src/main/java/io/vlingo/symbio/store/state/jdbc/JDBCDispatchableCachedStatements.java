@@ -16,6 +16,7 @@ import io.vlingo.symbio.store.DataFormat;
 public abstract class JDBCDispatchableCachedStatements<T> {
   private final CachedStatement<T> appendDispatchable;
   private final CachedStatement<T> appendEntry;
+  private final CachedStatement<T> appendEntryIdentity;
   private final CachedStatement<T> delete;
   private final CachedStatement<T> queryAll;
 
@@ -27,6 +28,7 @@ public abstract class JDBCDispatchableCachedStatements<T> {
           final Logger logger) {
     this.appendDispatchable = createStatement(appendDispatchableExpression(), appendDataObject, connection, logger);
     this.appendEntry = createStatement(appendEntryExpression(), appendDataObject, connection, logger);
+    this.appendEntryIdentity = createStatement(appendEntryIdentityExpression(), null, connection, logger);
     this.delete = createStatement(deleteExpression(), null, connection, logger);
     this.queryAll = prepareQuery(createStatement(selectExpression(), null, connection, logger), originatorId, logger);
   }
@@ -39,6 +41,10 @@ public abstract class JDBCDispatchableCachedStatements<T> {
     return appendEntry;
   }
 
+  public final CachedStatement<T> appendEntryIdentityStatement() {
+    return appendEntryIdentity;
+  }
+
   public final CachedStatement<T> deleteStatement() {
     return delete;
   }
@@ -49,6 +55,7 @@ public abstract class JDBCDispatchableCachedStatements<T> {
 
   protected abstract String appendDispatchableExpression();
   protected abstract String appendEntryExpression();
+  protected abstract String appendEntryIdentityExpression();
   protected abstract String deleteExpression();
   protected abstract String selectExpression();
 

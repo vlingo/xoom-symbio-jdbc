@@ -1,7 +1,14 @@
+// Copyright © 2012-2018 Vaughn Vernon. All rights reserved.
+//
+// This Source Code Form is subject to the terms of the
+// Mozilla Public License, v. 2.0. If a copy of the MPL
+// was not distributed with this file, You can obtain
+// one at https://mozilla.org/MPL/2.0/.
+
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import static io.vlingo.symbio.store.journal.JournalReader.Beginning;
-import static io.vlingo.symbio.store.journal.JournalReader.End;
+import static io.vlingo.symbio.store.EntryReader.Beginning;
+import static io.vlingo.symbio.store.EntryReader.End;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
@@ -13,7 +20,7 @@ import org.junit.Test;
 
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.testkit.TestUntil;
-import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.store.journal.JournalReader;
 
 public class PostgresJournalReaderActorTest extends BasePostgresJournalTest {
@@ -32,7 +39,7 @@ public class PostgresJournalReaderActorTest extends BasePostgresJournalTest {
 
     @Test
     public void testThatRetrievesNextEvents() throws Exception {
-        JournalReader<String> journalReader = journalReader();
+        JournalReader<TextEntry> journalReader = journalReader();
 
         insertEvent(1);
         insertEvent(2);
@@ -49,7 +56,7 @@ public class PostgresJournalReaderActorTest extends BasePostgresJournalTest {
         long lastOffset = insertEvent(4);
 
         insertOffset(offset, readerName);
-        JournalReader<String> journalReader = journalReader();
+        JournalReader<TextEntry> journalReader = journalReader();
 
         assertEquals(3, parse(journalReader.readNext().await()).number);
         assertEquals(4, parse(journalReader.readNext().await()).number);
@@ -63,8 +70,8 @@ public class PostgresJournalReaderActorTest extends BasePostgresJournalTest {
         insertEvent(3);
         insertEvent(4);
 
-        JournalReader<String> journalReader = journalReader();
-        List<Entry<String>> events = journalReader.readNext(2).await();
+        JournalReader<TextEntry> journalReader = journalReader();
+        List<TextEntry> events = journalReader.readNext(2).await();
         assertEquals(2, events.size());
         assertEquals(1, parse(events.get(0)).number);
         assertEquals(2, parse(events.get(1)).number);
@@ -82,19 +89,19 @@ public class PostgresJournalReaderActorTest extends BasePostgresJournalTest {
         long offset = insertEvent(2);
 
         insertOffset(offset, readerName);
-        JournalReader<String> journalReader = journalReader();
+        JournalReader<TextEntry> journalReader = journalReader();
         journalReader.rewind();
 
         until.completesWithin(50);
         assertOffsetIs(readerName, 1);
-        Entry<String> event = journalReader.readNext().await();
+        TextEntry event = journalReader.readNext().await();
         assertEquals(1, parse(event).number);
     }
 
     @Test
     public void testThatSeekToGoesToTheBeginningWhenSpecified() throws Exception {
         TestUntil until = TestUntil.happenings(1);
-        JournalReader<String> journalReader = journalReader();
+        JournalReader<TextEntry> journalReader = journalReader();
         journalReader.seekTo(Beginning).await();
 
         until.completesWithin(50);
@@ -108,7 +115,7 @@ public class PostgresJournalReaderActorTest extends BasePostgresJournalTest {
         insertEvent(2);
         long lastOffset = insertEvent(3);
 
-        JournalReader<String> journalReader = journalReader();
+        JournalReader<TextEntry> journalReader = journalReader();
         journalReader.seekTo(End).await();
 
         until.completesWithin(50);
@@ -116,7 +123,7 @@ public class PostgresJournalReaderActorTest extends BasePostgresJournalTest {
     }
 
     @SuppressWarnings("unchecked")
-    private JournalReader<String> journalReader() {
+    private JournalReader<TextEntry> journalReader() {
         return world.actorFor(
                 JournalReader.class,
                 Definition.has(PostgresJournalReaderActor.class,

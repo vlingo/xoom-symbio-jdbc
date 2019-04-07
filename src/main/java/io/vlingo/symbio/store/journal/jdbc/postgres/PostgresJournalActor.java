@@ -7,8 +7,6 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import com.google.gson.Gson;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -20,6 +18,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 
+import com.google.gson.Gson;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Address;
 import io.vlingo.actors.Definition;
@@ -29,6 +29,7 @@ import io.vlingo.common.Success;
 import io.vlingo.common.Tuple2;
 import io.vlingo.common.identity.IdentityGenerator;
 import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapter;
 import io.vlingo.symbio.Source;
@@ -60,7 +61,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     private final PreparedStatement insertEvent;
     private final PreparedStatement insertSnapshot;
     private final Gson gson;
-    private final Map<String, JournalReader<String>> journalReaders;
+    private final Map<String, JournalReader<TextEntry>> journalReaders;
     private final Map<String, StreamReader<String>> streamReaders;
     private final IdentityGenerator identityGenerator;
 
@@ -179,8 +180,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Completes<JournalReader<String>> journalReader(String name) {
-        final JournalReader<String> reader = journalReaders.computeIfAbsent(name, (key) -> {
+    public Completes<JournalReader<TextEntry>> journalReader(String name) {
+        final JournalReader<TextEntry> reader = journalReaders.computeIfAbsent(name, (key) -> {
             Address address = stage().world().addressFactory().uniquePrefixedWith("eventJournalReader-" + name);
             return stage().actorFor(
                     JournalReader.class,

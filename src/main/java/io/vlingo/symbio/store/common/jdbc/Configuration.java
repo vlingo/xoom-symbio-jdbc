@@ -37,6 +37,7 @@ public class Configuration {
    */
   public static final long DefaultTransactionTimeout = 5 * 60 * 1000L; // 5 minutes
 
+  public final String actualDatabaseName;
   public final Connection connection;
   public final String databaseName;
   public final String driverClassname;
@@ -53,8 +54,8 @@ public class Configuration {
 
   public static Configuration cloneOf(final Configuration other) throws Exception {
     return new Configuration(other.interest, other.driverClassname, other.format,
-            other.url, other.databaseName, other.username, other.password,
-            other.useSSL, other.originatorId, other.createTables, other.transactionTimeoutMillis);
+            other.url, other.actualDatabaseName, other.username, other.password, other.useSSL,
+            other.originatorId, other.createTables, other.transactionTimeoutMillis, true);
   }
 
   public Configuration(
@@ -86,11 +87,31 @@ public class Configuration {
           final boolean createTables,
           final long transactionTimeoutMillis)
     throws Exception {
+    this(interest, driverClassname, format, url, databaseName, username, password,
+            useSSL, originatorId, createTables, DefaultTransactionTimeout, false);
+  }
+
+
+  private Configuration(
+          final ConfigurationInterest interest,
+          final String driverClassname,
+          final DataFormat format,
+          final String url,
+          final String databaseName,
+          final String username,
+          final String password,
+          final boolean useSSL,
+          final String originatorId,
+          final boolean createTables,
+          final long transactionTimeoutMillis,
+          final boolean reuseDatabaseName)
+    throws Exception {
 
     this.interest = interest;
     this.driverClassname = driverClassname;
     this.format = format;
     this.databaseName = databaseName;
+    this.actualDatabaseName = reuseDatabaseName ? databaseName : actualDatabaseName(databaseName);
     this.url = url;
     this.username = username;
     this.password = password;
@@ -99,8 +120,12 @@ public class Configuration {
     this.createTables = createTables;
     this.transactionTimeoutMillis = transactionTimeoutMillis;
     beforeConnect();
-    this.connection = connect(url, databaseName);
+    this.connection = connect(url, this.databaseName);
     afterConnect();
+  }
+
+  protected String actualDatabaseName(final String databaseName) {
+    return this.databaseName;
   }
 
   protected void afterConnect() throws Exception {
@@ -136,8 +161,6 @@ public class Configuration {
   public static class TestConfiguration extends Configuration {
     static private final AtomicInteger uniqueNumber = new AtomicInteger(0);
 
-    private String testDatabaseName;
-
     public TestConfiguration(
             final ConfigurationInterest interest,
             final String driverClassname,
@@ -157,7 +180,7 @@ public class Configuration {
       try (final Connection ownerConnection = swapConnections()) {
         try (final Statement statement = ownerConnection.createStatement()) {
           ownerConnection.setAutoCommit(true);
-          interest.dropDatabase(ownerConnection, testDatabaseName);
+          interest.dropDatabase(ownerConnection, actualDatabaseName);
         }  catch (Exception e) {
           e.printStackTrace();
           // ignore
@@ -169,24 +192,24 @@ public class Configuration {
     }
 
     @Override
-    protected Connection connect(final String url, final String databaseName) {
-      final Connection connection = super.connect(url, databaseName);
-
-      try (final Statement statement = connection.createStatement()) {
-        this.testDatabaseName = testDatabaseName(format, databaseName);
-        interest.createDatabase(connection, testDatabaseName);
-        connection.close();
-        return super.connect(url, testDatabaseName);
-      }  catch (Exception e) {
-        throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because the server or database unavilable, or wrong credentials.", e);
-      }
-    }
-    
-    protected String testDatabaseName(final DataFormat format, final String databaseName) {
+    protected String actualDatabaseName(final String databaseName) {
       return databaseName +
               "_" +
               uniqueNumber.incrementAndGet() +
               (format.isBinary() ? "b":"t");
+    }
+
+    @Override
+    protected Connection connect(final String url, final String databaseName) {
+      final Connection connection = super.connect(url, databaseName);
+
+      try (final Statement statement = connection.createStatement()) {
+        interest.createDatabase(connection, actualDatabaseName);
+        connection.close();
+        return super.connect(url, actualDatabaseName);
+      }  catch (Exception e) {
+        throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because the server or database unavilable, or wrong credentials.", e);
+      }
     }
 
     private Connection swapConnections() {

@@ -14,7 +14,7 @@ import io.vlingo.common.Completes;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 
-public class PostgresStateStoreEntryReaderActor<T> extends Actor implements StateStoreEntryReader<T> {
+public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
   private final String name;
 
   public PostgresStateStoreEntryReaderActor(final String name) {
@@ -27,12 +27,12 @@ public class PostgresStateStoreEntryReaderActor<T> extends Actor implements Stat
   }
 
   @Override
-  public Completes<Entry<T>> readNext() {
+  public Completes<T> readNext() {
     return null;
   }
 
   @Override
-  public Completes<List<Entry<T>>> readNext(int maximumEntries) {
+  public Completes<List<T>> readNext(int maximumEntries) {
     return null;
   }
 

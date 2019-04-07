@@ -143,7 +143,7 @@ public abstract class JDBCTextStateStoreActorTest {
     store.write(entity3.id, entity3, 1, interest);
 
     try {
-      Thread.sleep(6000);
+      Thread.sleep(3000);
     }
     catch (InterruptedException ex) {
       //ignored
