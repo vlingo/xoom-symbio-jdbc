@@ -9,6 +9,8 @@ package io.vlingo.symbio.store.state.jdbc;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -154,9 +156,9 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
           final String dispatchId = storeName + ":" + id;
           final PreparedStatement dispatchableStatement = delegate.dispatchableWriteExpressionFor(dispatchId, raw);
           dispatchableStatement.execute();
-          appendEntries(sources);
+          final List<Entry<?>> entries = appendEntries(sources);
           delegate.complete();
-          dispatch(dispatchId, raw);
+          dispatch(dispatchId, raw, entries);
 
           interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, sources, object);
         } catch (Exception e) {
@@ -174,10 +176,11 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   }
 
   @SuppressWarnings("rawtypes")
-  private <C> void appendEntries(final List<Source<C>> sources) throws Exception {
-    if (sources.isEmpty()) return;
+  private <C> List<Entry<?>> appendEntries(final List<Source<C>> sources) throws Exception {
+    if (sources.isEmpty()) return Collections.emptyList();
     try {
-      for (final Entry<?> entry : entryAdapterProvider.asEntries(sources)) {
+      final List<Entry<?>> adapted = entryAdapterProvider.asEntries(sources);
+      for (final Entry<?> entry : adapted) {
         long id = -1L;
         final PreparedStatement appendStatement = delegate.appendExpressionFor(entry);
         final int count = appendStatement.executeUpdate();
@@ -195,6 +198,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
           throw new IllegalStateException(message);
         }
       }
+      return adapted;
     } catch (Exception e) {
       final String message = "Failed to append entry because: " + e.getMessage();
       logger().log(message, e);
@@ -202,7 +206,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     }
   }
 
-  private void dispatch(final String dispatchId, final State<String> state) {
-    dispatcher.dispatch(dispatchId, state.asTextState());
+  private <E extends Entry<?>> void dispatch(final String dispatchId, final State<String> state, final Collection<E> entries) {
+    dispatcher.dispatch(dispatchId, state.asTextState(), entries);
   }
 }
