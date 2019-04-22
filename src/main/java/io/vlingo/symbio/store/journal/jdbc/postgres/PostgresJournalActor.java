@@ -31,11 +31,10 @@ import io.vlingo.common.identity.IdentityGenerator;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.EntryAdapter;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Source;
-import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.TextState;
-import io.vlingo.symbio.StateAdapter;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
@@ -53,8 +52,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
             "INSERT INTO vlingo_symbio_journal_snapshots(stream_name, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)" +
                     "VALUES(?, ?, ?, ?::JSONB, ?, ?::JSONB)";
 
-    private final Map<Class<?>,EntryAdapter<? extends Source<?>,? extends Entry<?>>> sourceAdapters;
-    private final Map<Class<?>,StateAdapter<?,?>> stateAdapters;
+    private final EntryAdapterProvider entryAdapterProvider;
+    private final StateAdapterProvider stateAdapterProvider;
     private final Configuration configuration;
     private final Connection connection;
     private final JournalListener<String> listener;
@@ -75,8 +74,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
         this.gson = new Gson();
 
-        this.sourceAdapters = new HashMap<>();
-        this.stateAdapters = new HashMap<>();
+        this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
+        this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
         this.journalReaders = new HashMap<>();
         this.streamReaders = new HashMap<>();
 
@@ -100,7 +99,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
               (e) -> appendResultedInFailure(streamName, streamVersion, source, snapshot, interest, object, e);
       final Entry<String> entry = asEntry(source, whenFailed);
       insertEntry(streamName, streamVersion, entry, whenFailed);
-      final Tuple2<Optional<ST>,Optional<TextState>> snapshotState = toState(snapshot, streamVersion);
+      final Tuple2<Optional<ST>,Optional<TextState>> snapshotState = toState(streamName, snapshot, streamVersion);
       snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
       doCommit(whenFailed);
       listener.appendedWith(entry, snapshotState._2.orElseGet(() -> null));
@@ -131,51 +130,11 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
       for (Entry<String> entry : entries) {
         insertEntry(streamName, version++, entry, whenFailed);
       }
-      final Tuple2<Optional<ST>,Optional<TextState>> snapshotState = toState(snapshot, fromStreamVersion);
+      final Tuple2<Optional<ST>,Optional<TextState>> snapshotState = toState(streamName, snapshot, fromStreamVersion);
       snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
       doCommit(whenFailed);
       listener.appendedAllWith(entries, snapshotState._2.orElseGet(() -> null));
       interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, snapshotState._1, object);
-    }
-
-    @Override
-    public <S extends Source<?>,E extends Entry<?>> void registerEntryAdapter(final Class<S> sourceType, final EntryAdapter<S,E> adapter) {
-      sourceAdapters.put(sourceType, adapter);
-    }
-
-    @Override
-    public <S,R extends State<?>> void registerStateAdapter(Class<S> stateType, StateAdapter<S,R> adapter) {
-      stateAdapters.put(stateType, adapter);
-    }
-
-    @SuppressWarnings("unchecked")
-    private <S extends Source<?>,E extends Entry<?>> EntryAdapter<S,E> adapter(final Class<S> sourceType) {
-      final EntryAdapter<S,E> adapter = (EntryAdapter<S,E>) sourceAdapters.get(sourceType);
-      if (adapter != null) {
-        return adapter;
-      }
-      throw new IllegalStateException("Adapter not registrered for: " + sourceType.getName());
-    }
-
-    private <S> List<Entry<String>> asEntries(final List<Source<S>> sources, final Consumer<Exception> whenFailed) {
-      final List<Entry<String>> entries = new ArrayList<>();
-      for (final Source<?> source : sources) {
-        entries.add(asEntry(source, whenFailed));
-      }
-      return entries;
-    }
-
-    @SuppressWarnings("unchecked")
-    private Entry<String> asEntry(final Source<?> source, final Consumer<Exception> whenFailed) {
-      try {
-        final EntryAdapter<Source<?>,Entry<?>>  adapter = (EntryAdapter<Source<?>,Entry<?>>) adapter(source.getClass());
-
-        return (Entry<String>) adapter.toEntry(source);
-      } catch (Exception e) {
-        whenFailed.accept(e);
-        logger().log("vlingo/symbio-jdbc-postgres: Cannot adapt source to entry because: ", e);
-        throw new IllegalArgumentException(e);
-      }
     }
 
     @Override
@@ -314,11 +273,27 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private <ST> Tuple2<Optional<ST>,Optional<TextState>> toState(final ST snapshot, final int streamVersion) {
+    private <S> List<Entry<String>> asEntries(final List<Source<S>> sources, final Consumer<Exception> whenFailed) {
+      final List<Entry<String>> entries = new ArrayList<>(sources.size());
+      for (final Source<?> source : sources) {
+        entries.add(asEntry(source, whenFailed));
+      }
+      return entries;
+    }
+
+    private <S> Entry<String> asEntry(final Source<S> source, final Consumer<Exception> whenFailed) {
+      try {
+        return entryAdapterProvider.asEntry(source);
+      } catch (Exception e) {
+        whenFailed.accept(e);
+        logger().log("vlingo/symbio-jdbc-postgres: Cannot adapt source to entry because: ", e);
+        throw new IllegalArgumentException(e);
+      }
+    }
+
+    private <ST> Tuple2<Optional<ST>,Optional<TextState>> toState(final String streamName, final ST snapshot, final int streamVersion) {
         if (snapshot != null) {
-            final StateAdapter<ST,TextState> adapter = (StateAdapter<ST,TextState>) stateAdapters.get(snapshot.getClass());
-            return Tuple2.from(Optional.of(snapshot), Optional.of(adapter.toRawState(snapshot, streamVersion)));
+            return Tuple2.from(Optional.of(snapshot), Optional.of(stateAdapterProvider.asRaw(streamName, snapshot, streamVersion)));
         } else {
             return Tuple2.from(Optional.empty(), Optional.empty());
         }
