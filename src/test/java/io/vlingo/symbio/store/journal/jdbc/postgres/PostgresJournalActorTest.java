@@ -25,9 +25,11 @@ import io.vlingo.common.Completes;
 import io.vlingo.common.serialization.JsonSerialization;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.StateAdapter;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalListener;
 import io.vlingo.symbio.store.journal.JournalReader;
@@ -51,8 +53,10 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
         until = TestUntil.happenings(1);
         listener = Mockito.mock(JournalListener.class);
         journal = Journal.using(world.stage(), PostgresJournalActor.class, listener, configuration);
-        journal.registerEntryAdapter(TestEvent.class, new TestEventAdapter());
-        journal.registerStateAdapter(Entity1.class, entity1Adapter);
+        EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
+        StateAdapterProvider.instance(world).registerAdapter(Entity1.class, entity1Adapter);
+//        journal.registerEntryAdapter(TestEvent.class, new TestEventAdapter());
+//        journal.registerStateAdapter(Entity1.class, entity1Adapter);
 
         Mockito.doAnswer(x -> until.happened()).when(listener).appended(any());
         Mockito.doAnswer(x -> until.happened()).when(listener).appendedAll(any());
@@ -189,6 +193,12 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
       public TextState toRawState(Entity1 state, int stateVersion, Metadata metadata) {
         final String serialization = JsonSerialization.serialized(state);
         return new TextState(state.id, Entity1.class, typeVersion(), serialization, stateVersion, metadata);
+      }
+
+      @Override
+      public TextState toRawState(final String id, final Entity1 state, final int stateVersion, final Metadata metadata) {
+        final String serialization = JsonSerialization.serialized(state);
+        return new TextState(id, Entity1.class, typeVersion(), serialization, stateVersion, metadata);
       }
     }
 }
