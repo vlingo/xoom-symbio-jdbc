@@ -11,12 +11,11 @@ import java.util.List;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.symbio.Source;
+import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
-
 /**
  * JPAObjectStoreActor
- *
  */
 public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   private boolean closed;
@@ -36,15 +35,13 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
     }
   }
 
-  /* @see io.vlingo.symbio.store.object.ObjectStore#persist(java.lang.Object, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public <E> void persist(final Object persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     delegate.persist(persistentObject, sources, updateId, interest, object);
   }
 
-  /* @see io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public <E> void persistAll(final Collection<Object> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     delegate.persistAll(persistentObjects, sources, updateId, interest, object);
   }
 
@@ -82,15 +79,8 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
     delegate.registerMapper(mapper);
   }
 
-  /*
-   * @see io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStore#remove(java.lang.
-   * Object, long,
-   * io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest,
-   * java.lang.Object)
-   */
   @Override
-  public void remove(final Object persistentObject, final long removeId, final PersistResultInterest interest, final Object object) {
+  public <T extends PersistentObject> void remove(final T persistentObject, final long removeId, final PersistResultInterest interest, final Object object) {
     delegate.remove(persistentObject, removeId, interest);
   }
-
 }

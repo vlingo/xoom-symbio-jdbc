@@ -161,7 +161,7 @@ public class JPAObjectStoreIntegrationTest {
     int count = queryInterestAccess.readFrom("multiResultsSize");
     assertEquals(3, count);
 
-    final List<Object> modifiedPersons = new ArrayList<>();
+    final List<Person> modifiedPersons = new ArrayList<>();
     for ( int i = 0; i < count; i++ ) {
       Person person = queryInterestAccess.readFrom("multiResultsValue", i);
       person = person.newPersonWithName(person.name + " " + person.id);
@@ -335,10 +335,10 @@ public class JPAObjectStoreIntegrationTest {
     private AccessSafely access = AccessSafely.afterCompleting(1);
 
     @Override
-    public void persistResultedIn(final Outcome<StorageException, Result> outcome, final Object persistentObject, final int possible, final int actual, final Object object) {
+    public void persistResultedIn(Outcome<StorageException, Result> outcome, Object persistentObject, int possible, int actual, Object object) {
       access.writeUsing("set", outcome);
     }
-    
+
     @SuppressWarnings("unchecked")
     public AccessSafely afterCompleting( final int times ) {
       access =

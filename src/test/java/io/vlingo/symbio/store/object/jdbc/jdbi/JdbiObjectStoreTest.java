@@ -191,7 +191,7 @@ public class JdbiObjectStoreTest {
     final QueryMultiResults mapResults = queryInterest.multiResults.get();
     @SuppressWarnings("unchecked")
     final Iterator<Person> iterator = (Iterator<Person>) mapResults.persistentObjects.iterator();
-    final List<Object> modifiedPersons = new ArrayList<>();
+    final List<Person> modifiedPersons = new ArrayList<>();
     while (iterator.hasNext()) {
       final Person person = iterator.next();
       modifiedPersons.add(person.withName(person.name + " " + person.id));
@@ -265,12 +265,7 @@ public class JdbiObjectStoreTest {
     public TestUntil until;
 
     @Override
-    public void persistResultedIn(
-            final Outcome<StorageException, Result> outcome,
-            final Object persistentObject,
-            final int possible,
-            final int actual,
-            final Object object) {
+    public void persistResultedIn(Outcome<StorageException, Result> outcome, Object persistentObject, int possible, int actual, Object object) {
       this.outcome.set(outcome);
       until.happened();
     }

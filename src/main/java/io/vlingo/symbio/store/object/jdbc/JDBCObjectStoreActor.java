@@ -14,6 +14,7 @@ import io.vlingo.actors.Actor;
 import io.vlingo.common.Scheduled;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.object.ObjectStore;
+import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 
@@ -45,13 +46,15 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
     }
   }
 
+  /* @see io.vlingo.symbio.store.object.ObjectStoreWriter#persist(io.vlingo.symbio.store.object.PersistentObject, java.util.List, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object) */
   @Override
-  public <E> void persist(final Object persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     delegate.persist(persistentObject, updateId, interest, object);
   }
 
+  /* @see io.vlingo.symbio.store.object.ObjectStoreWriter#persistAll(java.util.Collection, java.util.List, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object) */
   @Override
-  public <E> void persistAll(final Collection<Object> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     delegate.persistAll(persistentObjects, updateId, interest, object);    
   }
 

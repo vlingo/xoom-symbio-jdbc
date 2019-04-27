@@ -28,6 +28,7 @@ import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.object.MapQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStoreReader;
+import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 
@@ -73,9 +74,8 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     }
   }
 
-  /* @see io.vlingo.symbio.store.object.ObjectStore#persist(java.lang.Object, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public <E> void persist(Object persistentObject, List<Source<E>> sources, long updateId, PersistResultInterest interest, Object object) {
+  public <T extends PersistentObject, E> void persist(T persistentObject, List<Source<E>> sources, long updateId, PersistResultInterest interest, Object object) {
     try {
       em.getTransaction().begin();
       createOrUpdate(persistentObject, updateId);
@@ -93,7 +93,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
 
   /* @see io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public <E> void persistAll(Collection<Object> persistentObjects, List<Source<E>> sources, long updateId, PersistResultInterest interest, Object object) {
+  public <T extends PersistentObject, E> void persistAll(Collection<T> persistentObjects, List<Source<E>> sources, long updateId, PersistResultInterest interest, Object object) {
     try {
       int count = 0;
       em.getTransaction().begin();
@@ -123,7 +123,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
    */
   @Override
   public void queryAll(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
-    List<?> results = null;
+    List<? extends PersistentObject> results = null;
 
     TypedQuery<?> query = em.createNamedQuery(expression.query, expression.type);
 
@@ -143,7 +143,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     }
 
     em.getTransaction().begin();
-    results = query.getResultList();
+    results = (List<? extends PersistentObject>) query.getResultList();
     em.getTransaction().commit();
 
     interest.queryAllResultedIn(Success.of(Result.Success), QueryMultiResults.of(results), object);
@@ -159,11 +159,11 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
    */
   @Override
   public void queryObject(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
-    Object obj = null;
+    PersistentObject obj = null;
     if (expression.isMapQueryExpression()) {
       MapQueryExpression mapExpression = expression.asMapQueryExpression();
       Object idObj = mapExpression.parameters.get("id");
-      obj = findEntity(mapExpression.type, idObj);
+      obj = (PersistentObject) findEntity(mapExpression.type, idObj);
       if (obj != null)
         em.detach(obj);
     } else {
@@ -175,17 +175,11 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     interest.queryObjectResultedIn(Success.of(Result.Success), QuerySingleResult.of(obj), object);
   }
 
-  /*
-   * @see io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStore#remove(java.lang.
-   * Object, long,
-   * io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest,
-   * java.lang.Object)
-   */
   @Override
-  public void remove(Object persistentObject, long removeId, PersistResultInterest interest, Object object) {
+  public <T extends PersistentObject> void remove(T persistentObject, long removeId, PersistResultInterest interest, Object object) {
     try {
       int count = 0;
-      Object managedEntity = findEntity(persistentObject.getClass(), removeId);
+      PersistentObject managedEntity = (PersistentObject) findEntity(persistentObject.getClass(), removeId);
       if (managedEntity != null) {
         em.getTransaction().begin();
         em.remove(managedEntity);

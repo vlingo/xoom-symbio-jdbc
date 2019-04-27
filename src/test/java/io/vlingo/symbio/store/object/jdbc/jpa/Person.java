@@ -17,6 +17,7 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
+import io.vlingo.symbio.store.object.PersistentObject;
 /**
  * Person
  */
@@ -27,7 +28,9 @@ import javax.persistence.Table;
   @NamedQuery(name="Person.adultsParmList", query="SELECT p FROM Person p WHERE p.age >= ?1 ORDER BY p.id ASC"),
   @NamedQuery(name="Person.adultsParmMap", query="SELECT p FROM Person p WHERE p.age >= :age ORDER BY p.id ASC")
 })
-public class Person implements ReferenceObject {
+public class Person extends PersistentObject implements ReferenceObject {
+
+  private static final long serialVersionUID = 1L;
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)

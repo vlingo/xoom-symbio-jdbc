@@ -75,9 +75,9 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     }
   }
 
-  /* @see io.vlingo.symbio.store.object.ObjectStore#persist(java.lang.Object, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public <E> void persist(final Object persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
+    
     final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
@@ -97,16 +97,15 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     }
   }
 
-  /* @see io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public <E> void persistAll(final Collection<Object> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
     final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
     try {
       final int actual = handle.inTransaction(handle -> {
         int total = 0;
-        for (final Object each : persistentObjects) {
+        for (final T each : persistentObjects) {
           total += persistEach(handle, unitOfWork, each, create, interest, object);
         }
         return total;
@@ -129,6 +128,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
    * @see io.vlingo.symbio.store.object.ObjectStore#queryAll(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStore.QueryResultInterest, java.lang.Object)
    */
   @Override
+  @SuppressWarnings("unchecked")
   public void queryAll(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
     final List<?> results;
 
@@ -147,8 +147,9 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
               .mapTo(expression.type)
               .list();
     }
-
-    interest.queryAllResultedIn(Success.of(Result.Success), queryMultiResults(results, expression.mode), object);
+    
+    List<PersistentObject> resultsAsPersistentObjects = (List<PersistentObject>) results;
+    interest.queryAllResultedIn(Success.of(Result.Success), queryMultiResults(resultsAsPersistentObjects, expression.mode), object);
   }
 
   /*
@@ -174,7 +175,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
               .findFirst();
     }
 
-    final Object presistentObject = result.isPresent() ? result.get() : null;
+    final PersistentObject presistentObject = result.isPresent() ? (PersistentObject) result.get() : null;
 
     interest.queryObjectResultedIn(Success.of(Result.Success), querySingleResult(presistentObject, expression.mode), object);
   }
@@ -214,13 +215,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     }
   }
 
-  private int persistEach(
-          final Handle handle,
-          final UnitOfWork unitOfWork,
-          final Object persistentObject,
-          final boolean create,
-          final PersistResultInterest interest,
-          final Object object) {
+  private <T extends PersistentObject> int persistEach(final Handle handle, final UnitOfWork unitOfWork, final T persistentObject, final boolean create, final PersistResultInterest interest, final Object object) {
 
     final PersistentObject typed = PersistentObject.from(persistentObject);
 
@@ -239,14 +234,14 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     return 0;
   }
 
-  private QueryMultiResults queryMultiResults(final List<?> presistentObjects, final QueryMode mode) {
+  private <T extends PersistentObject> QueryMultiResults queryMultiResults(final List<T> presistentObjects, final QueryMode mode) {
     if (mode.isReadUpdate() && !presistentObjects.isEmpty()) {
       return QueryMultiResults.of(presistentObjects, registerUnitOfWork(presistentObjects));
     }
     return QueryMultiResults.of(presistentObjects);
   }
 
-  private QuerySingleResult querySingleResult(final Object presistentObject, final QueryMode mode) {
+  private <T extends PersistentObject> QuerySingleResult querySingleResult(final T presistentObject, final QueryMode mode) {
     if (mode.isReadUpdate() && presistentObject != null) {
       return QuerySingleResult.of(presistentObject, registerUnitOfWork(presistentObject));
     }
