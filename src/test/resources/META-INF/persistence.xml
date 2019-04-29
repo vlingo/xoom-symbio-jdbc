@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<persistence xmlns="http://java.sun.com/xml/ns/persistence"
-	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
-	version="2.0">
+<persistence xmlns="http://xmlns.jcp.org/xml/ns/persistence"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence
+          http://xmlns.jcp.org/xml/ns/persistence/persistence_2_2.xsd"
+        version="2.2">
   
   	<!--
   	  Per JPA 2.1 Specification, Section 8.2.1.6.1, Page 366, "The exclude-unlisted-classes
@@ -16,14 +17,16 @@
       </description>
       <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
       
-      <!-- Uncomment to use orm.xml -->
-      <!-- mapping-file>META-INF/orm.xml</mapping-file -->
+      <mapping-file>META-INF/orm.xml</mapping-file>
       
       <!-- Annotated entities, converters, etc. contained in the persistence unit -->
+      <class>io.vlingo.symbio.store.object.PersistentObject</class>
+      <class>io.vlingo.symbio.store.object.jdbc.jpa.LocalDateConverter</class>
       <class>io.vlingo.symbio.store.object.jdbc.jpa.EntryMetadataConverter</class>
       <class>io.vlingo.symbio.store.object.jdbc.jpa.JPAEntry</class>
-      <class>io.vlingo.symbio.store.object.jdbc.jpa.LocalDateConverter</class>
       <class>io.vlingo.symbio.store.object.jdbc.jpa.Person</class>
+      
+      <exclude-unlisted-classes>false</exclude-unlisted-classes>
       
       <properties>	
        	<property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
@@ -40,11 +43,11 @@
        	<property name="javax.persistence.schema-generation.drop-source" value="metadata"/>
        	<property name="javax.persistence.schema-generation.create-script-source" value="./target/createDDL.jdbc"/>
        	<property name="javax.persistence.schema-generation.drop-script-source" value="./target/dropDDL.jdbc"/>
-       	<!--
+		<!--        	
        	<property name="eclipselink.logging.level.sql" value="FINE"/>
 		<property name="eclipselink.logging.parameters" value="true"/>
-		-->
-      </properties>
+ 		-->
+       </properties>
     </persistence-unit>
     <persistence-unit name="JpaHsqldbService" transaction-type="RESOURCE_LOCAL">
       <description>
@@ -52,14 +55,17 @@
       </description>
       <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
      
-      <!-- Uncomment to use orm.xml -->
-      <!-- mapping-file>META-INF/orm.xml</mapping-file -->
+      
+      <mapping-file>META-INF/orm.xml</mapping-file>
       
       <!-- Annotated entities, converters, etc. contained in the persistence unit -->
+      <class>io.vlingo.symbio.store.object.PersistentObject</class>
+      <class>io.vlingo.symbio.store.object.jdbc.jpa.LocalDateConverter</class>
       <class>io.vlingo.symbio.store.object.jdbc.jpa.EntryMetadataConverter</class>
       <class>io.vlingo.symbio.store.object.jdbc.jpa.JPAEntry</class>
-      <class>io.vlingo.symbio.store.object.jdbc.jpa.LocalDateConverter</class>
       <class>io.vlingo.symbio.store.object.jdbc.jpa.Person</class>
+      
+      <exclude-unlisted-classes>false</exclude-unlisted-classes>
       
       <properties>
        	<property name="javax.persistence.jdbc.driver" value="org.hsqldb.jdbc.JDBCDriver"/>
@@ -76,10 +82,10 @@
        	<property name="javax.persistence.schema-generation.drop-source" value="metadata"/>
        	<property name="javax.persistence.schema-generation.create-script-source" value="./target/createDDL.jdbc"/>
        	<property name="javax.persistence.schema-generation.drop-script-source" value="./target/dropDDL.jdbc"/>
-       	<!--
+		<!--        	
        	<property name="eclipselink.logging.level.sql" value="FINE"/>
 		<property name="eclipselink.logging.parameters" value="true"/>
-		-->
+ 		-->
       </properties>
     </persistence-unit>
     <persistence-unit name="JpaPostgresService" transaction-type="RESOURCE_LOCAL">
@@ -88,14 +94,17 @@
       </description>
       <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
      
-      <!-- Uncomment to use orm.xml -->
-      <!-- mapping-file>META-INF/orm.xml</mapping-file -->
+      
+      <mapping-file>META-INF/orm.xml</mapping-file>
       
       <!-- Annotated entities, converters, etc. contained in the persistence unit -->
+      <class>io.vlingo.symbio.store.object.PersistentObject</class>
+      <class>io.vlingo.symbio.store.object.jdbc.jpa.LocalDateConverter</class>
       <class>io.vlingo.symbio.store.object.jdbc.jpa.EntryMetadataConverter</class>
       <class>io.vlingo.symbio.store.object.jdbc.jpa.JPAEntry</class>
-      <class>io.vlingo.symbio.store.object.jdbc.jpa.LocalDateConverter</class>
       <class>io.vlingo.symbio.store.object.jdbc.jpa.Person</class>
+      
+      <exclude-unlisted-classes>false</exclude-unlisted-classes>
       
       <properties>
        	<property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver"/>
@@ -112,10 +121,10 @@
        	<property name="javax.persistence.schema-generation.drop-source" value="metadata"/>
        	<property name="javax.persistence.schema-generation.create-script-source" value="./target/createDDL.jdbc"/>
        	<property name="javax.persistence.schema-generation.drop-script-source" value="./target/dropDDL.jdbc"/>
-       	<!--
+		<!--        	
        	<property name="eclipselink.logging.level.sql" value="FINE"/>
 		<property name="eclipselink.logging.parameters" value="true"/>
-		-->
+ 		-->
       </properties>
     </persistence-unit>
 </persistence>
