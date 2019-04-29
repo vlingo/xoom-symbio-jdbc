@@ -153,8 +153,8 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
     @Test
     public void testThatReturnsSameReaderForSameName() {
         final String name = UUID.randomUUID().toString();
-        assertEquals(journal.journalReader(name).await(), journal.journalReader(name).await());
-        assertEquals(journal.streamReader(name).await(), journal.streamReader(name).await());
+        assertEquals((Object) journal.journalReader(name).await(), journal.journalReader(name).await());
+        assertEquals((Object) journal.streamReader(name).await(), journal.streamReader(name).await());
     }
 
     private TestEvent newEventForData(int number) {
