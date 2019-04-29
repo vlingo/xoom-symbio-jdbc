@@ -16,13 +16,13 @@ public final class PersonEvents {
     public final String personId;
     public final int age;
     public final String name;
-    public final int version;
+    public final long version;
     
     public PersonAdded(final Person person) {
-      this(String.valueOf(person.id), person.age, person.name, person.version);
+      this(String.valueOf(person.persistenceId()), person.age, person.name, person.version());
     }
     
-    public PersonAdded(final String personId, final int age, final String name, final int version) {
+    public PersonAdded(final String personId, final int age, final String name, final long version) {
       super();
       this.personId = personId;
       this.age = age;
@@ -37,7 +37,7 @@ public final class PersonEvents {
     public final String name;
     
     public PersonRenamed(final Person person) {
-      this(String.valueOf(person.id), person.name);
+      this(String.valueOf(person.persistenceId()), person.name);
     }
     
     public PersonRenamed(final String personId, final String name) {

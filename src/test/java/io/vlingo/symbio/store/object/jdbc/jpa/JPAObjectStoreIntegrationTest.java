@@ -51,7 +51,7 @@ public class JPAObjectStoreIntegrationTest {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
     Person person = new Person(1L, 21, "Jody Jones");
-    objectStore.persist(person, Arrays.asList(new PersonAdded(person)), person.id, persistInterest);
+    objectStore.persist(person, Arrays.asList(new PersonAdded(person)), person.persistenceId(), persistInterest);
     assertEquals(Result.Success, persistInterestAccess.readFrom("result")); 
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
@@ -65,7 +65,7 @@ public class JPAObjectStoreIntegrationTest {
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
     AccessSafely removeInterestAccess = removeInterest.afterCompleting(1);
-    objectStore.remove(person, person.id, removeInterest);
+    objectStore.remove(person, person.persistenceId(), removeInterest);
     assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
   }
 
@@ -96,9 +96,9 @@ public class JPAObjectStoreIntegrationTest {
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
     AccessSafely removeInterestAccess = removeInterest.afterCompleting(3);
-    objectStore.remove(person1, person1.id, removeInterest);
-    objectStore.remove(person2, person2.id, removeInterest);
-    objectStore.remove(person3, person3.id, removeInterest);
+    objectStore.remove(person1, person1.persistenceId(), removeInterest);
+    objectStore.remove(person2, person2.persistenceId(), removeInterest);
+    objectStore.remove(person3, person3.persistenceId(), removeInterest);
     assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
     assertEquals(3, (int)removeInterestAccess.readFrom("count"));
   }
@@ -109,13 +109,13 @@ public class JPAObjectStoreIntegrationTest {
     final AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
     Person person1 = new Person(1L, 21, "Jody Jones");
 
-    objectStore.persist(person1, Arrays.asList(new PersonAdded(person1)), person1.id, persistInterest);
+    objectStore.persist(person1, Arrays.asList(new PersonAdded(person1)), person1.persistenceId(), persistInterest);
     assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
     final TestPersistResultInterest updateInterest = new TestPersistResultInterest();
     final AccessSafely updateInterestAccess = updateInterest.afterCompleting(1);
-    person1 = person1.newPersonWithName( person1.name + " " + person1.id );
-    objectStore.persist(person1, Arrays.asList(new PersonRenamed(person1)), person1.id, updateInterest);
+    person1 = person1.newPersonWithName( person1.name + " " + person1.persistenceId() );
+    objectStore.persist(person1, Arrays.asList(new PersonRenamed(person1)), person1.persistenceId(), updateInterest);
     assertEquals(Result.Success, updateInterestAccess.readFrom("result"));
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
@@ -124,14 +124,14 @@ public class JPAObjectStoreIntegrationTest {
     objectStore.queryObject(expression, queryInterest);
     assertNotNull( queryInterestAccess.readFrom("singleResult"));
     Person queriedPerson = (Person) queryInterestAccess.readFrom("singleResultValue");
-    assertEquals(person1.id, queriedPerson.id);
+    assertEquals(person1.persistenceId(), queriedPerson.persistenceId());
     assertEquals(person1.age, queriedPerson.age);
     assertEquals(person1.name, queriedPerson.name);
 
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
     final AccessSafely removeInterestAccess = removeInterest.afterCompleting(1);
-    objectStore.remove(person1, person1.id, removeInterest);
+    objectStore.remove(person1, person1.persistenceId(), removeInterest);
     assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
   }
 
@@ -164,7 +164,7 @@ public class JPAObjectStoreIntegrationTest {
     final List<Person> modifiedPersons = new ArrayList<>();
     for ( int i = 0; i < count; i++ ) {
       Person person = queryInterestAccess.readFrom("multiResultsValue", i);
-      person = person.newPersonWithName(person.name + " " + person.id);
+      person = person.newPersonWithName(person.name + " " + person.persistenceId());
       modifiedPersons.add(person);
     }
 
@@ -185,7 +185,7 @@ public class JPAObjectStoreIntegrationTest {
     for (int i = 0; i < 3; i++) {
       Person modifiedPerson = (Person) modifiedPersons.get(i);
       Person queriedPerson = (Person) queryInterest2Access.readFrom("multiResultsValue", i);
-      assertEquals(modifiedPerson.id, queriedPerson.id);
+      assertEquals(modifiedPerson.persistenceId(), queriedPerson.persistenceId());
       assertEquals(modifiedPerson.age, queriedPerson.age);
       assertEquals(modifiedPerson.name, queriedPerson.name);
     }
@@ -193,9 +193,9 @@ public class JPAObjectStoreIntegrationTest {
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
     final AccessSafely removeInterestAccess = removeInterest.afterCompleting(3);
-    objectStore.remove(person1, person1.id, removeInterest);
-    objectStore.remove(person2, person2.id, removeInterest);
-    objectStore.remove(person3, person3.id, removeInterest);
+    objectStore.remove(person1, person1.persistenceId(), removeInterest);
+    objectStore.remove(person2, person2.persistenceId(), removeInterest);
+    objectStore.remove(person3, person3.persistenceId(), removeInterest);
     assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
     assertEquals(3, (int)removeInterestAccess.readFrom("count"));
   }
@@ -228,9 +228,9 @@ public class JPAObjectStoreIntegrationTest {
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
     final AccessSafely removeInterestAccess = removeInterest.afterCompleting(3);
-    objectStore.remove(person1, person1.id, removeInterest);
-    objectStore.remove(person2, person2.id, removeInterest);
-    objectStore.remove(person3, person3.id, removeInterest);
+    objectStore.remove(person1, person1.persistenceId(), removeInterest);
+    objectStore.remove(person2, person2.persistenceId(), removeInterest);
+    objectStore.remove(person3, person3.persistenceId(), removeInterest);
     assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
     assertEquals(3, (int)removeInterestAccess.readFrom("count"));
   }
@@ -263,9 +263,9 @@ public class JPAObjectStoreIntegrationTest {
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
     final AccessSafely removeInterestAccess = removeInterest.afterCompleting(3);
-    objectStore.remove(person1, person1.id, removeInterest);
-    objectStore.remove(person2, person2.id, removeInterest);
-    objectStore.remove(person3, person3.id, removeInterest);
+    objectStore.remove(person1, person1.persistenceId(), removeInterest);
+    objectStore.remove(person2, person2.persistenceId(), removeInterest);
+    objectStore.remove(person3, person3.persistenceId(), removeInterest);
     assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
     assertEquals(3, (int)removeInterestAccess.readFrom("count"));
   }
