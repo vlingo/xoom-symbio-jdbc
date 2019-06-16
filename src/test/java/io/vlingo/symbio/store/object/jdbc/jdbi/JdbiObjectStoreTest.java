@@ -27,6 +27,7 @@ import org.junit.Test;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.common.Outcome;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -218,8 +219,9 @@ public class JdbiObjectStoreTest {
     handle = Jdbi.open(configuration.connection);
 
     handle.execute("CREATE TABLE PERSON (id BIGINT PRIMARY KEY, name VARCHAR(200), age INTEGER)");
+    handle.execute("CREATE TABLE EVENT_JOURNAL (E_ID BIGINT PRIMARY KEY, E_TYPE VARCHAR(200), E_TYPE_VERSION INTEGER, E_DATA LONGVARCHAR(65535), E_METADATA_VALUE VARCHAR(4000) NULL, E_METADATA_OP VARCHAR(128) NULL)");
 
-    final PersistentObjectMapper mapper =
+    final PersistentObjectMapper personMapper =
             PersistentObjectMapper.with(
                     Person.class,
                     JdbiPersistMapper.with(
@@ -228,13 +230,24 @@ public class JdbiObjectStoreTest {
                             (update,object) -> update.bindFields(object)),
                     new PersonMapper());
 
+    final PersistentObjectMapper entryMapper =
+            PersistentObjectMapper.with(
+                    Entry.class,
+                    JdbiPersistMapper.with(
+                            "INSERT INTO EVENT_JOURNAL(E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP) "
+                             + "VALUES (:id, :type, :typeVersion, :entryData, :metadata.value, :metadata.op)",
+                            "(unused)",
+                            (update,object) -> update.bindFields(object)),
+                    null); // query mapper not used
+
     world = World.startWithDefaults("jdbi-test");
 
     delegate = new JdbiObjectStoreDelegate(world.stage(), configuration);
 
     objectStore = world.actorFor(ObjectStore.class, JDBCObjectStoreActor.class, delegate);
 
-    objectStore.registerMapper(mapper);
+    objectStore.registerMapper(personMapper);
+    objectStore.registerMapper(entryMapper);
   }
 
   @After
