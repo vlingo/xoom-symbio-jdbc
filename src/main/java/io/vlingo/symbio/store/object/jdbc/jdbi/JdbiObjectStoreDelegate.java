@@ -7,10 +7,25 @@
 
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.mapper.RowMapper;
+import org.jdbi.v3.core.statement.Update;
+
 import io.vlingo.actors.Logger;
 import io.vlingo.actors.Stage;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -21,17 +36,6 @@ import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreDelegate;
 import io.vlingo.symbio.store.object.jdbc.jdbi.UnitOfWork.AlwaysModifiedUnitOfWork;
-import org.jdbi.v3.core.Handle;
-import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.core.mapper.RowMapper;
-import org.jdbi.v3.core.statement.Update;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 
 /**
  * The {@code JDBCObjectStoreDelegate} for Jdbi.
@@ -40,6 +44,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   private static final String BindListKey = "listArgValues";
   private static final UnitOfWork AlwaysModified = new AlwaysModifiedUnitOfWork();
 
+  private final EntryAdapterProvider entryAdapterProvider;
   private final Handle handle;
   private final Logger logger;
   private final Map<Class<?>,PersistentObjectMapper> mappers;
@@ -58,7 +63,8 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     this.unitOfWorkRegistry = new HashMap<>();
     this.updateId = 0;
     this.logger = stage.world().defaultLogger();
-    
+    this.entryAdapterProvider = EntryAdapterProvider.instance(stage.world());
+
     initialize();
   }
 
@@ -76,14 +82,19 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
 
   @Override
   public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
-    
+
     final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
     try {
-      final int count = handle.inTransaction(handle -> persistEach(handle, unitOfWork, persistentObject, create, interest, object));
+      final int actual = handle.inTransaction(handle -> {
+        int total = 0;
+        total += persistEach(handle, unitOfWork, persistentObject, create, interest, object);
+        appendEntries(sources);
+        return total;
+      });
       unitOfWorkRegistry.remove(updateId);
-      interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, count, object);
+      interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, actual, object);
     } catch (Exception e) {
       // NOTE: UnitOfWork not removed in case retry; see intervalSignal() for timeout-based removal
 
@@ -107,6 +118,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
         for (final T each : persistentObjects) {
           total += persistEach(handle, unitOfWork, each, create, interest, object);
         }
+        appendEntries(sources);
         return total;
       });
       unitOfWorkRegistry.remove(updateId);
@@ -146,7 +158,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
               .mapTo(expression.type)
               .list();
     }
-    
+
     List<PersistentObject> resultsAsPersistentObjects = (List<PersistentObject>) results;
     interest.queryAllResultedIn(Success.of(Result.Success), queryMultiResults(resultsAsPersistentObjects, expression.mode), object);
   }
@@ -199,6 +211,15 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
       if (unitOfWork.hasTimedOut(timeoutTime)) {
         unitOfWorkRegistry.remove(unitOfWork.unitOfWorkId);
       }
+    }
+  }
+
+  private <E> void appendEntries(final List<Source<E>> sources) {
+    final Collection<BaseEntry<?>> all = entryAdapterProvider.asEntries(sources);
+    final JdbiPersistMapper mapper = mappers.get(Entry.class).persistMapper();
+    for (final BaseEntry<?> entry : all) {
+      final Update statement = handle.createUpdate(mapper.insertStatement);
+      mapper.binder.apply(statement, entry).execute();
     }
   }
 
