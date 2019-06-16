@@ -7,14 +7,6 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
@@ -34,6 +26,14 @@ import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
+
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class JDBCStateStoreActor extends Actor implements StateStore {
   private final StorageDelegate delegate;
@@ -118,14 +118,14 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
       } catch (Exception e) {
         delegate.fail();
         interest.readResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), id, null, -1, null, object);
-        logger().log(
+        logger().error(
                 getClass().getSimpleName() +
                 " readText() failed because: " + e.getMessage() +
                 " for: " + (id == null ? "unknown id" : id),
                 e);
       }
     } else {
-      logger().log(
+      logger().warn(
               getClass().getSimpleName() +
               " readText() missing ResultInterest for: " +
               (id == null ? "unknown id" : id));
@@ -162,13 +162,13 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
 
           interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, sources, object);
         } catch (Exception e) {
-          logger().log(getClass().getSimpleName() + " writeText() error because: " + e.getMessage(), e);
+          logger().error(getClass().getSimpleName() + " writeText() error because: " + e.getMessage(), e);
           delegate.fail();
           interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, sources, object);
         }
       }
     } else {
-      logger().log(
+      logger().warn(
               getClass().getSimpleName() +
               " writeText() missing ResultInterest for: " +
               (state == null ? "unknown id" : id));
@@ -194,14 +194,14 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
         }
         if (id == -1L) {
           final String message = "Could not retrieve entry id.";
-          logger().log(message);
+          logger().error(message);
           throw new IllegalStateException(message);
         }
       }
       return adapted;
     } catch (Exception e) {
       final String message = "Failed to append entry because: " + e.getMessage();
-      logger().log(message, e);
+      logger().error(message, e);
       throw new IllegalStateException(message, e);
     }
   }

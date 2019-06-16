@@ -7,6 +7,19 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
+import io.vlingo.actors.Logger;
+import io.vlingo.common.Tuple2;
+import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.State.BinaryState;
+import io.vlingo.symbio.State.TextState;
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.state.StateStore.Dispatchable;
+import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
+import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
+
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -20,19 +33,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import io.vlingo.actors.Logger;
-import io.vlingo.common.Tuple2;
-import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.State.BinaryState;
-import io.vlingo.symbio.State.TextState;
-import io.vlingo.symbio.store.DataFormat;
-import io.vlingo.symbio.store.state.StateStore.Dispatchable;
-import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 
 public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   protected final Connection connection;
@@ -94,7 +94,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   @Override
   public void beginRead() throws Exception {
     if (mode != Mode.None) {
-      logger.log(getClass().getSimpleName() + ": Cannot begin read because currently: " + mode.name());
+      logger.warn(getClass().getSimpleName() + ": Cannot begin read because currently: " + mode.name());
     } else {
       mode = Mode.Reading;
     }
@@ -105,7 +105,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     if (mode != Mode.None) {
 //      System.out.println("ALREADY IN WRITING MODE");
 //      (new IllegalStateException()).printStackTrace();
-      logger.log(getClass().getSimpleName() + ": Cannot begin write because currently: " + mode.name());
+      logger.warn(getClass().getSimpleName() + ": Cannot begin write because currently: " + mode.name());
     } else {
 //      System.out.println("SET WRITING MODE");
 //      (new IllegalStateException()).printStackTrace();
@@ -122,7 +122,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
         connection.close();
       }
     } catch (Exception e) {
-      logger.log(getClass().getSimpleName() + ": Could not close because: " + e.getMessage(), e);
+      logger.error(getClass().getSimpleName() + ": Could not close because: " + e.getMessage(), e);
     }
   }
 
@@ -158,7 +158,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       complete();
     } catch (Exception e) {
       fail();
-      logger.log(getClass().getSimpleName() +
+      logger.error(getClass().getSimpleName() +
               ": Confirm dispatched for: " + dispatchId +
               " failed because: " + e.getMessage(), e);
     }
@@ -196,7 +196,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       mode = Mode.None;
       connection.rollback();
     } catch (Exception e) {
-      logger.log(getClass().getSimpleName() + ": Rollback failed because: " + e.getMessage(), e);
+      logger.error(getClass().getSimpleName() + ": Rollback failed because: " + e.getMessage(), e);
     }
   }
 
@@ -334,14 +334,14 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       createDispatchablesTable();
     } catch (Exception e) {
       // assume table exists; could look at metadata
-      logger.log("Could not create dispatchables table because: " + e.getMessage(), e);
+      logger.error("Could not create dispatchables table because: " + e.getMessage(), e);
     }
 
     try {
       createEntryTable();
     } catch (Exception e) {
       // assume table exists; could look at metadata
-      logger.log("Could not create entry table because: " + e.getMessage(), e);
+      logger.error("Could not create entry table because: " + e.getMessage(), e);
     }
 
     for (final String storeName : StateTypeStateStoreMap.allStoreNames()) {
@@ -352,7 +352,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
         }
       } catch (Exception e) {
         // assume table exists; could look at metadata
-        logger.log("Could not create " + tableName + " table because: " + e.getMessage(), e);
+        logger.error("Could not create " + tableName + " table because: " + e.getMessage(), e);
       }
     }
   }

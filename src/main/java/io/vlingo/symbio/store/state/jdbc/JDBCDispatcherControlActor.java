@@ -6,10 +6,6 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state.jdbc;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.Collection;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Cancellable;
 import io.vlingo.common.Scheduled;
@@ -20,6 +16,10 @@ import io.vlingo.symbio.store.state.StateStore.Dispatchable;
 import io.vlingo.symbio.store.state.StateStore.Dispatcher;
 import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Collection;
 /**
  * JDBCRedispatchControlActor is responsible for requesting re-dispatch
  * of the unconfirmed dispatchables of a JDBCStateStoreActor on a
@@ -58,7 +58,7 @@ implements DispatcherControl, Scheduled<Object> {
       interest.confirmDispatchedResultedIn(Result.Success, dispatchId);
     }
     catch (Exception ex) {
-      logger().log(getClass().getSimpleName() + " confirmDispatched() failed because: " + ex.getMessage(), ex);
+      logger().error(getClass().getSimpleName() + " confirmDispatched() failed because: " + ex.getMessage(), ex);
     }
   }
   
@@ -77,7 +77,7 @@ implements DispatcherControl, Scheduled<Object> {
       }
     }
     catch (Exception e) {
-      logger().log(getClass().getSimpleName() + " dispatchUnconfirmed() failed because: " + e.getMessage(), e);
+      logger().error(getClass().getSimpleName() + " dispatchUnconfirmed() failed because: " + e.getMessage(), e);
     }
   }
   

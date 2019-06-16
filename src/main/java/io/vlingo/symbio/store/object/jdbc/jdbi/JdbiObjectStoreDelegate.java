@@ -7,18 +7,6 @@
 
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import org.jdbi.v3.core.Handle;
-import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.core.mapper.RowMapper;
-import org.jdbi.v3.core.statement.Update;
-
 import io.vlingo.actors.Logger;
 import io.vlingo.actors.Stage;
 import io.vlingo.common.Failure;
@@ -33,6 +21,17 @@ import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreDelegate;
 import io.vlingo.symbio.store.object.jdbc.jdbi.UnitOfWork.AlwaysModifiedUnitOfWork;
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.mapper.RowMapper;
+import org.jdbi.v3.core.statement.Update;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * The {@code JDBCObjectStoreDelegate} for Jdbi.
@@ -71,7 +70,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     try {
       handle.close();
     } catch (Exception e) {
-      logger.log("Close failed because: " + e.getMessage(), e);
+      logger.error("Close failed because: " + e.getMessage(), e);
     }
   }
 
@@ -88,7 +87,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     } catch (Exception e) {
       // NOTE: UnitOfWork not removed in case retry; see intervalSignal() for timeout-based removal
 
-      logger.log("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
+      logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
 
       interest.persistResultedIn(
               Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
@@ -115,7 +114,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     } catch (Exception e) {
       // NOTE: UnitOfWork not removed in case retry; see intervalSignal() for timeout-based removal
 
-      logger.log("Persist all of: " + persistentObjects + " failed because: " + e.getMessage(), e);
+      logger.error("Persist all of: " + persistentObjects + " failed because: " + e.getMessage(), e);
 
       interest.persistResultedIn(
               Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
@@ -211,7 +210,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     try {
       handle.getConnection().setAutoCommit(true);
     } catch (Exception e) {
-      logger.log("The connection could not be set to auto-commit; transactional problems likely.", e);
+      logger.error("The connection could not be set to auto-commit; transactional problems likely.", e);
     }
   }
 

@@ -7,12 +7,6 @@
 
 package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
-import java.sql.Blob;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.text.MessageFormat;
-
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -23,6 +17,12 @@ import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.jdbc.CachedStatement;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
+
+import java.sql.Blob;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.MessageFormat;
 
 public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements StorageDelegate, HSQLDBQueries {
   private final Configuration configuration;
@@ -167,7 +167,7 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
     } catch (SQLException e) {
       final String message =
               HSQLDBDispatchableCachedStatements.class.getSimpleName() + ": Failed to create blob because: " + e.getMessage();
-      logger.log(message, e);
+      logger.error(message, e);
       throw new IllegalStateException(message);
     }
   }

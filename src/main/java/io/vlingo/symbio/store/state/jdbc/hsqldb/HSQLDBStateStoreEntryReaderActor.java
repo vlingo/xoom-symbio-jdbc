@@ -7,12 +7,6 @@
 
 package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
-import java.sql.Blob;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.ArrayList;
-import java.util.List;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.BaseEntry.BinaryEntry;
@@ -21,6 +15,12 @@ import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
+
+import java.sql.Blob;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
 
 public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
   private final Advice advice;
@@ -79,7 +79,7 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
         return entry;
       }
     } catch (Exception e) {
-      logger().log("Unable to read next entry for " + name + " because: " + e.getMessage(), e);
+      logger().error("Unable to read next entry for " + name + " because: " + e.getMessage(), e);
     }
     return null;
   }
@@ -99,7 +99,7 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
       }
       return entries;
     } catch (Exception e) {
-      logger().log("Unable to read next " + maximumEntries + " entries for " + name + " because: " + e.getMessage(), e);
+      logger().error("Unable to read next " + maximumEntries + " entries for " + name + " because: " + e.getMessage(), e);
     }
     return new ArrayList<>(0);
   }

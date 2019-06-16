@@ -7,11 +7,11 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.store.DataFormat;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 
 public abstract class JDBCDispatchableCachedStatements<T> {
   private final CachedStatement<T> appendDispatchable;
@@ -73,8 +73,7 @@ public abstract class JDBCDispatchableCachedStatements<T> {
               getClass().getSimpleName() + ": Failed to create dispatchable statement: \n" +
               sql +
               "\nbecause: " + e.getMessage();
-      logger.log(message, e);
-      System.out.println(message);
+      logger.error(message, e);
       throw new IllegalStateException(message);
     }
   }
@@ -86,7 +85,7 @@ public abstract class JDBCDispatchableCachedStatements<T> {
     } catch (Exception e) {
       final String message =
               getClass().getSimpleName() + ": Failed to prepare query=all because: " + e.getMessage();
-      logger.log(message, e);
+      logger.error(message, e);
       throw new IllegalStateException(message);
     }
   }

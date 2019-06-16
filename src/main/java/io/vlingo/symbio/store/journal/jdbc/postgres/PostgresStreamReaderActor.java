@@ -60,7 +60,7 @@ public class PostgresStreamReaderActor extends Actor implements StreamReader<Str
         try {
             return completes().with(eventsFromOffset(streamName, fromStreamVersion));
         } catch (Exception e) {
-            logger().log("vlingo/symbio-postgresql: " + e.getMessage(), e);
+            logger().error("vlingo/symbio-postgresql: " + e.getMessage(), e);
             return completes().with(new Stream<>(streamName, 1, emptyList(), TextState.Null));
         }
     }
