@@ -7,15 +7,7 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.google.gson.Gson;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.BaseEntry;
@@ -23,6 +15,13 @@ import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.journal.JournalReader;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PostgresJournalReaderActor extends Actor implements JournalReader<TextEntry> {
     private static final String QUERY_CURRENT_OFFSET =
@@ -84,7 +83,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
                 return completes().with(eventFromResultSet(resultSet));
             }
         } catch (Exception e) {
-            logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
+            logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
         }
 
         return completes().with(null);
@@ -109,7 +108,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
             return completes().with(events);
 
         } catch (Exception e) {
-            logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
+            logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
         }
 
         return completes().with(null);
@@ -167,8 +166,8 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
                 this.offset = resultSet.getLong(1);
             }
         } catch (Exception e) {
-            logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
-            logger().log("vlingo/symbio-postgres: Rewinding the offset");
+            logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
+            logger().error("vlingo/symbio-postgres: Rewinding the offset");
         }
     }
 
@@ -181,8 +180,8 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
             updateCurrentOffset.executeUpdate();
             connection.commit();
         } catch (Exception e) {
-            logger().log("vlingo/symbio-postgres: Could not persist the offset. Will retry on next read.");
-            logger().log("vlingo/symbio-postgres: " + e.getMessage(), e);
+            logger().error("vlingo/symbio-postgres: Could not persist the offset. Will retry on next read.");
+            logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
         }
     }
 
@@ -193,7 +192,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
                 return resultSet.getLong(1);
             }
         } catch (Exception e) {
-            logger().log("vlingo/symbio-postgres: Could not retrieve latest offset, using current.");
+            logger().error("vlingo/symbio-postgres: Could not retrieve latest offset, using current.");
         }
 
         return offset;

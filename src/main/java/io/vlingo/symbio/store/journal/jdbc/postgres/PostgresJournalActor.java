@@ -7,19 +7,7 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.function.Consumer;
-
 import com.google.gson.Gson;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Address;
 import io.vlingo.actors.Definition;
@@ -42,6 +30,17 @@ import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalListener;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.StreamReader;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Consumer;
 
 public class PostgresJournalActor extends Actor implements Journal<String> {
     private static final String INSERT_EVENT =
@@ -192,14 +191,14 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
             insertEvent.setLong(8, timestamp);
 
             if (insertEvent.executeUpdate() != 1) {
-                logger().log("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString());
+                logger().error("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString());
                 throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert event");
             }
 
             ((BaseEntry<String>) entry).__internal__setId(id.toString()); //questionable cast
         } catch (SQLException e) {
             whenFailed.accept(e);
-            logger().log("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString(), e);
+            logger().error("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString(), e);
             throw new IllegalStateException(e);
         }
     }
@@ -217,12 +216,12 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
             insertSnapshot.setString(6, gson.toJson(snapshotState.metadata));
 
             if (insertSnapshot.executeUpdate() != 1) {
-                logger().log("vlingo/symbio-jdbc-postgres: Could not insert snapshot with id " + snapshotState.id);
+                logger().error("vlingo/symbio-jdbc-postgres: Could not insert snapshot with id " + snapshotState.id);
                 throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert snapshot");
             }
         } catch (SQLException e) {
             whenFailed.accept(e);
-            logger().log("vlingo/symbio-jdbc-postgres: Could not insert event with id " + snapshotState.id, e);
+            logger().error("vlingo/symbio-jdbc-postgres: Could not insert event with id " + snapshotState.id, e);
             throw new IllegalStateException(e);
         }
     }
@@ -268,7 +267,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
             connection.commit();
         } catch (SQLException e) {
             whenFailed.accept(e);
-            logger().log("vlingo/symbio-jdbc-postgres: Could not complete transaction", e);
+            logger().error("vlingo/symbio-jdbc-postgres: Could not complete transaction", e);
             throw new IllegalStateException(e);
         }
     }
@@ -286,7 +285,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
         return entryAdapterProvider.asEntry(source);
       } catch (Exception e) {
         whenFailed.accept(e);
-        logger().log("vlingo/symbio-jdbc-postgres: Cannot adapt source to entry because: ", e);
+        logger().error("vlingo/symbio-jdbc-postgres: Cannot adapt source to entry because: ", e);
         throw new IllegalArgumentException(e);
       }
     }

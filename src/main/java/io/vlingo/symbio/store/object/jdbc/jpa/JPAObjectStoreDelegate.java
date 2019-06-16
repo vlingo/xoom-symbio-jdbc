@@ -7,16 +7,6 @@
 
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.FlushModeType;
-import javax.persistence.Persistence;
-import javax.persistence.TypedQuery;
-
 import io.vlingo.actors.Logger;
 import io.vlingo.actors.Stage;
 import io.vlingo.common.Failure;
@@ -31,6 +21,15 @@ import io.vlingo.symbio.store.object.ObjectStoreReader;
 import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.FlushModeType;
+import javax.persistence.Persistence;
+import javax.persistence.TypedQuery;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 /**
  * The {@code JDBCObjectStoreDelegate} for JPA.
@@ -70,7 +69,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     try {
       em.close();
     } catch (Exception e) {
-      logger.log("Close failed because: " + e.getMessage(), e);
+      logger.error("Close failed because: " + e.getMessage(), e);
     }
   }
 
@@ -83,7 +82,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
       em.getTransaction().commit();
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, 1, object);
     } catch (Exception e) {
-      logger.log("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
+      logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
       em.getTransaction().rollback(); // TODO: is this necessary?
 
       interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), persistentObject,
@@ -106,7 +105,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
       interest.persistResultedIn(Success.of(Result.Success), persistentObjects, persistentObjects.size(), count,
               object);
     } catch (Exception e) {
-      logger.log("Persist all of: " + persistentObjects + "failed because: " + e.getMessage(), e);
+      logger.error("Persist all of: " + persistentObjects + "failed because: " + e.getMessage(), e);
 
       interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), persistentObjects,
               persistentObjects.size(), 0, object);
@@ -168,7 +167,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
         em.detach(obj);
     } else {
       // TODO: IllegalArgumentException?
-      logger.log("Unsupported query expression: " + expression.getClass().getName());
+      logger.error("Unsupported query expression: " + expression.getClass().getName());
       // interest.queryObjectResultedIn( Failure.of( Result.Failure, "" ), null, 1, 0,
       // object);
     }
@@ -188,7 +187,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
       }
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, count, object);
     } catch (Exception e) {
-      logger.log("Removal of: " + persistentObject + " failed because: " + e.getMessage(), e);
+      logger.error("Removal of: " + persistentObject + " failed because: " + e.getMessage(), e);
 
       em.getTransaction().rollback();
 
@@ -247,7 +246,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
         ? (JPAEntry) entry
         : new JPAEntry(entry);
       em.persist(jpaEntry);
-      logger.log("em.persist(" + jpaEntry + ")");
+      logger.debug("em.persist(" + jpaEntry + ")");
     }
   }
 }
