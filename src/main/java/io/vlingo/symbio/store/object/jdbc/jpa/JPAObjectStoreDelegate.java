@@ -121,6 +121,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
    * java.lang.Object)
    */
   @Override
+  @SuppressWarnings("unchecked")
   public void queryAll(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
     List<? extends PersistentObject> results = null;
 

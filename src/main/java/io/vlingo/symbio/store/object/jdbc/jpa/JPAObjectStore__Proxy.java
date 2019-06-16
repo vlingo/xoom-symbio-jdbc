@@ -1,20 +1,14 @@
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
+import java.util.Collection;
+import java.util.List;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.DeadLetter;
 import io.vlingo.actors.LocalMessage;
 import io.vlingo.actors.Mailbox;
-import io.vlingo.common.BasicCompletes;
-import io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStore;
-import io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest;
-import java.util.Collection;
-import io.vlingo.symbio.store.object.PersistentObject;
-import java.lang.Object;
-import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.Source;
-import io.vlingo.symbio.store.object.QueryExpression;
-import io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest;
-import java.util.List;
+import io.vlingo.symbio.store.object.PersistentObject;
 
 public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStore {
 
@@ -27,21 +21,13 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
   private static final String queryAllRepresentation7 = "queryAll(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest)";
   private static final String queryAllRepresentation8 = "queryAll(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest, java.lang.Object)";
   private static final String persistRepresentation9 = "persist(T, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
-  private static final String persistRepresentation10 = "persist(T, java.util.List<io.vlingo.symbio.Source<E>>, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
   private static final String persistRepresentation11 = "persist(T, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
-  private static final String persistRepresentation12 = "persist(T, java.util.List<io.vlingo.symbio.Source<E>>, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
   private static final String persistRepresentation13 = "persist(T, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
-  private static final String persistRepresentation14 = "persist(T, java.util.List<io.vlingo.symbio.Source<E>>, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
   private static final String persistRepresentation15 = "persist(T, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
-  private static final String persistRepresentation16 = "persist(T, java.util.List<io.vlingo.symbio.Source<E>>, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
-  private static final String persistAllRepresentation17 = "persistAll(java.util.Collection<T>, java.util.List<io.vlingo.symbio.Source<E>>, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
   private static final String persistAllRepresentation18 = "persistAll(java.util.Collection<T>, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
   private static final String persistAllRepresentation19 = "persistAll(java.util.Collection<T>, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
-  private static final String persistAllRepresentation20 = "persistAll(java.util.Collection<T>, java.util.List<io.vlingo.symbio.Source<E>>, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
   private static final String persistAllRepresentation21 = "persistAll(java.util.Collection<T>, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
-  private static final String persistAllRepresentation22 = "persistAll(java.util.Collection<T>, java.util.List<io.vlingo.symbio.Source<E>>, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
   private static final String persistAllRepresentation23 = "persistAll(java.util.Collection<T>, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
-  private static final String persistAllRepresentation24 = "persistAll(java.util.Collection<T>, java.util.List<io.vlingo.symbio.Source<E>>, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
 
   private final Actor actor;
   private final Mailbox mailbox;
@@ -51,6 +37,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     this.mailbox = mailbox;
   }
 
+  @Override
   public <T extends io.vlingo.symbio.store.object.PersistentObject>void remove(T arg0, long arg1, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.remove(arg0, arg1, arg2);
@@ -60,6 +47,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, removeRepresentation1));
     }
   }
+  @Override
   public <T extends io.vlingo.symbio.store.object.PersistentObject>void remove(T arg0, long arg1, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2, java.lang.Object arg3) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.remove(arg0, arg1, arg2, arg3);
@@ -69,6 +57,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, removeRepresentation2));
     }
   }
+  @Override
   public void close() {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.close();
@@ -78,6 +67,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, closeRepresentation3));
     }
   }
+  @Override
   public void registerMapper(io.vlingo.symbio.store.object.PersistentObjectMapper arg0) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.registerMapper(arg0);
@@ -87,6 +77,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, registerMapperRepresentation4));
     }
   }
+  @Override
   public void queryObject(io.vlingo.symbio.store.object.QueryExpression arg0, io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1, java.lang.Object arg2) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.queryObject(arg0, arg1, arg2);
@@ -96,6 +87,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, queryObjectRepresentation5));
     }
   }
+  @Override
   public void queryObject(io.vlingo.symbio.store.object.QueryExpression arg0, io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.queryObject(arg0, arg1);
@@ -105,6 +97,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, queryObjectRepresentation6));
     }
   }
+  @Override
   public void queryAll(io.vlingo.symbio.store.object.QueryExpression arg0, io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.queryAll(arg0, arg1);
@@ -114,6 +107,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, queryAllRepresentation7));
     }
   }
+  @Override
   public void queryAll(io.vlingo.symbio.store.object.QueryExpression arg0, io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1, java.lang.Object arg2) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.queryAll(arg0, arg1, arg2);
@@ -123,6 +117,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, queryAllRepresentation8));
     }
   }
+  @Override
   public <T extends io.vlingo.symbio.store.object.PersistentObject>void persist(T arg0, long arg1, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1, arg2);
@@ -132,6 +127,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, persistRepresentation9));
     }
   }
+  @Override
   public <T extends io.vlingo.symbio.store.object.PersistentObject>void persist(T arg0, long arg1, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2, java.lang.Object arg3) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1, arg2, arg3);
@@ -141,6 +137,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, persistRepresentation11));
     }
   }
+  @Override
   public <T extends io.vlingo.symbio.store.object.PersistentObject>void persist(T arg0, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1);
@@ -150,6 +147,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, persistRepresentation13));
     }
   }
+  @Override
   public <T extends io.vlingo.symbio.store.object.PersistentObject>void persist(T arg0, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1, java.lang.Object arg2) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1, arg2);
@@ -169,6 +167,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, persistRepresentation15));
     }
   }
+  @Override
   public <T extends io.vlingo.symbio.store.object.PersistentObject>void persistAll(java.util.Collection<T> arg0, long arg1, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1, arg2);
@@ -178,6 +177,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, persistAllRepresentation18));
     }
   }
+  @Override
   public <T extends io.vlingo.symbio.store.object.PersistentObject>void persistAll(java.util.Collection<T> arg0, long arg1, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2, java.lang.Object arg3) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1, arg2, arg3);
@@ -187,6 +187,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, persistAllRepresentation19));
     }
   }
+  @Override
   public <T extends io.vlingo.symbio.store.object.PersistentObject>void persistAll(java.util.Collection<T> arg0, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1);
@@ -196,6 +197,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       actor.deadLetters().failedDelivery(new DeadLetter(actor, persistAllRepresentation21));
     }
   }
+  @Override
   public <T extends io.vlingo.symbio.store.object.PersistentObject>void persistAll(java.util.Collection<T> arg0, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1, java.lang.Object arg2) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1, arg2);
