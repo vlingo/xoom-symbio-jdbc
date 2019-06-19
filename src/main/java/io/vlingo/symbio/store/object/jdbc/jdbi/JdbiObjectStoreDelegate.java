@@ -31,6 +31,7 @@ import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.object.ObjectStoreReader;
+import io.vlingo.symbio.store.object.PersistentEntry;
 import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
@@ -219,7 +220,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     final JdbiPersistMapper mapper = mappers.get(Entry.class).persistMapper();
     for (final BaseEntry<?> entry : all) {
       final Update statement = handle.createUpdate(mapper.insertStatement);
-      mapper.binder.apply(statement, entry).execute();
+      mapper.binder.apply(statement, new PersistentEntry(entry)).execute();
     }
   }
 
