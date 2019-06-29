@@ -7,12 +7,6 @@
 
 package io.vlingo.symbio.store.state.jdbc.postgres;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.text.MessageFormat;
-
-import org.postgresql.util.PGobject;
-
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -20,10 +14,15 @@ import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.EntryReader.Advice;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.common.jdbc.JDBCStorageDelegate;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.jdbc.CachedStatement;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
-import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
+import org.postgresql.util.PGobject;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.text.MessageFormat;
 
 public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> implements StorageDelegate, PostgresQueries {
   private final Configuration configuration;

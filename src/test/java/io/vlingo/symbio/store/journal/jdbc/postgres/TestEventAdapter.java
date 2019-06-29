@@ -19,13 +19,13 @@ public final class TestEventAdapter implements EntryAdapter<TestEvent,TextEntry>
   }
 
   @Override
-  public TextEntry toEntry(final TestEvent source) {
-    return toEntry(source, source.id);
+  public TextEntry toEntry(final TestEvent source, final Metadata metadata) {
+    return toEntry(source, source.id, metadata);
   }
 
   @Override
-  public TextEntry toEntry(TestEvent source, String id) {
+  public TextEntry toEntry(final TestEvent source, final String id, final Metadata metadata) {
     final String serialization = JsonSerialization.serialized(source);
-    return new TextEntry(TestEvent.class, 1, serialization, Metadata.nullMetadata());
+    return new TextEntry(TestEvent.class, 1, serialization, metadata);
   }
 }

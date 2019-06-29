@@ -6,14 +6,16 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
-import java.util.Collection;
-import java.util.List;
-
 import io.vlingo.actors.Actor;
+import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
+
+import java.util.Collection;
+import java.util.List;
+
 /**
  * JPAObjectStoreActor
  */
@@ -36,13 +38,16 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   }
 
   @Override
-  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
-    delegate.persist(persistentObject, sources, updateId, interest, object);
+  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
+          final PersistResultInterest interest, final Object object) {
+    delegate.persist(persistentObject, sources, metadata, updateId, interest, object);
+
   }
 
   @Override
-  public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
-    delegate.persistAll(persistentObjects, sources, updateId, interest, object);
+  public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final Metadata metadata,
+          final long updateId, final PersistResultInterest interest, final Object object) {
+    delegate.persistAll(persistentObjects, sources, metadata, updateId, interest, object);
   }
 
   /*

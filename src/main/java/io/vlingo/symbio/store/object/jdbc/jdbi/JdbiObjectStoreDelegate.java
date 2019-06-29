@@ -7,18 +7,6 @@
 
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-
-import org.jdbi.v3.core.Handle;
-import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.core.mapper.RowMapper;
-import org.jdbi.v3.core.statement.Update;
-
 import io.vlingo.actors.Logger;
 import io.vlingo.actors.Stage;
 import io.vlingo.common.Failure;
@@ -26,6 +14,7 @@ import io.vlingo.common.Success;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -37,6 +26,17 @@ import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreDelegate;
 import io.vlingo.symbio.store.object.jdbc.jdbi.UnitOfWork.AlwaysModifiedUnitOfWork;
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.mapper.RowMapper;
+import org.jdbi.v3.core.statement.Update;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * The {@code JDBCObjectStoreDelegate} for Jdbi.
@@ -76,13 +76,14 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   public void close() {
     try {
       handle.close();
-    } catch (Exception e) {
+    } catch (final Exception e) {
       logger.error("Close failed because: " + e.getMessage(), e);
     }
   }
 
   @Override
-  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
+          final PersistResultInterest interest, final Object object) {
 
     final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
@@ -91,12 +92,12 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
       final int actual = handle.inTransaction(handle -> {
         int total = 0;
         total += persistEach(handle, unitOfWork, persistentObject, create, interest, object);
-        appendEntries(sources);
+        appendEntries(sources, metadata);
         return total;
       });
       unitOfWorkRegistry.remove(updateId);
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, actual, object);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       // NOTE: UnitOfWork not removed in case retry; see intervalSignal() for timeout-based removal
 
       logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
@@ -109,7 +110,8 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   }
 
   @Override
-  public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
+  public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final Metadata metadata,
+          final long updateId, final PersistResultInterest interest, final Object object) {
     final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
@@ -119,12 +121,12 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
         for (final T each : persistentObjects) {
           total += persistEach(handle, unitOfWork, each, create, interest, object);
         }
-        appendEntries(sources);
+        appendEntries(sources, metadata);
         return total;
       });
       unitOfWorkRegistry.remove(updateId);
       interest.persistResultedIn(Success.of(Result.Success), persistentObjects, persistentObjects.size(), actual, object);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       // NOTE: UnitOfWork not removed in case retry; see intervalSignal() for timeout-based removal
 
       logger.error("Persist all of: " + persistentObjects + " failed because: " + e.getMessage(), e);
@@ -160,7 +162,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
               .list();
     }
 
-    List<PersistentObject> resultsAsPersistentObjects = (List<PersistentObject>) results;
+    final List<PersistentObject> resultsAsPersistentObjects = (List<PersistentObject>) results;
     interest.queryAllResultedIn(Success.of(Result.Success), queryMultiResults(resultsAsPersistentObjects, expression.mode), object);
   }
 
@@ -187,7 +189,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
               .findFirst();
     }
 
-    final PersistentObject presistentObject = result.isPresent() ? (PersistentObject) result.get() : null;
+    final PersistentObject presistentObject = (PersistentObject) result.orElse(null);
 
     interest.queryObjectResultedIn(Success.of(Result.Success), querySingleResult(presistentObject, expression.mode), object);
   }
@@ -215,8 +217,8 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     }
   }
 
-  private <E> void appendEntries(final List<Source<E>> sources) {
-    final Collection<BaseEntry<?>> all = entryAdapterProvider.asEntries(sources);
+  private <E> void appendEntries(final List<Source<E>> sources, final Metadata metadata) {
+    final Collection<BaseEntry<?>> all = entryAdapterProvider.asEntries(sources, metadata);
     final JdbiPersistMapper mapper = mappers.get(Entry.class).persistMapper();
     for (final BaseEntry<?> entry : all) {
       final Update statement = handle.createUpdate(mapper.insertStatement);
@@ -231,7 +233,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     // backwards, but fact nonetheless.
     try {
       handle.getConnection().setAutoCommit(true);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       logger.error("The connection could not be set to auto-commit; transactional problems likely.", e);
     }
   }

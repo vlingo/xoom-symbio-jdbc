@@ -13,6 +13,7 @@ import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -68,20 +69,21 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   public void close() {
     try {
       em.close();
-    } catch (Exception e) {
+    } catch (final Exception e) {
       logger.error("Close failed because: " + e.getMessage(), e);
     }
   }
 
   @Override
-  public <T extends PersistentObject, E> void persist(T persistentObject, List<Source<E>> sources, long updateId, PersistResultInterest interest, Object object) {
+  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
+          final PersistResultInterest interest, final Object object) {
     try {
       em.getTransaction().begin();
       createOrUpdate(persistentObject, updateId);
-      appendSources(sources);
+      appendSources(sources, metadata);
       em.getTransaction().commit();
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, 1, object);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
       em.getTransaction().rollback(); // TODO: is this necessary?
 
@@ -90,9 +92,9 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     }
   }
 
-  /* @see io.vlingo.symbio.store.object.ObjectStore#persistAll(java.util.Collection, java.util.List, long, io.vlingo.symbio.store.object.ObjectStore.PersistResultInterest, java.lang.Object) */
   @Override
-  public <T extends PersistentObject, E> void persistAll(Collection<T> persistentObjects, List<Source<E>> sources, long updateId, PersistResultInterest interest, Object object) {
+  public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final Metadata metadata,
+          final long updateId, final PersistResultInterest interest, final Object object) {
     try {
       int count = 0;
       em.getTransaction().begin();
@@ -100,11 +102,11 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
         createOrUpdate(detachedEntity, detachedEntity.persistenceId());
         count++;
       }
-      appendSources(sources);
+      appendSources(sources, metadata);
       em.getTransaction().commit();
       interest.persistResultedIn(Success.of(Result.Success), persistentObjects, persistentObjects.size(), count,
               object);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       logger.error("Persist all of: " + persistentObjects + "failed because: " + e.getMessage(), e);
 
       interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), persistentObjects,
@@ -127,16 +129,16 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     TypedQuery<?> query = em.createNamedQuery(expression.query, expression.type);
 
     if (expression.isListQueryExpression()) {
-      List<?> parameters = expression.asListQueryExpression().parameters;
+      final List<?> parameters = expression.asListQueryExpression().parameters;
       if (parameters != null) {
         for (int i = 0; i < parameters.size(); i++) {
-          int parmOrdinal = i + 1;
+          final int parmOrdinal = i + 1;
           query = query.setParameter(parmOrdinal, parameters.get(i));
         }
       }
     } else if (expression.isMapQueryExpression()) {
-      Map<String, ?> parameters = expression.asMapQueryExpression().parameters;
-      for (String key : parameters.keySet()) {
+      final Map<String, ?> parameters = expression.asMapQueryExpression().parameters;
+      for (final String key : parameters.keySet()) {
         query = query.setParameter(key, parameters.get(key));
       }
     }
@@ -160,8 +162,8 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   public void queryObject(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
     PersistentObject obj = null;
     if (expression.isMapQueryExpression()) {
-      MapQueryExpression mapExpression = expression.asMapQueryExpression();
-      Object idObj = mapExpression.parameters.get("id");
+      final MapQueryExpression mapExpression = expression.asMapQueryExpression();
+      final Object idObj = mapExpression.parameters.get("id");
       obj = (PersistentObject) findEntity(mapExpression.type, idObj);
       if (obj != null)
         em.detach(obj);
@@ -175,10 +177,10 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   }
 
   @Override
-  public <T extends PersistentObject> void remove(T persistentObject, long removeId, PersistResultInterest interest, Object object) {
+  public <T extends PersistentObject> void remove(final T persistentObject, final long removeId, final PersistResultInterest interest, final Object object) {
     try {
       int count = 0;
-      PersistentObject managedEntity = (PersistentObject) findEntity(persistentObject.getClass(), removeId);
+      final PersistentObject managedEntity = (PersistentObject) findEntity(persistentObject.getClass(), removeId);
       if (managedEntity != null) {
         em.getTransaction().begin();
         em.remove(managedEntity);
@@ -186,7 +188,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
         count++;
       }
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, count, object);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       logger.error("Removal of: " + persistentObject + " failed because: " + e.getMessage(), e);
 
       em.getTransaction().rollback();
@@ -202,11 +204,11 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
    * store.object.PersistentObjectMapper)
    */
   @Override
-  public void registerMapper(PersistentObjectMapper mapper) {
+  public void registerMapper(final PersistentObjectMapper mapper) {
     throw new UnsupportedOperationException("registerMapper is unnecessary for JPA.");
   }
 
-  protected Object findEntity(Class<?> entityClass, Object primaryKey) {
+  protected Object findEntity(final Class<?> entityClass, final Object primaryKey) {
     return em.find(entityClass, primaryKey);
   }
 
@@ -221,7 +223,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
        */
       em.persist(detachedEntity);
     } else {
-      Object managedEntity = findEntity(detachedEntity.getClass(), updateId);
+      final Object managedEntity = findEntity(detachedEntity.getClass(), updateId);
       if (managedEntity == null) {
         /*
          * App provided id is not yet saved.
@@ -239,10 +241,10 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   /**
    * Convert each {@link Source} in {@code sources} to a {@link
    */
-  private <E> void appendSources(List<Source<E>> sources) {
-    final Collection<Entry<String>> entries = entryAdapterProvider.asEntries(sources);
-    for (Entry<String> entry : entries) {
-      JPAEntry jpaEntry = entry instanceof JPAEntry
+  private <E> void appendSources(final List<Source<E>> sources, final Metadata metadata) {
+    final Collection<Entry<String>> entries = entryAdapterProvider.asEntries(sources, metadata);
+    for (final Entry<String> entry : entries) {
+      final JPAEntry jpaEntry = entry instanceof JPAEntry
         ? (JPAEntry) entry
         : new JPAEntry(entry);
       em.persist(jpaEntry);

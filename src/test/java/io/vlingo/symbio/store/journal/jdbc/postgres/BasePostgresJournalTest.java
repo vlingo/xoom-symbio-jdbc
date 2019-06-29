@@ -7,25 +7,23 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import static io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
-import static org.junit.Assert.assertEquals;
-
 import com.google.gson.Gson;
+import io.vlingo.actors.World;
+import io.vlingo.common.identity.IdentityGenerator;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-
-import io.vlingo.actors.World;
-import io.vlingo.common.identity.IdentityGenerator;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.store.DataFormat;
-import io.vlingo.symbio.store.common.jdbc.Configuration;
+import static io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
+import static org.junit.Assert.assertEquals;
 
 public abstract class BasePostgresJournalTest {
     private static final String EVENT_TABLE =
@@ -87,7 +85,11 @@ public abstract class BasePostgresJournalTest {
         streamName = aggregateRootId;
         world = World.startWithDefaults("event-stream-tests");
         configuration = testConfiguration(DataFormat.Text);
-
+        try {
+            dropDatabase();
+        } catch (Exception e){
+            //ignore any errors
+        }
         gson = new Gson();
         identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
 
@@ -109,6 +111,8 @@ public abstract class BasePostgresJournalTest {
             assert createEventTable.executeUpdate() == 0;
             assert createSnapshotTable.executeUpdate() == 0;
             assert createOffsetTable.executeUpdate() == 0;
+        } finally {
+            configuration.connection.commit();
         }
     }
 
@@ -121,6 +125,8 @@ public abstract class BasePostgresJournalTest {
             assert dropEventTable.executeUpdate() == 0;
             assert dropSnapshotTable.executeUpdate() == 0;
             assert dropOffsetTable.executeUpdate() == 0;
+        } finally {
+            configuration.connection.commit();
         }
     }
 

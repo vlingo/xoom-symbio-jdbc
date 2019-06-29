@@ -20,281 +20,274 @@ import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.journal.Journal;
-import io.vlingo.symbio.store.journal.JournalListener;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.StreamReader;
+import io.vlingo.symbio.store.common.jdbc.JDBCStorageDelegate;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class PostgresJournalActor extends Actor implements Journal<String> {
-    private static final String INSERT_EVENT =
-            "INSERT INTO vlingo_symbio_journal(entry_data, entry_metadata, entry_type, entry_type_version, stream_name, stream_version, id, entry_timestamp)" +
-                    "VALUES(?::JSONB, ?::JSONB, ?, ?, ?, ?, ?, ?)";
+  private static final String INSERT_EVENT =
+          "INSERT INTO vlingo_symbio_journal(entry_data, entry_metadata, entry_type, entry_type_version, stream_name, stream_version, id, entry_timestamp)"
+                  + "VALUES(?::JSONB, ?::JSONB, ?, ?, ?, ?, ?, ?)";
 
-    private static final String INSERT_SNAPSHOT =
-            "INSERT INTO vlingo_symbio_journal_snapshots(stream_name, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)" +
-                    "VALUES(?, ?, ?, ?::JSONB, ?, ?::JSONB)";
+  private static final String INSERT_SNAPSHOT =
+          "INSERT INTO vlingo_symbio_journal_snapshots(stream_name, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)"
+                  + "VALUES(?, ?, ?, ?::JSONB, ?, ?::JSONB)";
 
-    private final EntryAdapterProvider entryAdapterProvider;
-    private final StateAdapterProvider stateAdapterProvider;
-    private final Configuration configuration;
-    private final Connection connection;
-    private final JournalListener<String> listener;
-    private final PreparedStatement insertEvent;
-    private final PreparedStatement insertSnapshot;
-    private final Gson gson;
-    private final Map<String, JournalReader<TextEntry>> journalReaders;
-    private final Map<String, StreamReader<String>> streamReaders;
-    private final IdentityGenerator identityGenerator;
+  private final EntryAdapterProvider entryAdapterProvider;
+  private final StateAdapterProvider stateAdapterProvider;
+  private final Configuration configuration;
+  private final Connection connection;
+  private final PreparedStatement insertEvent;
+  private final PreparedStatement insertSnapshot;
+  private final Gson gson;
+  private final Map<String, JournalReader<TextEntry>> journalReaders;
+  private final Map<String, StreamReader<String>> streamReaders;
+  private final IdentityGenerator identityGenerator;
+  private final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher;
+  private final DispatcherControl dispatcherControl;
 
-    public PostgresJournalActor(JournalListener<String> listener, Configuration configuration) throws SQLException {
-        this.configuration = configuration;
-        this.connection = configuration.connection;
-        this.listener = listener;
+  public PostgresJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final JDBCStorageDelegate<Object> delegate,
+          final Configuration configuration) throws SQLException {
+    this(dispatcher, delegate, configuration, 1000L, 1000L);
+  }
 
-        this.insertEvent = connection.prepareStatement(INSERT_EVENT);
-        this.insertSnapshot = connection.prepareStatement(INSERT_SNAPSHOT);
+  public PostgresJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final JDBCStorageDelegate<Object> delegate, final Configuration configuration,
+          final long checkConfirmationExpirationInterval, final long confirmationExpiration) throws SQLException {
+    this.configuration = configuration;
+    this.connection = configuration.connection;
 
-        this.gson = new Gson();
+    this.insertEvent = connection.prepareStatement(INSERT_EVENT);
+    this.insertSnapshot = connection.prepareStatement(INSERT_SNAPSHOT);
 
-        this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
-        this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
-        this.journalReaders = new HashMap<>();
-        this.streamReaders = new HashMap<>();
+    this.gson = new Gson();
 
-        this.identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
+    this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
+    this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
+    this.journalReaders = new HashMap<>();
+    this.streamReaders = new HashMap<>();
+
+    this.identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
+    this.dispatcher = dispatcher;
+    this.dispatcherControl = stage().actorFor(DispatcherControl.class, Definition
+            .has(DispatcherControlActor.class, Definition.parameters(dispatcher, delegate, checkConfirmationExpirationInterval, confirmationExpiration)));
+  }
+
+  @Override
+  public void stop() {
+    if (dispatcherControl != null) {
+      dispatcherControl.stop();
     }
+    super.stop();
+  }
 
-    @Override
-    public <S,ST> void append(final String streamName, final int streamVersion, final Source<S> source, final AppendResultInterest interest, final Object object) {
-      final Consumer<Exception> whenFailed =
-              (e) -> appendResultedInFailure(streamName, streamVersion, source, null, interest, object, e);
-      final Entry<String> entry = asEntry(source, whenFailed);
-      insertEntry(streamName, streamVersion, entry, whenFailed);
-      doCommit(whenFailed);
-      listener.appended(entry);
-      interest.appendResultedIn(Success.of(Result.Success), streamName, streamVersion, source, Optional.empty(), object);
+  @Override
+  public <S, ST> void append(final String streamName, final int streamVersion, final Source<S> source, final Metadata metadata,
+          final AppendResultInterest interest, final Object object) {
+    final Consumer<Exception> whenFailed = (e) -> appendResultedInFailure(streamName, streamVersion, source, null, interest, object, e);
+    final Entry<String> entry = asEntry(source, metadata, whenFailed);
+    insertEntry(streamName, streamVersion, entry, whenFailed);
+    doCommit(whenFailed);
+    dispatch(streamName, streamVersion, Collections.singletonList(entry), null);
+    interest.appendResultedIn(Success.of(Result.Success), streamName, streamVersion, source, Optional.empty(), object);
+  }
+
+  @Override
+  public <S, ST> void appendWith(final String streamName, final int streamVersion, final Source<S> source, final Metadata metadata, final ST snapshot,
+          final AppendResultInterest interest, final Object object) {
+    final Consumer<Exception> whenFailed = (e) -> appendResultedInFailure(streamName, streamVersion, source, snapshot, interest, object, e);
+    final Entry<String> entry = asEntry(source, metadata, whenFailed);
+    insertEntry(streamName, streamVersion, entry, whenFailed);
+    final Tuple2<Optional<ST>, Optional<TextState>> snapshotState = toState(streamName, snapshot, streamVersion);
+    snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
+    doCommit(whenFailed);
+    dispatch(streamName, streamVersion, Collections.singletonList(entry), snapshotState._2.orElse(null));
+    interest.appendResultedIn(Success.of(Result.Success), streamName, streamVersion, source, snapshotState._1, object);
+  }
+
+  @Override
+  public <S, ST> void appendAll(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final Metadata metadata,
+          final AppendResultInterest interest, final Object object) {
+    final Consumer<Exception> whenFailed = (e) -> appendAllResultedInFailure(streamName, fromStreamVersion, sources, null, interest, object, e);
+    final List<Entry<String>> entries = asEntries(sources, metadata, whenFailed);
+    int version = fromStreamVersion;
+    for (final Entry<String> entry : entries) {
+      insertEntry(streamName, version++, entry, whenFailed);
     }
+    doCommit(whenFailed);
+    dispatch(streamName, fromStreamVersion, entries, null);
+    interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, Optional.empty(), object);
+  }
 
-    @Override
-    public <S,ST> void appendWith(final String streamName, final int streamVersion, final Source<S> source, final ST snapshot, final AppendResultInterest interest, final Object object) {
-      final Consumer<Exception> whenFailed =
-              (e) -> appendResultedInFailure(streamName, streamVersion, source, snapshot, interest, object, e);
-      final Entry<String> entry = asEntry(source, whenFailed);
-      insertEntry(streamName, streamVersion, entry, whenFailed);
-      final Tuple2<Optional<ST>,Optional<TextState>> snapshotState = toState(streamName, snapshot, streamVersion);
-      snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
-      doCommit(whenFailed);
-      listener.appendedWith(entry, snapshotState._2.orElseGet(() -> null));
-      interest.appendResultedIn(Success.of(Result.Success), streamName, streamVersion, source, snapshotState._1, object);
+  @Override
+  public <S, ST> void appendAllWith(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final Metadata metadata,
+          final ST snapshot, final AppendResultInterest interest, final Object object) {
+    final Consumer<Exception> whenFailed = (e) -> appendAllResultedInFailure(streamName, fromStreamVersion, sources, snapshot, interest, object, e);
+    final List<Entry<String>> entries = asEntries(sources, metadata, whenFailed);
+    int version = fromStreamVersion;
+    for (final Entry<String> entry : entries) {
+      insertEntry(streamName, version++, entry, whenFailed);
     }
+    final Tuple2<Optional<ST>, Optional<TextState>> snapshotState = toState(streamName, snapshot, fromStreamVersion);
+    snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
+    doCommit(whenFailed);
+    dispatch(streamName, fromStreamVersion, entries, snapshotState._2.orElse(null));
+    interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, snapshotState._1, object);
+  }
 
+  @Override
+  @SuppressWarnings("unchecked")
+  public Completes<JournalReader<TextEntry>> journalReader(final String name) {
+    final JournalReader<TextEntry> reader = journalReaders.computeIfAbsent(name, (key) -> {
+      final Address address = stage().world().addressFactory().uniquePrefixedWith("eventJournalReader-" + name);
+      return stage().actorFor(JournalReader.class, Definition.has(PostgresJournalReaderActor.class, Definition.parameters(configuration, name)), address);
+    });
 
-    @Override
-    public <S,ST> void appendAll(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final AppendResultInterest interest, final Object object) {
-      final Consumer<Exception> whenFailed =
-              (e) -> appendAllResultedInFailure(streamName, fromStreamVersion, sources, null, interest, object, e);
-      final List<Entry<String>> entries = asEntries(sources, whenFailed);
-      int version = fromStreamVersion;
-      for (Entry<String> entry : entries) {
-          insertEntry(streamName, version++, entry, whenFailed);
+    return completes().with(reader);
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public Completes<StreamReader<String>> streamReader(final String name) {
+    final StreamReader<String> reader = streamReaders.computeIfAbsent(name, (key) -> {
+      final Address address = stage().world().addressFactory().uniquePrefixedWith("eventStreamReader-" + key);
+      return stage().actorFor(StreamReader.class, Definition.has(PostgresStreamReaderActor.class, Definition.parameters(configuration)), address);
+    });
+
+    return completes().with(reader);
+  }
+
+  protected final void insertEntry(final String streamName, final int streamVersion, final Entry<String> entry, final Consumer<Exception> whenFailed) {
+    try {
+      final UUID id = identityGenerator.generate();
+      final long timestamp = id.timestamp();
+
+      insertEvent.setString(1, entry.entryData());
+      insertEvent.setString(2, gson.toJson(entry.metadata()));
+      insertEvent.setString(3, entry.type());
+      insertEvent.setInt(4, entry.typeVersion());
+      insertEvent.setString(5, streamName);
+      insertEvent.setInt(6, streamVersion);
+      insertEvent.setObject(7, id);
+      insertEvent.setLong(8, timestamp);
+
+      if (insertEvent.executeUpdate() != 1) {
+        logger().error("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString());
+        throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert event");
       }
-      doCommit(whenFailed);
-      listener.appendedAll(entries);
-      interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, Optional.empty(), object);
-    }
 
-    @Override
-    public <S,ST> void appendAllWith(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final ST snapshot, final AppendResultInterest interest, final Object object) {
-      final Consumer<Exception> whenFailed =
-              (e) -> appendAllResultedInFailure(streamName, fromStreamVersion, sources, snapshot, interest, object, e);
-      final List<Entry<String>> entries = asEntries(sources, whenFailed);
-      int version = fromStreamVersion;
-      for (Entry<String> entry : entries) {
-        insertEntry(streamName, version++, entry, whenFailed);
+      ((BaseEntry<String>) entry).__internal__setId(id.toString()); //questionable cast
+    } catch (final SQLException e) {
+      whenFailed.accept(e);
+      logger().error("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString(), e);
+      throw new IllegalStateException(e);
+    }
+  }
+
+  protected final void insertSnapshot(final String eventStream, final TextState snapshotState, final Consumer<Exception> whenFailed) {
+    try {
+      insertSnapshot.setString(1, eventStream);
+      insertSnapshot.setString(2, snapshotState.type);
+      insertSnapshot.setInt(3, snapshotState.typeVersion);
+      insertSnapshot.setString(4, snapshotState.data);
+      insertSnapshot.setInt(5, snapshotState.dataVersion);
+      insertSnapshot.setString(6, gson.toJson(snapshotState.metadata));
+
+      if (insertSnapshot.executeUpdate() != 1) {
+        logger().error("vlingo/symbio-jdbc-postgres: Could not insert snapshot with id " + snapshotState.id);
+        throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert snapshot");
       }
-      final Tuple2<Optional<ST>,Optional<TextState>> snapshotState = toState(streamName, snapshot, fromStreamVersion);
-      snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
-      doCommit(whenFailed);
-      listener.appendedAllWith(entries, snapshotState._2.orElseGet(() -> null));
-      interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, snapshotState._1, object);
+    } catch (final SQLException e) {
+      whenFailed.accept(e);
+      logger().error("vlingo/symbio-jdbc-postgres: Could not insert event with id " + snapshotState.id, e);
+      throw new IllegalStateException(e);
     }
+  }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public Completes<JournalReader<TextEntry>> journalReader(String name) {
-        final JournalReader<TextEntry> reader = journalReaders.computeIfAbsent(name, (key) -> {
-            Address address = stage().world().addressFactory().uniquePrefixedWith("eventJournalReader-" + name);
-            return stage().actorFor(
-                    JournalReader.class,
-                    Definition.has(
-                            PostgresJournalReaderActor.class,
-                            Definition.parameters(configuration, name)
-                    ),
-                    address
-            );
-        });
+  private <S, ST> void appendResultedInFailure(
+          final String streamName, final int streamVersion, final Source<S> source, final ST snapshot, final AppendResultInterest interest,
+          final Object object, final Exception e) {
 
-        return completes().with(reader);
+    interest.appendResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, streamVersion, source,
+            snapshot == null ? Optional.empty() : Optional.of(snapshot), object);
+  }
+
+  private <S, ST> void appendAllResultedInFailure(final String streamName, final int streamVersion, final List<Source<S>> sources, final ST snapshot,
+          final AppendResultInterest interest, final Object object, final Exception e) {
+
+    interest.appendAllResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, streamVersion, sources,
+            snapshot == null ? Optional.empty() : Optional.of(snapshot), object);
+  }
+
+  private void doCommit(final Consumer<Exception> whenFailed) {
+    try {
+      connection.commit();
+    } catch (final SQLException e) {
+      whenFailed.accept(e);
+      logger().error("vlingo/symbio-jdbc-postgres: Could not complete transaction", e);
+      throw new IllegalStateException(e);
     }
+  }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    public Completes<StreamReader<String>> streamReader(String name) {
-        final StreamReader<String> reader = streamReaders.computeIfAbsent(name, (key) -> {
-            Address address = stage().world().addressFactory().uniquePrefixedWith("eventStreamReader-" + key);
-            return stage().actorFor(
-                    StreamReader.class,
-                    Definition.has(
-                            PostgresStreamReaderActor.class,
-                            Definition.parameters(configuration)),
-                    address
-            );
-        });
-
-
-        return completes().with(reader);
+  private <S> List<Entry<String>> asEntries(final List<Source<S>> sources, final Metadata metadata, final Consumer<Exception> whenFailed) {
+    final List<Entry<String>> entries = new ArrayList<>(sources.size());
+    for (final Source<?> source : sources) {
+      entries.add(asEntry(source, metadata, whenFailed));
     }
+    return entries;
+  }
 
-    protected final void insertEntry(
-            final String streamName,
-            final int streamVersion,
-            final Entry<String> entry,
-            final Consumer<Exception> whenFailed) {
-        try {
-            final UUID id = identityGenerator.generate();
-            final long timestamp = id.timestamp();
-
-            insertEvent.setString(1, entry.entryData());
-            insertEvent.setString(2, gson.toJson(entry.metadata()));
-            insertEvent.setString(3, entry.type());
-            insertEvent.setInt(4, entry.typeVersion());
-            insertEvent.setString(5, streamName);
-            insertEvent.setInt(6, streamVersion);
-            insertEvent.setObject(7, id);
-            insertEvent.setLong(8, timestamp);
-
-            if (insertEvent.executeUpdate() != 1) {
-                logger().error("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString());
-                throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert event");
-            }
-
-            ((BaseEntry<String>) entry).__internal__setId(id.toString()); //questionable cast
-        } catch (SQLException e) {
-            whenFailed.accept(e);
-            logger().error("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString(), e);
-            throw new IllegalStateException(e);
-        }
+  private <S> Entry<String> asEntry(final Source<S> source, final Metadata metadata, final Consumer<Exception> whenFailed) {
+    try {
+      return entryAdapterProvider.asEntry(source, metadata);
+    } catch (final Exception e) {
+      whenFailed.accept(e);
+      logger().error("vlingo/symbio-jdbc-postgres: Cannot adapt source to entry because: ", e);
+      throw new IllegalArgumentException(e);
     }
+  }
 
-    protected final void insertSnapshot(
-            final String eventStream,
-            final TextState snapshotState,
-            final Consumer<Exception> whenFailed) {
-        try {
-            insertSnapshot.setString(1, eventStream);
-            insertSnapshot.setString(2, snapshotState.type);
-            insertSnapshot.setInt(3, snapshotState.typeVersion);
-            insertSnapshot.setString(4, snapshotState.data);
-            insertSnapshot.setInt(5, snapshotState.dataVersion);
-            insertSnapshot.setString(6, gson.toJson(snapshotState.metadata));
-
-            if (insertSnapshot.executeUpdate() != 1) {
-                logger().error("vlingo/symbio-jdbc-postgres: Could not insert snapshot with id " + snapshotState.id);
-                throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert snapshot");
-            }
-        } catch (SQLException e) {
-            whenFailed.accept(e);
-            logger().error("vlingo/symbio-jdbc-postgres: Could not insert event with id " + snapshotState.id, e);
-            throw new IllegalStateException(e);
-        }
+  private <ST> Tuple2<Optional<ST>, Optional<TextState>> toState(final String streamName, final ST snapshot, final int streamVersion) {
+    if (snapshot != null) {
+      return Tuple2.from(Optional.of(snapshot), Optional.of(stateAdapterProvider.asRaw(streamName, snapshot, streamVersion)));
+    } else {
+      return Tuple2.from(Optional.empty(), Optional.empty());
     }
+  }
 
-    private <S,ST> void appendResultedInFailure(
-            String streamName,
-            int streamVersion,
-            Source<S> source,
-            final ST snapshot,
-            AppendResultInterest interest,
-            Object object,
-            Exception e) {
+  private void dispatch(final String streamName, final int streamVersion, final List<Entry<String>> entries, final TextState snapshot) {
+    final String id = getDispatchId(streamName, streamVersion, entries);
+    final Dispatchable<Entry<String>, TextState> dispatchable = new Dispatchable<>(id, LocalDateTime.now(), snapshot, entries);
+    this.dispatcher.dispatch(dispatchable);
+  }
 
-      interest.appendResultedIn(
-              Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
-              streamName,
-              streamVersion,
-              source,
-              snapshot == null ? Optional.empty() : Optional.of(snapshot),
-              object);
-    }
-
-    private <S,ST> void appendAllResultedInFailure(
-            String streamName,
-            int streamVersion,
-            List<Source<S>> sources,
-            final ST snapshot,
-            AppendResultInterest interest,
-            Object object,
-            Exception e) {
-
-      interest.appendAllResultedIn(
-              Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
-              streamName,
-              streamVersion,
-              sources,
-              snapshot == null ? Optional.empty() : Optional.of(snapshot),
-              object);
-    }
-
-    private void doCommit(final Consumer<Exception> whenFailed) {
-        try {
-            connection.commit();
-        } catch (SQLException e) {
-            whenFailed.accept(e);
-            logger().error("vlingo/symbio-jdbc-postgres: Could not complete transaction", e);
-            throw new IllegalStateException(e);
-        }
-    }
-
-    private <S> List<Entry<String>> asEntries(final List<Source<S>> sources, final Consumer<Exception> whenFailed) {
-      final List<Entry<String>> entries = new ArrayList<>(sources.size());
-      for (final Source<?> source : sources) {
-        entries.add(asEntry(source, whenFailed));
-      }
-      return entries;
-    }
-
-    private <S> Entry<String> asEntry(final Source<S> source, final Consumer<Exception> whenFailed) {
-      try {
-        return entryAdapterProvider.asEntry(source);
-      } catch (Exception e) {
-        whenFailed.accept(e);
-        logger().error("vlingo/symbio-jdbc-postgres: Cannot adapt source to entry because: ", e);
-        throw new IllegalArgumentException(e);
-      }
-    }
-
-    private <ST> Tuple2<Optional<ST>,Optional<TextState>> toState(final String streamName, final ST snapshot, final int streamVersion) {
-        if (snapshot != null) {
-            return Tuple2.from(Optional.of(snapshot), Optional.of(stateAdapterProvider.asRaw(streamName, snapshot, streamVersion)));
-        } else {
-            return Tuple2.from(Optional.empty(), Optional.empty());
-        }
-    }
+  private static String getDispatchId(final String streamName, final int streamVersion, final Collection<Entry<String>> entries) {
+    return streamName + ":" + streamVersion + ":" + entries.stream().map(Entry::id).collect(Collectors.joining(":"));
+  }
 }

@@ -16,7 +16,7 @@ import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.jdbc.CachedStatement;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
-import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
+import io.vlingo.symbio.store.common.jdbc.JDBCStorageDelegate;
 
 import java.sql.Blob;
 import java.sql.Connection;

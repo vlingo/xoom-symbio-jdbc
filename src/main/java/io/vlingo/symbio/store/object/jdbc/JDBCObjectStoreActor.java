@@ -7,16 +7,17 @@
 
 package io.vlingo.symbio.store.object.jdbc;
 
-import java.util.Collection;
-import java.util.List;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Scheduled;
+import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
+
+import java.util.Collection;
+import java.util.List;
 
 /**
  * The actor implementing the {@code ObjectStore} protocol in behalf of
@@ -46,16 +47,16 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
     }
   }
 
-  /* @see io.vlingo.symbio.store.object.ObjectStoreWriter#persist(io.vlingo.symbio.store.object.PersistentObject, java.util.List, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object) */
   @Override
-  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
-    delegate.persist(persistentObject, sources, updateId, interest, object);
+  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
+          final PersistResultInterest interest, final Object object) {
+    delegate.persist(persistentObject, sources, metadata, updateId, interest, object);
   }
 
-  /* @see io.vlingo.symbio.store.object.ObjectStoreWriter#persistAll(java.util.Collection, java.util.List, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object) */
   @Override
-  public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final long updateId, final PersistResultInterest interest, final Object object) {
-    delegate.persistAll(persistentObjects, sources, updateId, interest, object);
+  public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final Metadata metadata,
+          final long updateId, final PersistResultInterest interest, final Object object) {
+    delegate.persistAll(persistentObjects, sources, metadata, updateId, interest, object);
   }
 
   /*

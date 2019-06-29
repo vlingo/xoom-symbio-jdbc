@@ -5,7 +5,7 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.state.jdbc;
+package io.vlingo.symbio.store.common.jdbc;
 
 import io.vlingo.actors.Logger;
 import io.vlingo.common.Tuple2;
@@ -16,9 +16,13 @@ import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.BinaryState;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.store.DataFormat;
-import io.vlingo.symbio.store.state.StateStore.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
+import io.vlingo.symbio.store.state.jdbc.CachedStatement;
+import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
+import io.vlingo.symbio.store.state.jdbc.Mode;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -30,11 +34,13 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
+public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
+        DispatcherControl.DispatcherControlDelegate<Entry<?>, State<?>> {
   protected final Connection connection;
   protected final JDBCDispatchableCachedStatements<T> dispatchableCachedStatements;
   protected final DataFormat format;
@@ -62,7 +68,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     this.writeStatements = new HashMap<>();
   }
 
-  @Override
   @SuppressWarnings("unchecked")
   public <A, E> A appendExpressionFor(final Entry<E> entry) throws Exception {
     final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendEntryStatement();
@@ -70,7 +75,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     return (A) cachedStatement.preparedStatement;
   }
 
-  @Override
   @SuppressWarnings("unchecked")
   public <A> A appendIdentityExpression() {
     final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendEntryIdentityStatement();
@@ -78,12 +82,12 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   }
 
   @Override
-  public <S extends State<?>> Collection<Dispatchable<S>> allUnconfirmedDispatchableStates() throws Exception {
-    final List<Dispatchable<S>> dispatchables = new ArrayList<>();
+  public Collection<Dispatchable<Entry<?>, State<?>>> allUnconfirmedDispatchableStates() throws Exception {
+    final List<Dispatchable<Entry<?>, State<?>>> dispatchables = new ArrayList<>();
 
     try (final ResultSet result = dispatchableCachedStatements.queryAllStatement().preparedStatement.executeQuery()) {
       while (result.next()) {
-        final Dispatchable<S> dispatchable = stateFrom(result);
+        final Dispatchable<Entry<?>, State<?>> dispatchable = dispatchableFrom(result);
         dispatchables.add(dispatchable);
       }
     }
@@ -91,8 +95,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     return dispatchables;
   }
 
-  @Override
-  public void beginRead() throws Exception {
+  public void beginRead() {
     if (mode != Mode.None) {
       logger.warn(getClass().getSimpleName() + ": Cannot begin read because currently: " + mode.name());
     } else {
@@ -100,7 +103,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     }
   }
 
-  @Override
   public void beginWrite() throws Exception {
     if (mode != Mode.None) {
 //      System.out.println("ALREADY IN WRITING MODE");
@@ -114,6 +116,11 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   }
 
   @Override
+  public void stop() {
+    close();
+  }
+
+  @Override
   public void close() {
     try {
       mode = Mode.None;
@@ -121,7 +128,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       if (connection != null) {
         connection.close();
       }
-    } catch (Exception e) {
+    } catch (final Exception e) {
       logger.error(getClass().getSimpleName() + ": Could not close because: " + e.getMessage(), e);
     }
   }
@@ -131,18 +138,16 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     try {
       return connection == null || connection.isClosed();
     }
-    catch (SQLException ex) {
+    catch (final SQLException ex) {
       return true;
     }
   }
 
-  @Override
   public void complete() throws Exception {
     mode = Mode.None;
     connection.commit();
   }
 
-  @Override
   @SuppressWarnings("unchecked")
   public <C> C connection() {
     return (C) connection;
@@ -156,7 +161,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       dispatchableCachedStatements.deleteStatement().preparedStatement.setString(1, dispatchId);
       dispatchableCachedStatements.deleteStatement().preparedStatement.executeUpdate();
       complete();
-    } catch (Exception e) {
+    } catch (final Exception e) {
       fail();
       logger.error(getClass().getSimpleName() +
               ": Confirm dispatched for: " + dispatchId +
@@ -164,7 +169,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     }
   }
 
-  @Override
   @SuppressWarnings("unchecked")
   public <W, S> W dispatchableWriteExpressionFor(final String dispatchId, final State<S> state) throws Exception {
     final PreparedStatement preparedStatement = dispatchableCachedStatements.appendDispatchableStatement().preparedStatement;
@@ -190,12 +194,11 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     return (W) preparedStatement;
   }
 
-  @Override
   public void fail() {
     try {
       mode = Mode.None;
       connection.rollback();
-    } catch (Exception e) {
+    } catch (final Exception e) {
       logger.error(getClass().getSimpleName() + ": Rollback failed because: " + e.getMessage(), e);
     }
   }
@@ -205,7 +208,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     return originatorId;
   }
 
-  @Override
   @SuppressWarnings("unchecked")
   public <R> R readExpressionFor(final String storeName, final String id) throws Exception {
     final CachedStatement<T> maybeCached = readStatements.get(storeName);
@@ -224,7 +226,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     return (R) maybeCached.preparedStatement;
   }
 
-  @Override
   public <S> S session() throws Exception {
     return null;
   }
@@ -257,7 +258,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     }
   }
 
-  @Override
   @SuppressWarnings("unchecked")
   public <W, S> W writeExpressionFor(final String storeName, final State<S> state) throws Exception {
     final CachedStatement<T> maybeCached = writeStatements.get(storeName);
@@ -303,7 +303,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
         statement.executeUpdate(dispatchableIdIndexCreateExpression());
         statement.executeUpdate(dispatchableOriginatorIdIndexCreateExpression());
         connection.commit();
-      } catch (Exception e) {
+      } catch (final Exception e) {
         throw new IllegalStateException("Cannot create table " + tableName + " because: " + e, e);
       }
     }
@@ -315,7 +315,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       try (final Statement statement = connection.createStatement()) {
         statement.executeUpdate(entryTableCreateExpression());
         connection.commit();
-      } catch (Exception e) {
+      } catch (final Exception e) {
         throw new IllegalStateException("Cannot create table " + tableName + " because: " + e, e);
       }
     }
@@ -332,14 +332,14 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   private void createTables() {
     try {
       createDispatchablesTable();
-    } catch (Exception e) {
+    } catch (final Exception e) {
       // assume table exists; could look at metadata
       logger.error("Could not create dispatchables table because: " + e.getMessage(), e);
     }
 
     try {
       createEntryTable();
-    } catch (Exception e) {
+    } catch (final Exception e) {
       // assume table exists; could look at metadata
       logger.error("Could not create entry table because: " + e.getMessage(), e);
     }
@@ -350,7 +350,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
         if (!tableExists(tableName)) {
           createStateStoreTable(storeName);
         }
-      } catch (Exception e) {
+      } catch (final Exception e) {
         // assume table exists; could look at metadata
         logger.error("Could not create " + tableName + " table because: " + e.getMessage(), e);
       }
@@ -399,7 +399,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  private <S extends State<?>> Dispatchable<S> stateFrom(final ResultSet resultSet) throws Exception {
+  private <S extends State<?>> Dispatchable<Entry<?>, S> dispatchableFrom(final ResultSet resultSet) throws Exception {
     final LocalDateTime createdAt = resultSet.getTimestamp(1).toLocalDateTime();
     final String dispatchId = resultSet.getString(2);
     final String id = resultSet.getString(3);
@@ -417,13 +417,15 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
 
     final Metadata metadata = Metadata.with(object, metadataValue, metadataOperation);
 
+    final S state;
     if (format.isBinary()) {
       final byte[] data = binaryDataFrom(resultSet, 6);
-      return new Dispatchable(dispatchId, createdAt, new BinaryState(id, type, typeVersion, data, dataVersion, metadata));
+      state = ((S) new BinaryState(id, type, typeVersion, data, dataVersion, metadata));
     } else {
       final String data = textDataFrom(resultSet, 6);
-      return new Dispatchable(dispatchId, createdAt, new TextState(id, type, typeVersion, data, dataVersion, metadata));
+      state = ((S) new TextState(id, type, typeVersion, data, dataVersion, metadata));
     }
+    return new Dispatchable<>(dispatchId, createdAt, state, Collections.emptyList());
   }
 
   private boolean tableExists(final String tableName) throws Exception {

@@ -7,8 +7,8 @@
 
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
-import java.time.LocalDate;
-import java.util.Comparator;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.Metadata;
 
 import javax.persistence.Column;
 import javax.persistence.Convert;
@@ -17,9 +17,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
-
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
+import java.time.LocalDate;
+import java.util.Comparator;
 /**
  * JPAEntry is an implementation of {@link Entry} that is designed
  * to be persisted via the Java Persistence API
@@ -146,14 +145,14 @@ public class JPAEntry implements Entry<String> {
   public <C> Class<C> typed() {
     try {
       return (Class<C>) Class.forName(type);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       throw new IllegalStateException("Cannot get class for type: " + type);
     }
   }
 
   /* @see java.lang.Comparable#compareTo(java.lang.Object) */
   @Override
-  public int compareTo(Entry<String> other) {
+  public int compareTo(final Entry<String> other) {
     final JPAEntry that = (JPAEntry) other;
     return Comparator
       .comparing((JPAEntry e) -> e.id)

@@ -7,18 +7,6 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mockito;
-
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.common.Completes;
@@ -30,18 +18,31 @@ import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.StateAdapter;
 import io.vlingo.symbio.StateAdapterProvider;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.journal.Journal;
-import io.vlingo.symbio.store.journal.JournalListener;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.Stream;
 import io.vlingo.symbio.store.journal.StreamReader;
+import io.vlingo.symbio.store.state.jdbc.postgres.PostgresStorageDelegate;
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mockito;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
+import static java.util.Arrays.asList;
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Matchers.any;
 
 public class PostgresJournalActorTest extends BasePostgresJournalTest {
     private Entity1Adapter entity1Adapter = new Entity1Adapter();
     private Object object = new Object();
     private MockAppendResultInterest interest;
     private Journal<String> journal;
-    private JournalListener<String> listener;
+    private Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher;
     private JournalReader<TextEntry> journalReader;
     private StreamReader<String> streamReader;
     private TestUntil until;
@@ -51,17 +52,15 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
     public void setUp() throws Exception {
         interest = new MockAppendResultInterest();
         until = TestUntil.happenings(1);
-        listener = Mockito.mock(JournalListener.class);
-        journal = Journal.using(world.stage(), PostgresJournalActor.class, listener, configuration);
+        dispatcher = Mockito.mock(Dispatcher.class);
+        final PostgresStorageDelegate storageDelegate = new PostgresStorageDelegate(configuration, world.defaultLogger());
+        journal =  world.stage().actorFor(Journal.class, PostgresJournalActor.class, dispatcher, storageDelegate, configuration);
         EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
         StateAdapterProvider.instance(world).registerAdapter(Entity1.class, entity1Adapter);
 //        journal.registerEntryAdapter(TestEvent.class, new TestEventAdapter());
 //        journal.registerStateAdapter(Entity1.class, entity1Adapter);
 
-        Mockito.doAnswer(x -> until.happened()).when(listener).appended(any());
-        Mockito.doAnswer(x -> until.happened()).when(listener).appendedAll(any());
-        Mockito.doAnswer(x -> until.happened()).when(listener).appendedWith(any(), any());
-        Mockito.doAnswer(x -> until.happened()).when(listener).appendedAllWith(any(), any());
+        Mockito.doAnswer(x -> until.happened()).when(dispatcher).dispatch(any());
 
         Completes<JournalReader<TextEntry>> completesJournalReader = journal.journalReader(streamName);
         journalReader = completesJournalReader.await();
