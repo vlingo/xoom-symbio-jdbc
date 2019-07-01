@@ -12,6 +12,7 @@ import io.vlingo.actors.World;
 import io.vlingo.common.identity.IdentityGenerator;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.TestEvent;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import org.junit.After;
 import org.junit.Assert;

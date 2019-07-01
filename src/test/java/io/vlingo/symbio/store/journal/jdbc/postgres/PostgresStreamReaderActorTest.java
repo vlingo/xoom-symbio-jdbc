@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.vlingo.symbio.store.common.TestEvent;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

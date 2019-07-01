@@ -5,7 +5,7 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.state.jdbc;
+package io.vlingo.symbio.store.common.jdbc;
 
 import java.sql.PreparedStatement;
 

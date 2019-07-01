@@ -7,14 +7,6 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
@@ -23,6 +15,8 @@ import io.vlingo.symbio.State;
 import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.Result;
+import io.vlingo.symbio.store.common.TestEvent;
+import io.vlingo.symbio.store.common.TestEventAdapter;
 import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
 import io.vlingo.symbio.store.state.Entity1;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
@@ -31,6 +25,17 @@ import io.vlingo.symbio.store.state.MockTextDispatcher;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.UUID;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 public abstract class JDBCTextStateStoreActorTest {
   protected TestConfiguration configuration;
@@ -135,12 +140,18 @@ public abstract class JDBCTextStateStoreActorTest {
 
     accessDispatcher.writeUsing("processDispatch", false);
 
-    final Entity1 entity1 = new Entity1("123", 1);
-    store.write(entity1.id, entity1, 1, interest);
-    final Entity1 entity2 = new Entity1("234", 2);
-    store.write(entity2.id, entity2, 1, interest);
-    final Entity1 entity3 = new Entity1("345", 3);
-    store.write(entity3.id, entity3, 1, interest);
+    final Entity1 entity1 = new Entity1(UUID.randomUUID().toString(), 1);
+    final TestEvent testEvent1 = new TestEvent(UUID.randomUUID().toString(), 30);
+    store.write(entity1.id, entity1, 1, Collections.singletonList(testEvent1), interest);
+
+    final Entity1 entity2 = new Entity1(UUID.randomUUID().toString(), 2);
+    final TestEvent testEvent2 = new TestEvent(UUID.randomUUID().toString(), 45);
+    store.write(entity2.id, entity2, 1, Collections.singletonList(testEvent2), interest);
+
+
+    final Entity1 entity3 = new Entity1(UUID.randomUUID().toString(), 3);
+    final TestEvent testEvent3 = new TestEvent(UUID.randomUUID().toString(), 12);
+    store.write(entity3.id, entity3, 1, Arrays.asList(testEvent1, testEvent2, testEvent3), interest);
 
     try {
       Thread.sleep(3000);
@@ -151,10 +162,10 @@ public abstract class JDBCTextStateStoreActorTest {
 
     accessDispatcher.writeUsing("processDispatch", true);
 
-    int dispatchedStateCount = accessDispatcher.readFrom("dispatchedStateCount");
-    assertTrue("dispatchedStateCount", dispatchedStateCount == 3);
+    final int dispatchedStateCount = accessDispatcher.readFrom("dispatchedStateCount");
+    assertEquals("dispatchedStateCount", 3, dispatchedStateCount);
 
-    int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
+    final int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
     assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
   }
 
@@ -172,10 +183,8 @@ public abstract class JDBCTextStateStoreActorTest {
     interest = new MockResultInterest();
     dispatcher = new MockTextDispatcher(0, interest);
 
-    final StateAdapterProvider stateAdapterProvider = new StateAdapterProvider(world);
-    new EntryAdapterProvider(world);
-
-    stateAdapterProvider.registerAdapter(Entity1.class, new Entity1StateAdapter());
+    EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
+    StateAdapterProvider.instance(world).registerAdapter(Entity1.class, new Entity1StateAdapter());
     // NOTE: No adapter registered for Entity2.class because it will use the default
 
     store = world.actorFor(

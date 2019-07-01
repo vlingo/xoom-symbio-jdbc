@@ -18,6 +18,8 @@ import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.StateAdapter;
 import io.vlingo.symbio.StateAdapterProvider;
+import io.vlingo.symbio.store.common.TestEvent;
+import io.vlingo.symbio.store.common.TestEventAdapter;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.journal.Journal;

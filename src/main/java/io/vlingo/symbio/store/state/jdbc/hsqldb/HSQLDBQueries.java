@@ -48,7 +48,8 @@ public interface HSQLDBQueries {
           "   D_STATE_METADATA_VALUE VARCHAR(4000) NOT NULL,\n" +
           "   D_STATE_METADATA_OP VARCHAR(128) NOT NULL,\n" +
           "   D_STATE_METADATA_OBJECT LONGVARCHAR(65535),\n" +
-          "   D_STATE_METADATA_OBJECT_TYPE VARCHAR(256)\n" +
+          "   D_STATE_METADATA_OBJECT_TYPE VARCHAR(256),\n" +
+          "   D_ENTRIES LONGVARCHAR(65535)\n" +
           ");";
 
   final static String SQL_DISPATCH_ID_INDEX =
@@ -79,15 +80,15 @@ public interface HSQLDBQueries {
                "(D_ID, D_CREATED_AT, D_ORIGINATOR_ID, D_DISPATCH_ID, \n" +
                " D_STATE_ID, D_STATE_TYPE, D_STATE_TYPE_VERSION, \n" +
                " D_STATE_DATA, D_STATE_DATA_VERSION, \n" +
-               " D_STATE_METADATA_VALUE, D_STATE_METADATA_OP, D_STATE_METADATA_OBJECT, D_STATE_METADATA_OBJECT_TYPE) \n" +
-               "VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+               " D_STATE_METADATA_VALUE, D_STATE_METADATA_OP, D_STATE_METADATA_OBJECT, D_STATE_METADATA_OBJECT_TYPE, D_ENTRIES) \n" +
+               "VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
   final static String SQL_DISPATCHABLE_DELETE =
           "DELETE FROM {0} WHERE D_DISPATCH_ID = ?";
 
   final static String SQL_DISPATCHABLE_SELECT =
           "SELECT D_CREATED_AT, D_DISPATCH_ID, D_STATE_ID, D_STATE_TYPE, D_STATE_TYPE_VERSION, D_STATE_DATA, D_STATE_DATA_VERSION, \n" +
-          "       D_STATE_METADATA_VALUE, D_STATE_METADATA_OP, D_STATE_METADATA_OBJECT, D_STATE_METADATA_OBJECT_TYPE \n" +
+          "       D_STATE_METADATA_VALUE, D_STATE_METADATA_OP, D_STATE_METADATA_OBJECT, D_STATE_METADATA_OBJECT_TYPE, D_ENTRIES\n" +
           "FROM {0} \n" +
           "WHERE D_ORIGINATOR_ID = ? ORDER BY D_ID";
 
@@ -112,10 +113,10 @@ public interface HSQLDBQueries {
 
   final static String SQL_QUERY_ENTRY_BATCH =
           "SELECT E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP FROM " +
-                  TBL_VLINGO_SYMBIO_STATE_ENTRY + " WHERE E_ID >= ? " +
+                  " {0} WHERE E_ID >= ? " +
                   "ORDER BY E_ID LIMIT ?";
 
   final static String SQL_QUERY_ENTRY =
           "SELECT E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP FROM " +
-                  TBL_VLINGO_SYMBIO_STATE_ENTRY + " WHERE E_ID = ? ";
+                  " {0} WHERE E_ID = ?";
 }

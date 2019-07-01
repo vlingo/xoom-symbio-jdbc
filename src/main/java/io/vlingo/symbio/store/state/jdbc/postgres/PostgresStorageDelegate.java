@@ -16,7 +16,7 @@ import io.vlingo.symbio.store.EntryReader.Advice;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.JDBCStorageDelegate;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.state.jdbc.CachedStatement;
+import io.vlingo.symbio.store.common.jdbc.CachedStatement;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
 import org.postgresql.util.PGobject;
 
@@ -44,8 +44,8 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
       return new EntryReader.Advice(
               Configuration.cloneOf(configuration),
               PostgresStateStoreEntryReaderActor.class,
-              SQL_QUERY_ENTRY_BATCH,
-              SQL_QUERY_ENTRY);
+              namedEntry(SQL_QUERY_ENTRY_BATCH),
+              namedEntry(SQL_QUERY_ENTRY));
     } catch (Exception e) {
       throw new IllegalStateException("Cannot create EntryReader.Advice because: " + e.getMessage(), e);
     }
@@ -177,18 +177,23 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
     }
 
     @Override
-    protected String deleteExpression() {
+    protected String deleteDispatchableExpression() {
       return namedDispatchable(SQL_DISPATCHABLE_DELETE);
     }
 
     @Override
-    protected String selectExpression() {
+    protected String selectDispatchableExpression() {
       return namedDispatchable(SQL_DISPATCHABLE_SELECT);
     }
 
     @Override
     protected String appendEntryExpression() {
       return namedEntry(SQL_APPEND_ENTRY);
+    }
+
+    @Override
+    protected String queryEntryExpression() {
+      return namedEntry(SQL_QUERY_ENTRY);
     }
 
     @Override
