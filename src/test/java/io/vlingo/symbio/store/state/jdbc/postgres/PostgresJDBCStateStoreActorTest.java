@@ -11,9 +11,9 @@ import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
 import io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.state.jdbc.JDBCTextStateStoreActorTest;
+import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
 
-public class PostgresJDBCTextStateStoreActorTest extends JDBCTextStateStoreActorTest {
+public class PostgresJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
 
   @Override
   protected StorageDelegate delegate() throws Exception {

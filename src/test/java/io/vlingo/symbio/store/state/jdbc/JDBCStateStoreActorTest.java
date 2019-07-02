@@ -37,7 +37,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-public abstract class JDBCTextStateStoreActorTest {
+public abstract class JDBCStateStoreActorTest {
   protected TestConfiguration configuration;
   protected StorageDelegate delegate;
   protected MockTextDispatcher dispatcher;
