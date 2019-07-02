@@ -82,7 +82,10 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
   private final IdentityGenerator identityGenerator;
   private final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher;
   private final DispatcherControl dispatcherControl;
-  private final PostgresDispatcherControlDelegate dispatcherControlDelegate;
+
+  public PostgresJournalActor(final Configuration configuration) throws SQLException {
+    this(null, configuration, 0L, 0L);
+  }
 
   public PostgresJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration) throws SQLException {
     this(dispatcher, configuration, 1000L, 1000L);
@@ -105,11 +108,22 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     this.streamReaders = new HashMap<>();
 
     this.identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
-    this.dispatcher = dispatcher;
-    this.dispatcherControlDelegate = new PostgresDispatcherControlDelegate(connection, configuration.originatorId, stage().world().defaultLogger());
-    this.dispatcherControl = stage().actorFor(DispatcherControl.class, Definition.has(DispatcherControlActor.class,
-            Definition.parameters(dispatcher, dispatcherControlDelegate, checkConfirmationExpirationInterval, confirmationExpiration))
-    );
+    if (dispatcher != null) {
+      this.dispatcher = dispatcher;
+      final PostgresDispatcherControlDelegate dispatcherControlDelegate = new PostgresDispatcherControlDelegate(connection,
+              configuration.originatorId, stage().world().defaultLogger());
+      this.dispatcherControl = stage().actorFor(DispatcherControl.class,
+              Definition.has(DispatcherControlActor.class,
+                  Definition.parameters(dispatcher,
+                          dispatcherControlDelegate,
+                          checkConfirmationExpirationInterval,
+                          confirmationExpiration)
+              )
+      );
+    } else {
+      this.dispatcher = null;
+      this.dispatcherControl = null;
+    }
   }
 
   @Override
@@ -337,11 +351,13 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
   private void dispatch(final String streamName, final int streamVersion, final List<Entry<String>> entries, final TextState snapshot,
           final Consumer<Exception> whenFailed) {
-    final String id = getDispatchId(streamName, streamVersion, entries);
-    final Dispatchable<Entry<String>, TextState> dispatchable = new Dispatchable<>(id, LocalDateTime.now(), snapshot, entries);
-    insertDispatchable(dispatchable, whenFailed);
-    //dispatch only if insert successful
-    this.dispatcher.dispatch(dispatchable);
+    if (dispatcher != null) {
+      final String id = getDispatchId(streamName, streamVersion, entries);
+      final Dispatchable<Entry<String>, TextState> dispatchable = new Dispatchable<>(id, LocalDateTime.now(), snapshot, entries);
+      insertDispatchable(dispatchable, whenFailed);
+      //dispatch only if insert successful
+      this.dispatcher.dispatch(dispatchable);
+    }
   }
 
   private static String getDispatchId(final String streamName, final int streamVersion, final Collection<Entry<String>> entries) {
