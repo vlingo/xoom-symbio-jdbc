@@ -47,13 +47,16 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
 
+  public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate) {
+    this(null, delegate, 0L, 0L);
+  }
+
   public JDBCStateStoreActor(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate) {
     this(dispatcher, delegate, 1000L, 1000L);
   }
 
   public JDBCStateStoreActor(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate,
           final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
-    this.dispatcher = dispatcher;
     this.delegate = delegate;
 
     this.entryReaders = new HashMap<>();
@@ -61,12 +64,18 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
 
-    this.dispatcherControl = stage().actorFor(
-      DispatcherControl.class,
-      Definition.has(
-        DispatcherControlActor.class,
-        Definition.parameters(dispatcher, delegate, checkConfirmationExpirationInterval, confirmationExpiration))
-    );
+    if (dispatcher!=null){
+      this.dispatcher = dispatcher;
+      this.dispatcherControl = stage().actorFor(
+        DispatcherControl.class,
+        Definition.has(
+          DispatcherControlActor.class,
+          Definition.parameters(dispatcher, delegate, checkConfirmationExpirationInterval, confirmationExpiration))
+      );
+    } else {
+      this.dispatcher = null;
+      this.dispatcherControl = null;
+    }
   }
 
   @Override
@@ -158,9 +167,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
           writeStatement.execute();
           final String dispatchId = storeName + ":" + id;
           final List<Entry<?>> entries = appendEntries(sources, metadata);
-          final Dispatchable<Entry<?>, State<String>> dispatchable = dispatch(dispatchId, raw, entries);
-          final PreparedStatement dispatchableStatement = delegate.dispatchableWriteExpressionFor(dispatchable);
-          dispatchableStatement.execute();
+          dispatch(dispatchId, raw, entries);
           delegate.complete();
 
           interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, sources, object);
@@ -209,9 +216,12 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     }
   }
 
-  private Dispatchable<Entry<?>, State<String>> dispatch(final String dispatchId, final State<String> state, final List<Entry<?>> entries) {
-    final Dispatchable<Entry<?>, State<String>> dispatchable = new Dispatchable<>(dispatchId, LocalDateTime.now(), state.asTextState(), entries);
-    dispatcher.dispatch(dispatchable);
-    return dispatchable;
+  private void dispatch(final String dispatchId, final State<String> state, final List<Entry<?>> entries) throws Exception {
+    if (this.dispatcher != null) {
+      final Dispatchable<Entry<?>, State<String>> dispatchable = new Dispatchable<>(dispatchId, LocalDateTime.now(), state.asTextState(), entries);
+      dispatcher.dispatch(dispatchable);
+      final PreparedStatement dispatchableStatement = delegate.dispatchableWriteExpressionFor(dispatchable);
+      dispatchableStatement.execute();
+    }
   }
 }
