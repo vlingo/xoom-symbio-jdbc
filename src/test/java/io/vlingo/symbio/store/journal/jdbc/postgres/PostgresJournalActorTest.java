@@ -8,7 +8,6 @@
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
 import io.vlingo.actors.testkit.AccessSafely;
-import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.common.Completes;
 import io.vlingo.common.serialization.JsonSerialization;
 import io.vlingo.symbio.BaseEntry.TextEntry;
@@ -21,59 +20,59 @@ import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.common.TestEvent;
 import io.vlingo.symbio.store.common.TestEventAdapter;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.Stream;
 import io.vlingo.symbio.store.journal.StreamReader;
-import io.vlingo.symbio.store.state.jdbc.postgres.PostgresStorageDelegate;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
+import static org.junit.Assert.assertTrue;
 
 public class PostgresJournalActorTest extends BasePostgresJournalTest {
     private Entity1Adapter entity1Adapter = new Entity1Adapter();
     private Object object = new Object();
     private MockAppendResultInterest interest;
     private Journal<String> journal;
-    private Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher;
+    private MockJournalDispatcher dispatcher;
     private JournalReader<TextEntry> journalReader;
     private StreamReader<String> streamReader;
-    private TestUntil until;
 
     @Before
     @SuppressWarnings("unchecked")
     public void setUp() throws Exception {
         interest = new MockAppendResultInterest();
-        until = TestUntil.happenings(1);
-        dispatcher = Mockito.mock(Dispatcher.class);
-        final PostgresStorageDelegate storageDelegate = new PostgresStorageDelegate(configuration, world.defaultLogger());
-        journal =  world.stage().actorFor(Journal.class, PostgresJournalActor.class, dispatcher, storageDelegate, configuration);
+
+        dispatcher = new MockJournalDispatcher();
+
+        journal =  world.stage().actorFor(Journal.class, PostgresJournalActor.class, dispatcher, configuration);
         EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
         StateAdapterProvider.instance(world).registerAdapter(Entity1.class, entity1Adapter);
-//        journal.registerEntryAdapter(TestEvent.class, new TestEventAdapter());
-//        journal.registerStateAdapter(Entity1.class, entity1Adapter);
 
-        Mockito.doAnswer(x -> until.happened()).when(dispatcher).dispatch(any());
-
-        Completes<JournalReader<TextEntry>> completesJournalReader = journal.journalReader(streamName);
+        final Completes<JournalReader<TextEntry>> completesJournalReader = journal.journalReader(streamName);
         journalReader = completesJournalReader.await();
         streamReader = journal.streamReader(streamName).await();
     }
 
     @Test
     public void testThatInsertsANewEvent() {
+        dispatcher.afterCompleting(1);
+
         TestEvent appendedEvent = newEventForData(1);
         journal.append(streamName, 1, appendedEvent, interest, object);
-        until.completes();
+
+        final Map<String, Dispatchable<Entry<String>, TextState>> dispatched = dispatcher.getDispatched();
+
+        assertEquals(1, dispatched.size());
 
         Entry<String> entry = journalReader.readNext().await();
         TestEvent event = gson.fromJson(entry.entryData(), TestEvent.class);
@@ -82,10 +81,14 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
 
     @Test
     public void testThatInsertsANewListOfEvents() {
+        dispatcher.afterCompleting(1);
+
         TestEvent appendedEvent1 = newEventForData(1);
         TestEvent appendedEvent2 = newEventForData(2);
         journal.appendAll(streamName, 1, asList(appendedEvent1, appendedEvent2), interest, object);
-        until.completes();
+
+        final Map<String, Dispatchable<Entry<String>, TextState>> dispatched = dispatcher.getDispatched();
+        assertEquals(1, dispatched.size());
 
         List<TextEntry> eventStream = journalReader.readNext(2).await();
         Entry<String> entry1 = eventStream.get(0);
@@ -99,16 +102,19 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
 
     @Test
     public void testThatInsertsANewEventWithASnapshot() {
+        dispatcher.afterCompleting(3);
+
         TestEvent appendedEvent1 = newEventForData(1);
         TestEvent appendedEvent2 = newEventForData(2);
         TestEvent appendedEvent3 = newEventForData(3);
         Entity1 entity = new Entity1("1", 123);
 
-        until = TestUntil.happenings(3);
         journal.appendWith(streamName, 1, appendedEvent1, null, interest, object);
         journal.appendWith(streamName, 2, appendedEvent2, null, interest, object);
         journal.appendWith(streamName, 3, appendedEvent3, entity, interest, object);
-        until.completes();
+
+        final Map<String, Dispatchable<Entry<String>, TextState>> dispatched = dispatcher.getDispatched();
+        assertEquals(3, dispatched.size());
 
         Stream<String> eventStream = streamReader.streamFor(streamName, 1).await();
         Entity1 readEntity = entity1Adapter.fromRawState((TextState) eventStream.snapshot);
@@ -118,16 +124,18 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
 
     @Test
     public void testThatInsertsANewListOfEventsWithASnapshot() {
+        dispatcher.afterCompleting(2);
         TestEvent appendedEvent1 = newEventForData(1);
         TestEvent appendedEvent2 = newEventForData(2);
         TestEvent appendedEvent3 = newEventForData(3);
         TestEvent appendedEvent4 = newEventForData(4);
         Entity1 entity = new Entity1("1", 123);
 
-        until = TestUntil.happenings(2);
         journal.appendAllWith(streamName, 1, Arrays.asList(appendedEvent1, appendedEvent2), null, interest, object);
         journal.appendAllWith(streamName, 3, Arrays.asList(appendedEvent3, appendedEvent4), entity, interest, object);
-        until.completes();
+
+        final Map<String, Dispatchable<Entry<String>, TextState>> dispatched = dispatcher.getDispatched();
+        assertEquals(2, dispatched.size());
 
         Stream<String> eventStream = streamReader.streamFor(streamName, 1).await();
         Entity1 readEntity = entity1Adapter.fromRawState((TextState) eventStream.snapshot);
@@ -137,6 +145,7 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
 
     @Test
     public void testThatInsertsANewListOfEventsWithErrorWithoutASnapshot() {
+        dispatcher.afterCompleting(0);
         System.out.println("========== BEGIN: testThatInsertsANewListOfEventsWithErrorWithoutASnapshot()");
         System.out.println("========== BEGIN: EXPECTED EXCEPTIONS AHEAD");
         TestEvent appendedEvent1 = newEventForData(1);
@@ -146,6 +155,9 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
 
         journal.appendAllWith(streamName, 1, Arrays.asList(appendedEvent1, null), null, interest, object);
         journal.appendAllWith(streamName, 3, Arrays.asList(appendedEvent3, null), null, interest, object);
+
+        final Map<String, Dispatchable<Entry<String>, TextState>> dispatched = dispatcher.getDispatched();
+        assertEquals(0, dispatched.size());
 
         assertEquals(0, (int) access.readFrom("successCount"));
         assertEquals(2, (int) access.readFrom("failureCount"));
@@ -164,48 +176,88 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
         assertEquals(streamReader1, streamReader2);
     }
 
+    @Test
+    public void testRedispatch() {
+        interest.afterCompleting(2);
+        final AccessSafely accessDispatcher = dispatcher.afterCompleting(4);
+
+        accessDispatcher.writeUsing("processDispatch", false);
+
+        TestEvent appendedEvent1 = newEventForData(1);
+        TestEvent appendedEvent2 = newEventForData(2);
+        TestEvent appendedEvent3 = newEventForData(3);
+        TestEvent appendedEvent4 = newEventForData(4);
+        Entity1 entity = new Entity1("1", 123);
+
+        journal.appendAllWith(streamName, 1, Arrays.asList(appendedEvent1, appendedEvent2), null, interest, object);
+        journal.appendAllWith(streamName, 3, Arrays.asList(appendedEvent3, appendedEvent4), entity, interest, object);
+
+
+        try {
+          Thread.sleep(3000);
+        } catch (InterruptedException ex) {
+          //ignored
+        }
+
+        accessDispatcher.writeUsing("processDispatch", true);
+
+        final Map<String, Dispatchable<Entry<String>, TextState>> dispatched = dispatcher.getDispatched();
+        assertEquals(2, dispatched.size());
+
+        final int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
+        assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
+
+        for (final Dispatchable<Entry<String>, TextState> dispatchable : dispatched.values()) {
+          Assert.assertNotNull(dispatchable.createdOn());
+          Assert.assertNotNull(dispatchable.id());
+          final Collection<Entry<String>> dispatchedEntries = dispatchable.entries();
+          Assert.assertEquals(2, dispatchedEntries.size());
+        }
+    }
+
+
     private TestEvent newEventForData(int number) {
-        final TestEvent event = new TestEvent(String.valueOf(number), number);
-        return event;
-    }
-
-    public static final class Entity1 {
-      public final String id;
-      public final int number;
-
-      public Entity1(final String id, final int number) {
-        this.id = id;
-        this.number = number;
-      }
-    }
-
-    public static final class Entity1Adapter implements StateAdapter<Entity1,TextState> {
-
-      @Override
-      public int typeVersion() {
-        return 1;
+          final TestEvent event = new TestEvent(String.valueOf(number), number);
+          return event;
       }
 
-      @Override
-      public Entity1 fromRawState(TextState raw) {
-        return JsonSerialization.deserialized(raw.data, raw.typed());
+      public static final class Entity1 {
+        public final String id;
+        public final int number;
+
+        public Entity1(final String id, final int number) {
+          this.id = id;
+          this.number = number;
+        }
       }
 
-      @Override
-      public <ST> ST fromRawState(final TextState raw, final Class<ST> stateType) {
-        return JsonSerialization.deserialized(raw.data, stateType);
-      }
+      public static final class Entity1Adapter implements StateAdapter<Entity1,TextState> {
 
-      @Override
-      public TextState toRawState(Entity1 state, int stateVersion, Metadata metadata) {
-        final String serialization = JsonSerialization.serialized(state);
-        return new TextState(state.id, Entity1.class, typeVersion(), serialization, stateVersion, metadata);
-      }
+        @Override
+        public int typeVersion() {
+          return 1;
+        }
 
-      @Override
-      public TextState toRawState(final String id, final Entity1 state, final int stateVersion, final Metadata metadata) {
-        final String serialization = JsonSerialization.serialized(state);
-        return new TextState(id, Entity1.class, typeVersion(), serialization, stateVersion, metadata);
+        @Override
+        public Entity1 fromRawState(TextState raw) {
+          return JsonSerialization.deserialized(raw.data, raw.typed());
+        }
+
+        @Override
+        public <ST> ST fromRawState(final TextState raw, final Class<ST> stateType) {
+          return JsonSerialization.deserialized(raw.data, stateType);
+        }
+
+        @Override
+        public TextState toRawState(Entity1 state, int stateVersion, Metadata metadata) {
+          final String serialization = JsonSerialization.serialized(state);
+          return new TextState(state.id, Entity1.class, typeVersion(), serialization, stateVersion, metadata);
+        }
+
+        @Override
+        public TextState toRawState(final String id, final Entity1 state, final int stateVersion, final Metadata metadata) {
+          final String serialization = JsonSerialization.serialized(state);
+          return new TextState(id, Entity1.class, typeVersion(), serialization, stateVersion, metadata);
+        }
       }
-    }
-}
+  }

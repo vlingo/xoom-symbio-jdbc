@@ -49,15 +49,31 @@ public abstract class BasePostgresJournalTest {
                     "snapshot_metadata JSON NOT NULL" +
                     ")";
 
+    private static final String DISPATCH_TABLE =
+            "CREATE TABLE vlingo_symbio_journal_dispatch (\n" +
+                    "   d_id UUID PRIMARY KEY," +
+                    "   d_created_at TIMESTAMP NOT NULL," +
+                    "   d_originator_id VARCHAR(32) NOT NULL," +
+                    "   d_dispatch_id VARCHAR(128) NOT NULL,\n" +
+                    "   d_state_id VARCHAR(128) NULL, \n" +
+                    "   d_state_type VARCHAR(256) NULL,\n" +
+                    "   d_state_type_version INTEGER NULL,\n" +
+                    "   d_state_data JSONB NULL,\n" +
+                    "   d_state_data_version INT NULL,\n" +
+                    "   d_state_metadata JSON NULL,\n" +
+                    "   d_entries TEXT NOT NULL\n" +
+                    ");";
+
     private static final String OFFSET_TABLE =
             "CREATE TABLE vlingo_symbio_journal_offsets(" +
                     "reader_name VARCHAR(128) PRIMARY KEY," +
                     "reader_offset BIGINT NOT NULL" +
                     ")";
 
-    private static final String DROP_EVENT_TABLE = "DROP TABLE vlingo_symbio_journal";
-    private static final String DROP_SNAPSHOT_TABLE = "DROP TABLE vlingo_symbio_journal_snapshots";
-    private static final String DROP_OFFSET_TABLE = "DROP TABLE vlingo_symbio_journal_offsets";
+    private static final String DROP_EVENT_TABLE = "DROP TABLE  IF EXISTS vlingo_symbio_journal";
+    private static final String DROP_SNAPSHOT_TABLE = "DROP TABLE  IF EXISTS vlingo_symbio_journal_snapshots";
+    private static final String DROP_OFFSET_TABLE = "DROP TABLE IF EXISTS vlingo_symbio_journal_offsets";
+    private static final String DROP_DISPATCH_TABLE = "DROP TABLE IF EXISTS vlingo_symbio_journal_dispatch";
 
     private static final String INSERT_EVENT =
             "INSERT INTO vlingo_symbio_journal(id, entry_timestamp, entry_data, entry_metadata, entry_type, entry_type_version, stream_name, stream_version)" +
@@ -86,11 +102,7 @@ public abstract class BasePostgresJournalTest {
         streamName = aggregateRootId;
         world = World.startWithDefaults("event-stream-tests");
         configuration = testConfiguration(DataFormat.Text);
-        try {
-            dropDatabase();
-        } catch (Exception e){
-            //ignore any errors
-        }
+        dropDatabase();
         gson = new Gson();
         identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
 
@@ -107,11 +119,13 @@ public abstract class BasePostgresJournalTest {
         try (
                 final PreparedStatement createEventTable = configuration.connection.prepareStatement(EVENT_TABLE);
                 final PreparedStatement createSnapshotTable = configuration.connection.prepareStatement(SNAPSHOT_TABLE);
-                final PreparedStatement createOffsetTable = configuration.connection.prepareStatement(OFFSET_TABLE)
+                final PreparedStatement createOffsetTable = configuration.connection.prepareStatement(OFFSET_TABLE);
+                final PreparedStatement createDispatch = configuration.connection.prepareStatement(DISPATCH_TABLE)
         ) {
             assert createEventTable.executeUpdate() == 0;
             assert createSnapshotTable.executeUpdate() == 0;
             assert createOffsetTable.executeUpdate() == 0;
+            assert createDispatch.executeUpdate() == 0;
         } finally {
             configuration.connection.commit();
         }
@@ -121,11 +135,16 @@ public abstract class BasePostgresJournalTest {
         try (
                 final PreparedStatement dropEventTable = configuration.connection.prepareStatement(DROP_EVENT_TABLE);
                 final PreparedStatement dropSnapshotTable = configuration.connection.prepareStatement(DROP_SNAPSHOT_TABLE);
-                final PreparedStatement dropOffsetTable = configuration.connection.prepareStatement(DROP_OFFSET_TABLE)
+                final PreparedStatement dropOffsetTable = configuration.connection.prepareStatement(DROP_OFFSET_TABLE);
+                final PreparedStatement dropDispatchTable = configuration.connection.prepareStatement(DROP_DISPATCH_TABLE);
         ) {
             assert dropEventTable.executeUpdate() == 0;
             assert dropSnapshotTable.executeUpdate() == 0;
             assert dropOffsetTable.executeUpdate() == 0;
+            assert dropDispatchTable.executeUpdate() == 0;
+        } catch (Exception e){
+           //ignore
+          e.printStackTrace();
         } finally {
             configuration.connection.commit();
         }

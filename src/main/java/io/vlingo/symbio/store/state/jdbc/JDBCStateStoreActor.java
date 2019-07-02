@@ -23,7 +23,6 @@ import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
-import io.vlingo.symbio.store.common.jdbc.JDBCStorageDelegate;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;

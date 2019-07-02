@@ -5,7 +5,7 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.common.jdbc;
+package io.vlingo.symbio.store.state.jdbc;
 
 import io.vlingo.actors.Logger;
 import io.vlingo.common.Tuple2;
@@ -17,12 +17,11 @@ import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.BinaryState;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.jdbc.CachedStatement;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
-import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
-import io.vlingo.symbio.store.state.jdbc.Mode;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -179,7 +178,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     final State<S> state = dispatchable.typedState();
 
     preparedStatement.clearParameters();
-    preparedStatement.setObject(1, Timestamp.valueOf(LocalDateTime.now()));
+    preparedStatement.setObject(1, Timestamp.valueOf(dispatchable.createdOn()));
     preparedStatement.setString(2, originatorId);
     preparedStatement.setString(3, dispatchable.id());
     preparedStatement.setString(4, state.id);
@@ -248,7 +247,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
           queryEntryStatement.executeQuery();
           try (final ResultSet result = queryEntryStatement.executeQuery()) {
              if (result.next()) {
-               entries.add(entryFrom(result, id));
+               entries.add(entryFrom(result, entryId));
              }
           }
           dispatchableCachedStatements.getQueryEntry().preparedStatement.clearParameters();

@@ -14,7 +14,7 @@ import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.EntryReader.Advice;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.JDBCStorageDelegate;
+import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.common.jdbc.CachedStatement;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
