@@ -12,12 +12,15 @@ import java.util.List;
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 
 public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
+  private final EntryReader.Advice advice;
   private final String name;
 
-  public PostgresStateStoreEntryReaderActor(final String name) {
+  public PostgresStateStoreEntryReaderActor(final EntryReader.Advice advice, final String name) {
+    this.advice = advice;
     this.name = name;
   }
 
