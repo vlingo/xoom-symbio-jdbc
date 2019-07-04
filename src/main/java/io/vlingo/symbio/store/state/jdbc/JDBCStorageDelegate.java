@@ -7,19 +7,6 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
-import io.vlingo.actors.Logger;
-import io.vlingo.common.Tuple2;
-import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.State.BinaryState;
-import io.vlingo.symbio.State.TextState;
-import io.vlingo.symbio.store.DataFormat;
-import io.vlingo.symbio.store.state.StateStore.Dispatchable;
-import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
-
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -33,6 +20,19 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import io.vlingo.actors.Logger;
+import io.vlingo.common.Tuple2;
+import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.State.BinaryState;
+import io.vlingo.symbio.State.TextState;
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.state.StateStore.Dispatchable;
+import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
+import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 
 public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   protected final Connection connection;

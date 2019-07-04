@@ -6,6 +6,10 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.state.jdbc;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Collection;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Cancellable;
 import io.vlingo.common.Scheduled;
@@ -16,10 +20,6 @@ import io.vlingo.symbio.store.state.StateStore.Dispatchable;
 import io.vlingo.symbio.store.state.StateStore.Dispatcher;
 import io.vlingo.symbio.store.state.StateStore.DispatcherControl;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.Collection;
 /**
  * JDBCRedispatchControlActor is responsible for requesting re-dispatch
  * of the unconfirmed dispatchables of a JDBCStateStoreActor on a
@@ -29,14 +29,14 @@ import java.util.Collection;
  */
 public class JDBCDispatcherControlActor extends Actor
 implements DispatcherControl, Scheduled<Object> {
-  
+
   public final static long DEFAULT_REDISPATCH_DELAY = 2000L;
 
   private final StorageDelegate delegate;
   private final Dispatcher dispatcher;
   private final long confirmationExpiration;
   private final Cancellable cancellable;
-  
+
   @SuppressWarnings("unchecked")
   public JDBCDispatcherControlActor(final Dispatcher dispatcher, final StorageDelegate delegate, final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.dispatcher = dispatcher;
@@ -44,12 +44,12 @@ implements DispatcherControl, Scheduled<Object> {
     this.confirmationExpiration = confirmationExpiration;
     this.cancellable = scheduler().schedule(selfAs(Scheduled.class), null, DEFAULT_REDISPATCH_DELAY, checkConfirmationExpirationInterval);
   }
-  
+
   @Override
   public void intervalSignal(final Scheduled<Object> scheduled, final Object data) {
     dispatchUnconfirmed();
   }
-  
+
   @Override
   public void confirmDispatched(String dispatchId, ConfirmDispatchedResultInterest interest) {
     checkConnection();
@@ -61,7 +61,7 @@ implements DispatcherControl, Scheduled<Object> {
       logger().error(getClass().getSimpleName() + " confirmDispatched() failed because: " + ex.getMessage(), ex);
     }
   }
-  
+
   @Override
   public void dispatchUnconfirmed() {
     checkConnection();
@@ -80,13 +80,14 @@ implements DispatcherControl, Scheduled<Object> {
       logger().error(getClass().getSimpleName() + " dispatchUnconfirmed() failed because: " + e.getMessage(), e);
     }
   }
-  
+
   @Override
   public void stop() {
+    delegate.close();
     cancel();
     super.stop();
   }
-  
+
   private void cancel() {
     if (cancellable != null) {
       cancellable.cancel();
