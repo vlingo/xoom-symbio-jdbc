@@ -79,6 +79,7 @@ public class PostgresJDBCTextStateStoreEntryTest {
       });
 
     assertEquals(3, (int) accessReadEntries.readFrom("allCount"));
+
     assertEquals(new Event1(), entryAdapterProvider.asSource(readEntries.get(0)));
     assertEquals(new Event2(), entryAdapterProvider.asSource(readEntries.get(1)));
     assertEquals(new Event3(), entryAdapterProvider.asSource(readEntries.get(2)));
@@ -113,8 +114,8 @@ public class PostgresJDBCTextStateStoreEntryTest {
   public void tearDown() throws Exception {
     if (configuration == null) return;
     world.terminate();
-    configuration.cleanUp();
     delegate.close();
+    configuration.cleanUp();
   }
 
   private TestConfiguration testConfiguration(final DataFormat format) throws Exception {
