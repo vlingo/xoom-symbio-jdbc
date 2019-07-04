@@ -87,7 +87,7 @@ public interface PostgresQueries {
           "SELECT d_created_at, d_dispatch_id, d_state_id, d_state_type, d_state_type_version, d_state_data, d_state_data_version, \n" +
           "       d_state_metadata_value, d_state_metadata_op, d_state_metadata_object, d_state_metadata_object_type, d_entries \n" +
           "FROM {0} \n" +
-          "WHERE d_originator_id = ? ORDER BY D_ID";
+          "WHERE d_originator_id = ? ORDER BY d_created_at ASC";
 
 
   final static String SQL_CREATE_ENTRY_STORE =
