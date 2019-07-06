@@ -4,7 +4,7 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-package io.vlingo.symbio.store.journal.jdbc.postgres;
+package io.vlingo.symbio.store.common;
 
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.symbio.Entry;
@@ -20,20 +20,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 
-public class MockJournalDispatcher implements Dispatcher<Dispatchable<Entry<String>, State.TextState>> {
+public class MockDispatcher<E extends Entry<?>, RS extends State<?>> implements Dispatcher<Dispatchable<E,RS>> {
   public AccessSafely access;
 
   private final ConfirmDispatchedResultInterest confirmDispatchedResultInterest;
   private DispatcherControl control;
-  private final Map<String,Dispatchable<Entry<String>, State.TextState>> dispatched = new HashMap<>();
+  private final Map<String, Dispatchable<E, RS>> dispatched = new HashMap<>();
   private final AtomicBoolean processDispatch = new AtomicBoolean(true);
   private final AtomicInteger dispatchAttemptCount = new AtomicInteger(0);
 
-  public MockJournalDispatcher() {
+  public MockDispatcher() {
     this.confirmDispatchedResultInterest = (result, dispatchId) -> {
-      
+
     };
-    this.access = AccessSafely.afterCompleting(0);
+    this.access = afterCompleting(0);
   }
 
   @Override
@@ -42,7 +42,7 @@ public class MockJournalDispatcher implements Dispatcher<Dispatchable<Entry<Stri
   }
 
   @Override
-  public void dispatch(final Dispatchable<Entry<String>, State.TextState> dispatchable) {
+  public void dispatch(final Dispatchable<E, RS> dispatchable) {
     dispatchAttemptCount.getAndIncrement();
     if (processDispatch.get()) {
       final String id = dispatchable.id();
@@ -53,21 +53,18 @@ public class MockJournalDispatcher implements Dispatcher<Dispatchable<Entry<Stri
 
   @SuppressWarnings({ "rawtypes" })
   public AccessSafely afterCompleting(final int times) {
-    this.access = AccessSafely
-      .afterCompleting(times)
-      .writingWith("dispatched", (BiConsumer<String, Dispatchable>) dispatched::put)
+    this.access = AccessSafely.afterCompleting(times).writingWith("dispatched", (BiConsumer<String, Dispatchable>) dispatched::put)
 
-      .writingWith("processDispatch", processDispatch::set)
-      .readingWith("processDispatch", processDispatch::get)
+            .writingWith("processDispatch", processDispatch::set).readingWith("processDispatch", processDispatch::get)
 
-      .readingWith("dispatchAttemptCount", dispatchAttemptCount::get)
+            .readingWith("dispatchAttemptCount", dispatchAttemptCount::get)
 
-      .readingWith("dispatched", () -> dispatched);
+            .readingWith("dispatched", () -> dispatched);
 
     return access;
   }
 
-  public Map<String, Dispatchable<Entry<String>, State.TextState>> getDispatched() {
+  public Map<String, Dispatchable<E, RS>> getDispatched() {
     return access.readFrom("dispatched");
   }
 }

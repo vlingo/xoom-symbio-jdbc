@@ -9,16 +9,15 @@ package io.vlingo.symbio.store.object.jdbc.jdbi;
 
 import io.vlingo.actors.Logger;
 import io.vlingo.actors.Stage;
-import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.Result;
-import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.object.ObjectStoreReader;
 import io.vlingo.symbio.store.object.PersistentEntry;
 import io.vlingo.symbio.store.object.PersistentObject;
@@ -28,7 +27,9 @@ import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreDelegate;
 import io.vlingo.symbio.store.object.jdbc.jdbi.UnitOfWork.AlwaysModifiedUnitOfWork;
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.generic.GenericType;
 import org.jdbi.v3.core.mapper.RowMapper;
+import org.jdbi.v3.core.result.ResultBearing;
 import org.jdbi.v3.core.statement.Update;
 
 import java.util.ArrayList;
@@ -45,27 +46,27 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   private static final String BindListKey = "listArgValues";
   private static final UnitOfWork AlwaysModified = new AlwaysModifiedUnitOfWork();
 
-  private final EntryAdapterProvider entryAdapterProvider;
   private final Handle handle;
   private final Logger logger;
   private final Map<Class<?>,PersistentObjectMapper> mappers;
   private final Map<Long,UnitOfWork> unitOfWorkRegistry;
   private long updateId;
+  private final QueryExpression unconfirmedDispatchablesExpression;
 
   /**
    * Constructs my default state.
    * @param stage the Stage I use
    * @param configuration the Configuration used to configure my concrete subclasses
+   * @param unconfirmedDispatchablesExpression the query expression to use for getting unconfirmed dispatchables
    */
-  public JdbiObjectStoreDelegate(final Stage stage, final Configuration configuration) {
+  public JdbiObjectStoreDelegate(final Stage stage, final Configuration configuration, final QueryExpression unconfirmedDispatchablesExpression) {
     super(configuration);
     this.handle = Jdbi.open(configuration.connection);
+    this.unconfirmedDispatchablesExpression = unconfirmedDispatchablesExpression;
     this.mappers = new HashMap<>();
     this.unitOfWorkRegistry = new HashMap<>();
     this.updateId = 0;
     this.logger = stage.world().defaultLogger();
-    this.entryAdapterProvider = EntryAdapterProvider.instance(stage.world());
-
     initialize();
   }
 
@@ -82,60 +83,66 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   }
 
   @Override
-  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
-          final PersistResultInterest interest, final Object object) {
+  public void beginWrite() {
 
+  }
+
+  @Override
+  public void complete() {
+
+  }
+
+  @Override
+  public void fail() {
+
+  }
+
+  @Override
+  public <T extends PersistentObject> void persist(final T persistentObject, final long updateId, final List<BaseEntry.TextEntry> entries,
+          final Dispatchable<BaseEntry.TextEntry, State.TextState> dispatchable) {
     final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
-    try {
-      final int actual = handle.inTransaction(handle -> {
-        int total = 0;
-        total += persistEach(handle, unitOfWork, persistentObject, create, interest, object);
-        appendEntries(sources, metadata);
-        return total;
-      });
-      unitOfWorkRegistry.remove(updateId);
-      interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, actual, object);
-    } catch (final Exception e) {
-      // NOTE: UnitOfWork not removed in case retry; see intervalSignal() for timeout-based removal
+    handle.inTransaction(handle -> {
+      int total = 0;
+      total += persistEach(handle, unitOfWork, persistentObject, create);
+      appendEntries(entries);
+      appendDispatchable(dispatchable);
+      return total;
+    });
+    unitOfWorkRegistry.remove(updateId);
+  }
 
-      logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
+  @Override
+  public <T extends PersistentObject> void persistAll(final Collection<T> persistentObjects, final long updateId, final List<BaseEntry.TextEntry> entries,
+          final Collection<Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatchable) {
+    final boolean create = ObjectStoreReader.isNoId(updateId);
+    final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
-      interest.persistResultedIn(
-              Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
-              persistentObject, 1, 0,
-              object);
-    }
+    handle.inTransaction(handle -> {
+      int total = 0;
+      for (final T each : persistentObjects) {
+        total += persistEach(handle, unitOfWork, each, create);
+      }
+      appendEntries(entries);
+      for (final Dispatchable<BaseEntry.TextEntry, State.TextState> stateDispatchable : dispatchable) {
+        appendDispatchable(stateDispatchable);
+      }
+      return total;
+    });
+    unitOfWorkRegistry.remove(updateId);
+  }
+
+  @Override
+  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
+          final PersistResultInterest interest, final Object object) {
+      //not to be used
   }
 
   @Override
   public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final Metadata metadata,
           final long updateId, final PersistResultInterest interest, final Object object) {
-    final boolean create = ObjectStoreReader.isNoId(updateId);
-    final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
-
-    try {
-      final int actual = handle.inTransaction(handle -> {
-        int total = 0;
-        for (final T each : persistentObjects) {
-          total += persistEach(handle, unitOfWork, each, create, interest, object);
-        }
-        appendEntries(sources, metadata);
-        return total;
-      });
-      unitOfWorkRegistry.remove(updateId);
-      interest.persistResultedIn(Success.of(Result.Success), persistentObjects, persistentObjects.size(), actual, object);
-    } catch (final Exception e) {
-      // NOTE: UnitOfWork not removed in case retry; see intervalSignal() for timeout-based removal
-
-      logger.error("Persist all of: " + persistentObjects + " failed because: " + e.getMessage(), e);
-
-      interest.persistResultedIn(
-              Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
-              persistentObjects, persistentObjects.size(), 0,
-              object);
-    }
+    //not to be used
   }
 
   /*
@@ -217,13 +224,42 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     }
   }
 
-  private <E> void appendEntries(final List<Source<E>> sources, final Metadata metadata) {
-    final Collection<BaseEntry<?>> all = entryAdapterProvider.asEntries(sources, metadata);
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public Collection<Dispatchable<Entry<?>, State<?>>> allUnconfirmedDispatchableStates() {
+    return handle.createQuery(unconfirmedDispatchablesExpression.query)
+            .mapTo(new GenericType<Dispatchable<Entry<?>, State<?>>>(){})
+            .list();
+  }
+
+  @Override
+  public void confirmDispatched(final String dispatchId) {
+    final JdbiPersistMapper mapper = mappers.get(Dispatchable.class).persistMapper();
+    handle.createUpdate(mapper.updateStatement)
+            .bind("id", dispatchId)
+            .execute();
+  }
+
+  @Override
+  public void stop() {
+    this.close();
+  }
+
+  private void appendEntries(final Collection<BaseEntry.TextEntry> all) {
     final JdbiPersistMapper mapper = mappers.get(Entry.class).persistMapper();
-    for (final BaseEntry<?> entry : all) {
+    for (final BaseEntry.TextEntry entry : all) {
       final Update statement = handle.createUpdate(mapper.insertStatement);
-      mapper.binder.apply(statement, new PersistentEntry(entry)).execute();
+      final ResultBearing resultBearing = mapper.binder.apply(statement, new PersistentEntry(entry)).executeAndReturnGeneratedKeys();
+      final Object id = resultBearing.mapToMap().findOnly().get("e_id");
+      entry.__internal__setId(id.toString());
     }
+  }
+
+  private void appendDispatchable(final Dispatchable<BaseEntry.TextEntry, State.TextState> dispatchable) {
+    final JdbiPersistMapper mapper = mappers.get(dispatchable.getClass()).persistMapper();
+    final Update statement = handle.createUpdate(mapper.insertStatement);
+    mapper.binder.apply(statement, new PersistentDispatchable(configuration.originatorId, dispatchable)).execute();
   }
 
   private void initialize() {
@@ -238,7 +274,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     }
   }
 
-  private <T extends PersistentObject> int persistEach(final Handle handle, final UnitOfWork unitOfWork, final T persistentObject, final boolean create, final PersistResultInterest interest, final Object object) {
+  private <T extends PersistentObject> int persistEach(final Handle handle, final UnitOfWork unitOfWork, final T persistentObject, final boolean create) {
 
     final PersistentObject typed = PersistentObject.from(persistentObject);
 
@@ -254,7 +290,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
       return mapper.binder.apply(statement, persistentObject).execute();
     }
 
-    return 0;
+    return 1;
   }
 
   private <T extends PersistentObject> QueryMultiResults queryMultiResults(final List<T> presistentObjects, final QueryMode mode) {

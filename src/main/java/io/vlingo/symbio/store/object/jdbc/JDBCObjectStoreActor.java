@@ -8,14 +8,31 @@
 package io.vlingo.symbio.store.object.jdbc;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.Definition;
+import io.vlingo.actors.Logger;
+import io.vlingo.common.Failure;
 import io.vlingo.common.Scheduled;
+import io.vlingo.common.Success;
+import io.vlingo.common.identity.IdentityGenerator;
+import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.StateAdapterProvider;
+import io.vlingo.symbio.store.Result;
+import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -24,16 +41,43 @@ import java.util.List;
  * any number of {@code JDBCObjectStoreDelegate} types.
  */
 public class JDBCObjectStoreActor extends Actor implements ObjectStore, Scheduled<Object> {
+  private final DispatcherControl dispatcherControl;
   private boolean closed;
   private final JDBCObjectStoreDelegate delegate;
+  private final Dispatcher<Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatcher;
+  private final Logger logger;
+  private final EntryAdapterProvider entryAdapterProvider;
+  private final StateAdapterProvider stateAdapterProvider;
+  private final IdentityGenerator identityGenerator;
 
   @SuppressWarnings("unchecked")
-  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate) {
+  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatcher) {
+     this(delegate, dispatcher, 1000L, 1000L);
+  }
+
+  @SuppressWarnings("unchecked")
+  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatcher,
+          final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.delegate = delegate;
+    this.dispatcher = dispatcher;
     this.closed = false;
+    this.logger = stage().world().defaultLogger();
+    this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
+    this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
+    this.identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
 
     final long timeout = delegate.configuration.transactionTimeoutMillis;
     stage().scheduler().schedule(selfAs(Scheduled.class), null, timeout, timeout);
+
+    this.dispatcherControl = stage().actorFor(
+            DispatcherControl.class,
+            Definition.has(
+                    DispatcherControlActor.class,
+                    Definition.parameters(
+                            dispatcher,
+                            delegate,
+                            checkConfirmationExpirationInterval,
+                            confirmationExpiration)));
   }
 
   /*
@@ -43,6 +87,9 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   public void close() {
     if (!closed) {
       delegate.close();
+      if ( this.dispatcherControl != null ){
+        this.dispatcherControl.stop();
+      }
       closed = true;
     }
   }
@@ -50,13 +97,57 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   @Override
   public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
           final PersistResultInterest interest, final Object object) {
-    delegate.persist(persistentObject, sources, metadata, updateId, interest, object);
+    try {
+      delegate.beginWrite();
+
+      final List<BaseEntry.TextEntry> entries = entryAdapterProvider.asEntries(sources, metadata);
+      final State.TextState raw = stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
+      final Dispatchable<BaseEntry.TextEntry, State.TextState> dispatchable = buildDispatchable(raw, entries);
+
+      delegate.persist(persistentObject, updateId, entries, dispatchable);
+      dispatcher.dispatch(dispatchable);
+      
+      delegate.complete();
+      interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, 1, object);
+    } catch (final Exception e) {
+      delegate.fail();
+      logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
+
+      interest.persistResultedIn(
+              Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
+              persistentObject, 1, 0,
+              object);
+    }
   }
 
   @Override
   public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final Metadata metadata,
           final long updateId, final PersistResultInterest interest, final Object object) {
-    delegate.persistAll(persistentObjects, sources, metadata, updateId, interest, object);
+    try {
+      delegate.beginWrite();
+
+      final List<BaseEntry.TextEntry> entries = entryAdapterProvider.asEntries(sources, metadata);
+      final ArrayList<Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatchables = new ArrayList<>(persistentObjects.size());
+      for (final T persistentObject : persistentObjects) {
+        final State.TextState raw = stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
+        dispatchables.add(buildDispatchable(raw, entries));
+      }
+
+      delegate.persistAll(persistentObjects, updateId, entries, dispatchables);
+
+      dispatchables.forEach(dispatcher::dispatch);
+      
+      delegate.complete();
+      interest.persistResultedIn(Success.of(Result.Success), persistentObjects, persistentObjects.size(), persistentObjects.size(), object);
+    } catch (final Exception e) {
+      delegate.fail();
+      logger.error("Persist all of: " + persistentObjects + " failed because: " + e.getMessage(), e);
+
+      interest.persistResultedIn(
+              Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
+              persistentObjects, persistentObjects.size(), 0,
+              object);
+    }
   }
 
   /*
@@ -96,5 +187,10 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
     close();
 
     super.stop();
+  }
+
+  private Dispatchable<BaseEntry.TextEntry, State.TextState> buildDispatchable(final State.TextState state, final List<BaseEntry.TextEntry> entries){
+    final String id = identityGenerator.generate().toString();
+    return new Dispatchable<>(id, LocalDateTime.now(), state, entries);
   }
 }

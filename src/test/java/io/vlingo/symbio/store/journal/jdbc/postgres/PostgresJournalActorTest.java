@@ -17,8 +17,9 @@ import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.StateAdapter;
 import io.vlingo.symbio.StateAdapterProvider;
-import io.vlingo.symbio.store.common.TestEvent;
-import io.vlingo.symbio.store.common.TestEventAdapter;
+import io.vlingo.symbio.store.common.MockDispatcher;
+import io.vlingo.symbio.store.common.event.TestEvent;
+import io.vlingo.symbio.store.common.event.TestEventAdapter;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalReader;
@@ -43,7 +44,7 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
     private Object object = new Object();
     private MockAppendResultInterest interest;
     private Journal<String> journal;
-    private MockJournalDispatcher dispatcher;
+    private MockDispatcher<Entry<String>, TextState> dispatcher;
     private JournalReader<TextEntry> journalReader;
     private StreamReader<String> streamReader;
 
@@ -52,7 +53,7 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
     public void setUp() throws Exception {
         interest = new MockAppendResultInterest();
 
-        dispatcher = new MockJournalDispatcher();
+        dispatcher = new MockDispatcher<>();
 
         journal =  world.stage().actorFor(Journal.class, PostgresJournalActor.class, dispatcher, configuration);
         EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
@@ -212,6 +213,10 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
           Assert.assertNotNull(dispatchable.id());
           final Collection<Entry<String>> dispatchedEntries = dispatchable.entries();
           Assert.assertEquals(2, dispatchedEntries.size());
+
+          for (final Entry<String> dispatchedEntry : dispatchedEntries) {
+            Assert.assertTrue(dispatchedEntry.id() != null && !dispatchedEntry.id().isEmpty());
+          }
         }
     }
 

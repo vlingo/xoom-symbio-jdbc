@@ -5,7 +5,7 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.common;
+package io.vlingo.symbio.store.common.event;
 
 import java.util.Objects;
 

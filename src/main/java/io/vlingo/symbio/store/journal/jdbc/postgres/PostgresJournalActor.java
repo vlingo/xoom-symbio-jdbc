@@ -360,7 +360,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
   }
 
-  private static String getDispatchId(final String streamName, final int streamVersion, final Collection<Entry<String>> entries) {
-    return streamName + ":" + streamVersion + ":" + entries.stream().map(Entry::id).collect(Collectors.joining(":"));
+  private String getDispatchId(final String streamName, final int streamVersion, final Collection<Entry<String>> entries) {
+    return streamName + ":" + streamVersion + ":" + identityGenerator.generate().toString();
   }
 }
