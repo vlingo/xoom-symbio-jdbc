@@ -5,10 +5,12 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.object.jdbc.jpa;
+package io.vlingo.symbio.store.object.jdbc.jpa.model;
 
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter;
+import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter;
 
 import javax.persistence.Column;
 import javax.persistence.Convert;
@@ -33,14 +35,14 @@ public class JPAEntry implements Entry<String> {
   private String id;
 
   @Column(name="entry_timestamp", updatable = false, nullable = false)
-  @Convert(converter=LocalDateConverter.class)
+  @Convert(converter= LocalDateConverter.class)
   private LocalDate entryTimestamp;
 
   @Column(name="entry_data", updatable = false, nullable = false)
   private String entryData;
 
   @Column(name="metadata", updatable = false, nullable = false)
-  @Convert(converter=EntryMetadataConverter.class)
+  @Convert(converter= MetadataConverter.class)
   private Metadata metadata;
 
   @Column(name="entry_type", updatable = false, nullable = false)

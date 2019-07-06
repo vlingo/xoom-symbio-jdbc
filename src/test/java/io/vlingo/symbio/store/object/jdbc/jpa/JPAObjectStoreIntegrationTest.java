@@ -6,27 +6,16 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.common.Outcome;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.common.MockDispatcher;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.object.ListQueryExpression;
 import io.vlingo.symbio.store.object.MapQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
@@ -38,6 +27,23 @@ import io.vlingo.symbio.store.object.jdbc.jpa.PersonEntryAdapters.PersonAddedAda
 import io.vlingo.symbio.store.object.jdbc.jpa.PersonEntryAdapters.PersonRenamedAdapter;
 import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonAdded;
 import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonRenamed;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 /**
  * JPAObjectStoreIntegrationTest is responsible for testing {@link JPAObjectStore}
  */
@@ -45,13 +51,20 @@ public class JPAObjectStoreIntegrationTest {
   private JPAObjectStoreDelegate delegate;
   private JPAObjectStore objectStore;
   private World world;
+  private MockDispatcher<Entry<String>, State<String>> dispatcher;
 
   @Test
   public void testThatObjectStoreInsertsOneAndQuerys() {
+    dispatcher.afterCompleting(1);
+
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
     Person person = new Person(1L, 21, "Jody Jones");
-    objectStore.persist(person, Arrays.asList(new PersonAdded(person)), person.persistenceId(), persistInterest);
+    
+    objectStore.persist(person,
+            Collections.singletonList(new PersonAdded(person)),
+            person.persistenceId(),
+            persistInterest);
     assertEquals(Result.Success, persistInterestAccess.readFrom("result")); 
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
@@ -67,10 +80,25 @@ public class JPAObjectStoreIntegrationTest {
     AccessSafely removeInterestAccess = removeInterest.afterCompleting(1);
     objectStore.remove(person, person.persistenceId(), removeInterest);
     assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
+
+    final Map<String, Dispatchable<Entry<String>, State<String>>> dispatched = dispatcher.getDispatched();
+    assertEquals(1, dispatched.size());
+
+    for (final Dispatchable<Entry<String>, State<String>> dispatchable : dispatched.values()) {
+      Assert.assertNotNull(dispatchable.createdOn());
+      Assert.assertNotNull(dispatchable.id());
+      final List<Entry<String>> dispatchedEntries = dispatchable.entries();
+      Assert.assertEquals(1, dispatchedEntries.size());
+      for (final Entry<String> dispatchedEntry : dispatchedEntries) {
+        Assert.assertTrue(dispatchedEntry.id() != null && !dispatchedEntry.id().isEmpty());
+      }
+    }
   }
 
   @Test
   public void testThatObjectStoreInsertsMultipleAndQueries() {
+    dispatcher.afterCompleting(3);
+
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
     Person person1 = new Person(1L, 21, "Jody Jones");
@@ -101,10 +129,15 @@ public class JPAObjectStoreIntegrationTest {
     objectStore.remove(person3, person3.persistenceId(), removeInterest);
     assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
     assertEquals(3, (int)removeInterestAccess.readFrom("count"));
+
+    final Map<String, Dispatchable<Entry<String>, State<String>>> dispatched = dispatcher.getDispatched();
+    assertEquals(3, dispatched.size());
   }
 
   @Test
   public void testThatSingleEntityUpdates() {
+    dispatcher.afterCompleting(2);
+
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     final AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
     Person person1 = new Person(1L, 21, "Jody Jones");
@@ -128,6 +161,9 @@ public class JPAObjectStoreIntegrationTest {
     assertEquals(person1.age, queriedPerson.age);
     assertEquals(person1.name, queriedPerson.name);
 
+    final Map<String, Dispatchable<Entry<String>, State<String>>> dispatched = dispatcher.getDispatched();
+    assertEquals(2, dispatched.size());
+
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
     final AccessSafely removeInterestAccess = removeInterest.afterCompleting(1);
@@ -137,6 +173,7 @@ public class JPAObjectStoreIntegrationTest {
 
   @Test
   public void testThatMultipleEntitiesUpdate() {
+    dispatcher.afterCompleting(6);
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     final AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
 
@@ -189,6 +226,9 @@ public class JPAObjectStoreIntegrationTest {
       assertEquals(modifiedPerson.age, queriedPerson.age);
       assertEquals(modifiedPerson.name, queriedPerson.name);
     }
+
+    final Map<String, Dispatchable<Entry<String>, State<String>>> dispatched = dispatcher.getDispatched();
+    assertEquals(6, dispatched.size());
 
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
@@ -269,15 +309,62 @@ public class JPAObjectStoreIntegrationTest {
     assertEquals(Result.Success, removeInterestAccess.readFrom("result"));
     assertEquals(3, (int)removeInterestAccess.readFrom("count"));
   }
-  
+
+
+  @Test
+  public void testRedispatch() {
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
+
+    accessDispatcher.writeUsing("processDispatch", false);
+
+    final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
+    final AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
+
+    final Person person1 = new Person(1L, 21, "Jody Jones");
+    final Person person2 = new Person(2L, 21, "Joey Jones");
+    final Person person3 = new Person(3L, 25, "Mira Jones");
+
+    objectStore.persistAll(
+            Arrays.asList(person1, person2, person3),
+            Arrays.asList(new PersonAdded(person1), new PersonAdded(person2), new PersonAdded(person3)),
+            persistInterest);
+    assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
+
+    try {
+      Thread.sleep(3000);
+    } catch (InterruptedException ex) {
+      //ignored
+    }
+
+    accessDispatcher.writeUsing("processDispatch", true);
+
+    final Map<String, Dispatchable<Entry<String>, State<String>>> dispatched = dispatcher.getDispatched();
+    assertEquals(3, dispatched.size());
+
+    final int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
+    assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
+
+    for (final Dispatchable<Entry<String>, State<String>> dispatchable : dispatched.values()) {
+      Assert.assertNotNull(dispatchable.createdOn());
+      Assert.assertNotNull(dispatchable.id());
+      final List<Entry<String>> dispatchedEntries = dispatchable.entries();
+      Assert.assertEquals(3, dispatchedEntries.size());
+      for (final Entry<String> dispatchedEntry : dispatchedEntries) {
+        Assert.assertTrue(dispatchedEntry.id() != null && !dispatchedEntry.id().isEmpty());
+        Assert.assertEquals(PersonAdded.class, dispatchedEntry.typed());
+      }
+    }
+  }
+
   /**
    * @throws java.lang.Exception
    */
   @Before
   public void setUp() throws Exception {
     world = World.startWithDefaults("jpa-test");
-    delegate = new JPAObjectStoreDelegate(world.stage());
-    objectStore = world.actorFor(JPAObjectStore.class, JPAObjectStoreActor.class, delegate);
+    delegate = new JPAObjectStoreDelegate(world.stage(), "TEST");
+    dispatcher = new MockDispatcher<>();
+    objectStore = world.actorFor(JPAObjectStore.class, JPAObjectStoreActor.class, delegate, dispatcher);
     EntryAdapterProvider.instance(world).registerAdapter(PersonAdded.class, new PersonAddedAdapter());
     EntryAdapterProvider.instance(world).registerAdapter(PersonRenamed.class, new PersonRenamedAdapter());    
   }

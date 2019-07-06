@@ -12,16 +12,20 @@ import io.vlingo.actors.Stage;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.object.MapQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStoreReader;
 import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.jdbc.jpa.model.JPADispatchable;
+import io.vlingo.symbio.store.object.jdbc.jpa.model.JPAEntry;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -31,11 +35,12 @@ import javax.persistence.TypedQuery;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * The {@code JDBCObjectStoreDelegate} for JPA.
  */
-public class JPAObjectStoreDelegate implements JPAObjectStore {
+public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl.DispatcherControlDelegate<Entry<?>, State<?>>{
   // Persistence Units defined in persistence.xml
   public static final String JPA_MYSQL_PERSISTENCE_UNIT = "JpaMySqlService";
   public static final String JPA_HSQLDB_PERSISTENCE_UNIT = "JpaHsqldbService";
@@ -44,24 +49,24 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   private final EntityManagerFactory emf = Persistence.createEntityManagerFactory(JPA_POSTGRES_PERSISTENCE_UNIT);
   private final EntityManager em = emf.createEntityManager();
   private final Logger logger;
-  private final EntryAdapterProvider entryAdapterProvider;
-
+  private final String originatorId;
 
   /**
    * Constructs my default state.
    *
    * @param stage from which to obtain the default logger.
+   * @param originatorId the ID of {@link Dispatchable} originator
    */
-  public JPAObjectStoreDelegate(final Stage stage) {
+  public JPAObjectStoreDelegate(final Stage stage, final String originatorId) {
     logger = stage.world().defaultLogger();
+    this.originatorId = originatorId;
     FlushModeType flushMode = em.getFlushMode();
     if (flushMode.equals(FlushModeType.AUTO))
       em.setFlushMode(FlushModeType.COMMIT);
     flushMode = em.getFlushMode();
     assert flushMode.equals(FlushModeType.COMMIT);
-    this.entryAdapterProvider = EntryAdapterProvider.instance(stage.world());
   }
-
+  
   /*
    * @see io.vlingo.symbio.store.object.ObjectStore#close()
    */
@@ -74,44 +79,48 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     }
   }
 
+
+  public final void beginWrite(){
+    em.getTransaction().begin();
+  }
+
+  public final void complete(){
+    em.getTransaction().commit();
+  }
+
+  public final void fail(){
+    em.getTransaction().rollback(); // TODO: is this necessary?
+  }
+
+  public final <T extends PersistentObject> void persist(final T persistentObject, final long updateId, final List<Entry<String>> entries,
+          final Dispatchable<Entry<String>, State<String>> dispatchable){
+    createOrUpdate(persistentObject, updateId);
+    appendEntries(entries);
+    appendDispatchable(dispatchable);
+  }
+
+  public final <T extends PersistentObject> void persistAll(final Collection<T> persistentObjects, final long updateId,  final List<Entry<String>> entries,
+          final Collection<Dispatchable<Entry<String>, State<String>>> dispatchables){
+    for (final T detachedEntity : persistentObjects) {
+      createOrUpdate(detachedEntity, detachedEntity.persistenceId());
+    }
+    appendEntries(entries);
+
+    for (final Dispatchable<Entry<String>, State<String>> stateDispatchable : dispatchables) {
+      appendDispatchable(stateDispatchable);
+    }
+  }
+  
   @Override
   public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
           final PersistResultInterest interest, final Object object) {
-    try {
-      em.getTransaction().begin();
-      createOrUpdate(persistentObject, updateId);
-      appendSources(sources, metadata);
-      em.getTransaction().commit();
-      interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, 1, object);
-    } catch (final Exception e) {
-      logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
-      em.getTransaction().rollback(); // TODO: is this necessary?
-
-      interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), persistentObject,
-              1, 0, object);
-    }
+    //not to be used
   }
 
   @Override
   public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final Metadata metadata,
           final long updateId, final PersistResultInterest interest, final Object object) {
-    try {
-      int count = 0;
-      em.getTransaction().begin();
-      for (final T detachedEntity : persistentObjects) {
-        createOrUpdate(detachedEntity, detachedEntity.persistenceId());
-        count++;
-      }
-      appendSources(sources, metadata);
-      em.getTransaction().commit();
-      interest.persistResultedIn(Success.of(Result.Success), persistentObjects, persistentObjects.size(), count,
-              object);
-    } catch (final Exception e) {
-      logger.error("Persist all of: " + persistentObjects + "failed because: " + e.getMessage(), e);
-
-      interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), persistentObjects,
-              persistentObjects.size(), 0, object);
-    }
+    //not to be used
   }
 
   /*
@@ -198,6 +207,36 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
     }
   }
 
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<Dispatchable<Entry<?>, State<?>>> allUnconfirmedDispatchableStates() throws Exception {
+    return em.createNamedQuery("Dispatchables.getUnconfirmed", JPADispatchable.class)
+            .setParameter("orignatorId", originatorId)
+            .getResultStream()
+            .map(JPADispatchable::toDispatchable)
+            .collect(Collectors.toList());
+  }
+
+  @Override
+  public void confirmDispatched(final String dispatchId) {
+    beginWrite();
+    try {
+      em.createNamedQuery("Dispatchables.deleteByDispatchId")
+              .setParameter(1, dispatchId)
+              .executeUpdate();
+      complete();
+    } catch (final Exception e){
+      logger.error("Failed to confirm dispatch id {}", dispatchId, e);
+      fail();
+    }
+  }
+
+  @Override
+  public void stop() {
+
+  }
+  
   /*
    * @see
    * io.vlingo.symbio.store.object.ObjectStore#registerMapper(io.vlingo.symbio.
@@ -241,8 +280,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
   /**
    * Convert each {@link Source} in {@code sources} to a {@link
    */
-  private <E> void appendSources(final List<Source<E>> sources, final Metadata metadata) {
-    final Collection<Entry<String>> entries = entryAdapterProvider.asEntries(sources, metadata);
+  private <E> void appendEntries(final Collection<Entry<String>> entries) {
     for (final Entry<String> entry : entries) {
       final JPAEntry jpaEntry = entry instanceof JPAEntry
         ? (JPAEntry) entry
@@ -251,4 +289,9 @@ public class JPAObjectStoreDelegate implements JPAObjectStore {
       logger.debug("em.persist(" + jpaEntry + ")");
     }
   }
+
+  private void appendDispatchable(final Dispatchable<Entry<String>, State<String>> stateDispatchable) {
+     em.persist(JPADispatchable.fromDispatchable(originatorId, stateDispatchable));
+  }
+  
 }

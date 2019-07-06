@@ -11,6 +11,8 @@ import io.vlingo.symbio.EntryAdapter;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonAdded;
 import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonRenamed;
+import io.vlingo.symbio.store.object.jdbc.jpa.model.JPAEntry;
+
 /**
  * PersonEntryAdapters
  */
