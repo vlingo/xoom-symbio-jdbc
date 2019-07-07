@@ -208,6 +208,9 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
   }
 
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   @SuppressWarnings("unchecked")
   public List<Dispatchable<Entry<?>, State<?>>> allUnconfirmedDispatchableStates() throws Exception {
@@ -218,7 +221,9 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
             .collect(Collectors.toList());
   }
 
-  @Override
+  /**
+   * {@inheritDoc}
+   */  @Override
   public void confirmDispatched(final String dispatchId) {
     beginWrite();
     try {
@@ -232,9 +237,12 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
     }
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public void stop() {
-
+     this.close();
   }
   
   /*
