@@ -38,21 +38,22 @@ import java.util.List;
  */
 public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   private final DispatcherControl dispatcherControl;
-  private final Dispatcher<Dispatchable<Entry<String>, State<String>>> dispatcher;
+  private final Dispatcher<Dispatchable<Entry<String>, State<?>>> dispatcher;
   private boolean closed;
   private final JPAObjectStoreDelegate delegate;
+  private final JPAObjectStoreDelegate dispatcherControlDelegate;
   private final EntryAdapterProvider entryAdapterProvider;
   private final Logger logger;
   private final IdentityGenerator identityGenerator;
   private final StateAdapterProvider stateAdapterProvider;
 
   public JPAObjectStoreActor(final JPAObjectStoreDelegate delegate,
-          final Dispatcher<Dispatchable<Entry<String>, State<String>>> dispatcher) {
+          final Dispatcher<Dispatchable<Entry<String>, State<?>>> dispatcher) {
     this(delegate, dispatcher, 1000L, 1000L);
   }
 
   public JPAObjectStoreActor(final JPAObjectStoreDelegate delegate,
-          final Dispatcher<Dispatchable<Entry<String>, State<String>>> dispatcher,
+          final Dispatcher<Dispatchable<Entry<String>, State<?>>> dispatcher,
           final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.delegate = delegate;
     this.dispatcher = dispatcher;
@@ -62,13 +63,13 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
     this.logger = stage().world().defaultLogger();
     this.identityGenerator = new IdentityGenerator.RandomIdentityGenerator();
 
+    this.dispatcherControlDelegate = delegate.copy();
     this.dispatcherControl = stage().actorFor(
             DispatcherControl.class,
             Definition.has(
                     DispatcherControlActor.class,         
                     Definition.parameters(
-                            dispatcher,
-                            delegate.copy(),
+                            dispatcher, dispatcherControlDelegate,
                             checkConfirmationExpirationInterval,
                             confirmationExpiration)));
   }
@@ -91,10 +92,10 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
 
     try {
       delegate.beginWrite();
-      final State.TextState raw = stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
+      final State<?> raw = stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
       final List<Entry<String>> entries = entryAdapterProvider.asEntries(sources, metadata);
 
-      final Dispatchable<Entry<String>, State<String>> dispatchable = buildDispatchable(raw, entries);
+      final Dispatchable<Entry<String>, State<?>> dispatchable = buildDispatchable(raw, entries);
 
       delegate.persist(persistentObject, updateId, entries, dispatchable);
 
@@ -120,9 +121,9 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
 
       final List<Entry<String>> entries = entryAdapterProvider.asEntries(sources, metadata);
 
-      final ArrayList<Dispatchable<Entry<String>, State<String>>> dispatchables = new ArrayList<>(persistentObjects.size());
+      final ArrayList<Dispatchable<Entry<String>, State<?>>> dispatchables = new ArrayList<>(persistentObjects.size());
       for (final T persistentObject : persistentObjects) {
-        final State.TextState raw = stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
+        final State<?> raw = stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
         dispatchables.add(buildDispatchable(raw, entries));
       }
 
@@ -176,6 +177,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   @Override
   public void registerMapper(final PersistentObjectMapper mapper) {
     delegate.registerMapper(mapper);
+    dispatcherControlDelegate.registerMapper(mapper);
   }
 
   @Override
@@ -183,7 +185,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
     delegate.remove(persistentObject, removeId, interest);
   }
 
-  private Dispatchable<Entry<String>, State<String>> buildDispatchable(final State<String> state, final List<Entry<String>> entries){
+  private Dispatchable<Entry<String>, State<?>> buildDispatchable(final State<?> state, final List<Entry<String>> entries){
     final String id = identityGenerator.generate().toString();
     return new Dispatchable<>(id, LocalDateTime.now(), state, entries);
   }

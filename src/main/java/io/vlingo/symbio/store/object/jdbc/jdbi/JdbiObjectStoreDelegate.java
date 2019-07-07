@@ -59,7 +59,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
    * @param unconfirmedDispatchablesExpression the query expression to use for getting unconfirmed dispatchables
    * @param logger the instance of {@link Logger} to be used
    */
-  public JdbiObjectStoreDelegate(final Configuration configuration, final QueryExpression unconfirmedDispatchablesExpression, Logger logger) {
+  public JdbiObjectStoreDelegate(final Configuration configuration, final QueryExpression unconfirmedDispatchablesExpression, final Logger logger) {
     super(configuration);
     this.handle = Jdbi.open(configuration.connection);
     this.unconfirmedDispatchablesExpression = unconfirmedDispatchablesExpression;
@@ -109,8 +109,8 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   }
 
   @Override
-  public <T extends PersistentObject> void persist(final T persistentObject, final long updateId, final List<BaseEntry.TextEntry> entries,
-          final Dispatchable<BaseEntry.TextEntry, State.TextState> dispatchable) {
+  public <T extends PersistentObject> void persist(final T persistentObject, final long updateId, final List<Entry<?>> entries,
+          final Dispatchable<Entry<?>, State<?>> dispatchable) {
     final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
@@ -125,8 +125,8 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   }
 
   @Override
-  public <T extends PersistentObject> void persistAll(final Collection<T> persistentObjects, final long updateId, final List<BaseEntry.TextEntry> entries,
-          final Collection<Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatchable) {
+  public <T extends PersistentObject> void persistAll(final Collection<T> persistentObjects, final long updateId, final List<Entry<?>> entries,
+          final Collection<Dispatchable<Entry<?>, State<?>>> dispatchable) {
     final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
@@ -136,7 +136,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
         total += persistEach(handle, unitOfWork, each, create);
       }
       appendEntries(entries);
-      for (final Dispatchable<BaseEntry.TextEntry, State.TextState> stateDispatchable : dispatchable) {
+      for (final Dispatchable<Entry<?>, State<?>> stateDispatchable : dispatchable) {
         appendDispatchable(stateDispatchable);
       }
       return total;
@@ -222,8 +222,9 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   @Override
   @SuppressWarnings("unchecked")
   public Collection<Dispatchable<Entry<?>, State<?>>> allUnconfirmedDispatchableStates() {
-    return handle.createQuery(unconfirmedDispatchablesExpression.query).mapTo(new GenericType<Dispatchable<Entry<?>, State<?>>>() {
-    }).list();
+    return handle.createQuery(unconfirmedDispatchablesExpression.query)
+            .mapTo(new GenericType<Dispatchable<Entry<?>, State<?>>>() {})
+            .list();
   }
 
   @Override
@@ -237,17 +238,17 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     this.close();
   }
 
-  private void appendEntries(final Collection<BaseEntry.TextEntry> all) {
+  private void appendEntries(final Collection<Entry<?>> all) {
     final JdbiPersistMapper mapper = mappers.get(Entry.class).persistMapper();
-    for (final BaseEntry.TextEntry entry : all) {
+    for (final Entry<?> entry : all) {
       final Update statement = handle.createUpdate(mapper.insertStatement);
       final ResultBearing resultBearing = mapper.binder.apply(statement, new PersistentEntry(entry)).executeAndReturnGeneratedKeys();
       final Object id = resultBearing.mapToMap().findOnly().get("e_id");
-      entry.__internal__setId(id.toString());
+      ((BaseEntry<?>) entry).__internal__setId(id.toString());
     }
   }
 
-  private void appendDispatchable(final Dispatchable<BaseEntry.TextEntry, State.TextState> dispatchable) {
+  private void appendDispatchable(final Dispatchable<Entry<?>, State<?>> dispatchable) {
     final JdbiPersistMapper mapper = mappers.get(dispatchable.getClass()).persistMapper();
     final Update statement = handle.createUpdate(mapper.insertStatement);
     mapper.binder.apply(statement, new PersistentDispatchable(configuration.originatorId, dispatchable)).execute();

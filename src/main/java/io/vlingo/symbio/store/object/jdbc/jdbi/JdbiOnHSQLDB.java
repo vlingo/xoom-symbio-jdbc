@@ -165,7 +165,7 @@ public class JdbiOnHSQLDB {
       } else {
         entries = Collections.emptyList();
       }
-
+      
       final State.TextState state = new State.TextState(stateId, stateType, stateTypeVersion, stateData, stateDataVersion, metadata);
       return new Dispatchable<>(dispatchId, createdAt, state, entries);
     }

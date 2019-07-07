@@ -7,7 +7,7 @@
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
 import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import org.jdbi.v3.core.mapper.Nested;
@@ -16,9 +16,9 @@ import java.time.LocalDateTime;
 
 public final class PersistentDispatchable {
   private final String originatorId;
-  private final Dispatchable<BaseEntry.TextEntry, State.TextState> dispatchable;
+  private final Dispatchable<Entry<?>, State<?>> dispatchable;
 
-  public PersistentDispatchable(final String originatorId, final Dispatchable<BaseEntry.TextEntry, State.TextState> dispatchable) {
+  public PersistentDispatchable(final String originatorId, final Dispatchable<Entry<?>, State<?>> dispatchable) {
     this.originatorId = originatorId;
     this.dispatchable = dispatchable;
   }
@@ -49,9 +49,9 @@ public final class PersistentDispatchable {
   }
 
   public static class PersistentState {
-    private final State.TextState state;
+    private final State<?> state;
 
-    public PersistentState(final State.TextState state) {
+    public PersistentState(final State<?> state) {
       this.state = state;
     }
 
@@ -60,7 +60,7 @@ public final class PersistentDispatchable {
     }
 
     public String data() {
-      return state.data;
+      return JsonSerialization.serialized(state.data);
     }
 
     public int dataVersion() {

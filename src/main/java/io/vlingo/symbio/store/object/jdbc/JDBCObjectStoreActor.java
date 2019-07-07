@@ -14,7 +14,7 @@ import io.vlingo.common.Failure;
 import io.vlingo.common.Scheduled;
 import io.vlingo.common.Success;
 import io.vlingo.common.identity.IdentityGenerator;
-import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
@@ -44,19 +44,20 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   private final DispatcherControl dispatcherControl;
   private boolean closed;
   private final JDBCObjectStoreDelegate delegate;
-  private final Dispatcher<Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatcher;
+  private final JDBCObjectStoreDelegate dispatchControlDelegate;
+  private final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher;
   private final Logger logger;
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
   private final IdentityGenerator identityGenerator;
 
   @SuppressWarnings("unchecked")
-  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatcher) {
+  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher) {
      this(delegate, dispatcher, 1000L, 1000L);
   }
 
   @SuppressWarnings("unchecked")
-  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatcher,
+  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher,
           final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.delegate = delegate;
     this.dispatcher = dispatcher;
@@ -69,13 +70,13 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
     final long timeout = delegate.configuration.transactionTimeoutMillis;
     stage().scheduler().schedule(selfAs(Scheduled.class), null, timeout, timeout);
 
+    this.dispatchControlDelegate = delegate.copy();
     this.dispatcherControl = stage().actorFor(
             DispatcherControl.class,
             Definition.has(
                     DispatcherControlActor.class,
                     Definition.parameters(
-                            dispatcher,
-                            delegate.copy(),
+                            dispatcher, dispatchControlDelegate,
                             checkConfirmationExpirationInterval,
                             confirmationExpiration)));
   }
@@ -100,9 +101,9 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
     try {
       delegate.beginWrite();
 
-      final List<BaseEntry.TextEntry> entries = entryAdapterProvider.asEntries(sources, metadata);
-      final State.TextState raw = stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
-      final Dispatchable<BaseEntry.TextEntry, State.TextState> dispatchable = buildDispatchable(raw, entries);
+      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
+      final State<?> raw = stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
+      final Dispatchable<Entry<?>, State<?>> dispatchable = buildDispatchable(raw, entries);
 
       delegate.persist(persistentObject, updateId, entries, dispatchable);
       delegate.complete();
@@ -127,10 +128,10 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
     try {
       delegate.beginWrite();
 
-      final List<BaseEntry.TextEntry> entries = entryAdapterProvider.asEntries(sources, metadata);
-      final ArrayList<Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatchables = new ArrayList<>(persistentObjects.size());
+      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
+      final ArrayList<Dispatchable<Entry<?>, State<?>>> dispatchables = new ArrayList<>(persistentObjects.size());
       for (final T persistentObject : persistentObjects) {
-        final State.TextState raw = stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
+        final State<?> raw = stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
         dispatchables.add(buildDispatchable(raw, entries));
       }
 
@@ -173,7 +174,8 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
    */
   @Override
   public void registerMapper(final PersistentObjectMapper mapper) {
-    delegate.registerMapper(mapper);
+    this.delegate.registerMapper(mapper);
+    this.dispatchControlDelegate.registerMapper(mapper);
   }
 
   @Override
@@ -191,7 +193,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
     super.stop();
   }
 
-  private Dispatchable<BaseEntry.TextEntry, State.TextState> buildDispatchable(final State.TextState state, final List<BaseEntry.TextEntry> entries){
+  private Dispatchable<Entry<?>, State<?>> buildDispatchable(final State<?> state, final List<Entry<?>> entries){
     final String id = identityGenerator.generate().toString();
     return new Dispatchable<>(id, LocalDateTime.now(), state, entries);
   }

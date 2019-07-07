@@ -96,20 +96,20 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
   }
 
   public final <T extends PersistentObject> void persist(final T persistentObject, final long updateId, final List<Entry<String>> entries,
-          final Dispatchable<Entry<String>, State<String>> dispatchable){
+          final Dispatchable<Entry<String>, State<?>> dispatchable){
     createOrUpdate(persistentObject, updateId);
     appendEntries(entries);
     appendDispatchable(dispatchable);
   }
 
   public final <T extends PersistentObject> void persistAll(final Collection<T> persistentObjects, final long updateId,  final List<Entry<String>> entries,
-          final Collection<Dispatchable<Entry<String>, State<String>>> dispatchables){
+          final Collection<Dispatchable<Entry<String>, State<?>>> dispatchables){
     for (final T detachedEntity : persistentObjects) {
       createOrUpdate(detachedEntity, detachedEntity.persistenceId());
     }
     appendEntries(entries);
 
-    for (final Dispatchable<Entry<String>, State<String>> stateDispatchable : dispatchables) {
+    for (final Dispatchable<Entry<String>, State<?>> stateDispatchable : dispatchables) {
       appendDispatchable(stateDispatchable);
     }
   }
@@ -301,7 +301,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
     }
   }
 
-  private void appendDispatchable(final Dispatchable<Entry<String>, State<String>> stateDispatchable) {
+  private void appendDispatchable(final Dispatchable<Entry<String>, State<?>> stateDispatchable) {
      em.persist(JPADispatchable.fromDispatchable(originatorId, stateDispatchable));
   }
 }

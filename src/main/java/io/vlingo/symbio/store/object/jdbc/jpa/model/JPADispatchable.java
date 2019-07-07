@@ -158,7 +158,7 @@ public class JPADispatchable {
   }
 
 
-  public static JPADispatchable fromDispatchable(final String originatorId, final Dispatchable<Entry<String>, State<String>> dispatchable) {
+  public static JPADispatchable fromDispatchable(final String originatorId, final Dispatchable<Entry<String>, State<?>> dispatchable) {
     final JPADispatchable jpaDispatchable = new JPADispatchable();
     jpaDispatchable.dispatchId = dispatchable.id();
     jpaDispatchable.createdOn = dispatchable.createdOn();
@@ -170,7 +170,7 @@ public class JPADispatchable {
               jpaDispatchable.stateId = state.id;
               jpaDispatchable.stateType = state.type;
               jpaDispatchable.stateTypeVersion = state.typeVersion;
-              jpaDispatchable.stateData = state.data;
+              jpaDispatchable.stateData = JsonSerialization.serialized(state.data);
               jpaDispatchable.stateDataVersion = state.dataVersion;
               jpaDispatchable.stateMetadata = JsonSerialization.serialized(state.metadata);
             });

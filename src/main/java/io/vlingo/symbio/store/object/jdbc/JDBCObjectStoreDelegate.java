@@ -7,7 +7,6 @@
 
 package io.vlingo.symbio.store.object.jdbc;
 
-import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
@@ -41,9 +40,9 @@ public abstract class JDBCObjectStoreDelegate implements ObjectStore, Dispatcher
    */
   public abstract void timeoutCheck();
   
-  public abstract <T extends PersistentObject> void persist(final T persistentObject, final long updateId,  List<BaseEntry.TextEntry> entries, Dispatchable<BaseEntry.TextEntry, State.TextState> dispatchable);
+  public abstract <T extends PersistentObject> void persist(final T persistentObject, final long updateId,  List<Entry<?>> entries, Dispatchable<Entry<?>, State<?>> dispatchable);
 
-  public abstract <T extends PersistentObject> void persistAll(final Collection<T> persistentObjects, final long updateId,  List<BaseEntry.TextEntry> entries, Collection<Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatchables);
+  public abstract <T extends PersistentObject> void persistAll(final Collection<T> persistentObjects, final long updateId,  List<Entry<?>> entries, Collection<Dispatchable<Entry<?>, State<?>>> dispatchables);
 
   public abstract void beginWrite();
 
