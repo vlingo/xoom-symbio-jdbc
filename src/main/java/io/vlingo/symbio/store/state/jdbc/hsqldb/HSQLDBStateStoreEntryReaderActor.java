@@ -7,6 +7,13 @@
 
 package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
+import java.sql.Blob;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.BaseEntry.BinaryEntry;
@@ -15,12 +22,6 @@ import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
-
-import java.sql.Blob;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.ArrayList;
-import java.util.List;
 
 public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
   private final Advice advice;
@@ -38,6 +39,17 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
 
     this.queryBatch = configuration.connection.prepareStatement(this.advice.queryEntryBatchExpression);
     this.queryOne = configuration.connection.prepareStatement(this.advice.queryEntryExpression);
+  }
+
+  @Override
+  public void close() {
+    try {
+      queryBatch.close();
+      queryOne.close();
+      configuration.connection.close();
+    } catch (SQLException e) {
+      // ignore
+    }
   }
 
   @Override

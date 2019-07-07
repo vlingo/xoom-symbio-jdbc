@@ -7,7 +7,15 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.google.gson.Gson;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.BaseEntry;
@@ -15,13 +23,6 @@ import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.journal.JournalReader;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class PostgresJournalReaderActor extends Actor implements JournalReader<TextEntry> {
     private static final String QUERY_CURRENT_OFFSET =
@@ -65,6 +66,15 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
 
         this.gson = new Gson();
         retrieveCurrentOffset();
+    }
+
+    @Override
+    public void close() {
+      try {
+        connection.close();
+      } catch (SQLException e) {
+        // ignore
+      }
     }
 
     @Override

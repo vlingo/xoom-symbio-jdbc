@@ -39,6 +39,17 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
   }
 
   @Override
+  public StorageDelegate copy() {
+    try {
+      return new PostgresStorageDelegate(Configuration.cloneOf(configuration), logger);
+    } catch (Exception e) {
+      final String message = "Copy of PostgresStorageDelegate failed because: " + e.getMessage();
+      logger.error(message, e);
+      throw new IllegalStateException(message, e);
+    }
+  }
+
+  @Override
   public Advice entryReaderAdvice() {
     try {
       return new EntryReader.Advice(

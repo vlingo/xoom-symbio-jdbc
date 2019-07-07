@@ -7,6 +7,12 @@
 
 package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
+import java.sql.Blob;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.MessageFormat;
+
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -17,12 +23,6 @@ import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.common.jdbc.CachedStatement;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
-
-import java.sql.Blob;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.text.MessageFormat;
 
 public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements StorageDelegate, HSQLDBQueries {
   private final Configuration configuration;
@@ -36,6 +36,17 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
           logger);
 
     this.configuration = configuration;
+  }
+
+  @Override
+  public StorageDelegate copy() {
+    try {
+      return new HSQLDBStorageDelegate(Configuration.cloneOf(configuration), logger);
+    } catch (Exception e) {
+      final String message = "Copy of PostgresStorageDelegate failed because: " + e.getMessage();
+      logger.error(message, e);
+      throw new IllegalStateException(message, e);
+    }
   }
 
   @Override

@@ -7,6 +7,14 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
@@ -70,7 +78,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
         DispatcherControl.class,
         Definition.has(
           DispatcherControlActor.class,
-          Definition.parameters(dispatcher, delegate, checkConfirmationExpirationInterval, confirmationExpiration))
+          Definition.parameters(dispatcher, delegate.copy(), checkConfirmationExpirationInterval, confirmationExpiration))
       );
     } else {
       this.dispatcher = null;
@@ -80,6 +88,10 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
 
   @Override
   public void stop() {
+    for (final StateStoreEntryReader<?> reader : entryReaders.values()) {
+      reader.close();
+    }
+    delegate.close();
     if (dispatcherControl != null) {
       dispatcherControl.stop();
     }

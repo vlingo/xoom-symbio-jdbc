@@ -7,20 +7,22 @@
 
 package io.vlingo.symbio.store.state.jdbc.postgres;
 
+import java.sql.Blob;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.BaseEntry.BinaryEntry;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
-
-import java.sql.Blob;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.ArrayList;
-import java.util.List;
 
 public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
   private final Advice advice;
@@ -30,7 +32,7 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
   private final PreparedStatement queryBatch;
   private final PreparedStatement queryOne;
 
-  public PostgresStateStoreEntryReaderActor(final Advice advice, final String name) throws Exception {
+  public PostgresStateStoreEntryReaderActor(final EntryReader.Advice advice, final String name) throws Exception {
     this.advice = advice;
     this.name = name;
     this.configuration = advice.specificConfiguration();
@@ -38,6 +40,17 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
 
     this.queryBatch = configuration.connection.prepareStatement(this.advice.queryEntryBatchExpression);
     this.queryOne = configuration.connection.prepareStatement(this.advice.queryEntryExpression);
+  }
+
+  @Override
+  public void close() {
+    try {
+      queryBatch.close();
+      queryOne.close();
+      configuration.connection.close();
+    } catch (SQLException e) {
+      // ignore
+    }
   }
 
   @Override
@@ -53,7 +66,7 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
 
   @Override
   @SuppressWarnings("unchecked")
-  public Completes<List<T>> readNext(int maximumEntries) {
+  public Completes<List<T>> readNext(final int maximumEntries) {
     return completes().with((List<T>) queryNext(maximumEntries));
   }
 
@@ -63,7 +76,7 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
   }
 
   @Override
-  public Completes<String> seekTo(String id) {
+  public Completes<String> seekTo(final String id) {
     return null;
   }
 
@@ -99,7 +112,8 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
       }
       return entries;
     } catch (Exception e) {
-      logger().error("Unable to read next " + maximumEntries + " entries for " + name + " because: " + e.getMessage(), e);
+      logger().error("Unable to read next " + maximumEntries + " entries for " + name + " because: " + e.getMessage(),
+              e);
     }
     return new ArrayList<>(0);
   }
