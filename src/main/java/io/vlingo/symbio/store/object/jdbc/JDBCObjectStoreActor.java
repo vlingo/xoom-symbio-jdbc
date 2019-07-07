@@ -105,9 +105,10 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
       final Dispatchable<BaseEntry.TextEntry, State.TextState> dispatchable = buildDispatchable(raw, entries);
 
       delegate.persist(persistentObject, updateId, entries, dispatchable);
-      dispatcher.dispatch(dispatchable);
-      
       delegate.complete();
+
+      dispatcher.dispatch(dispatchable);
+
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, 1, object);
     } catch (final Exception e) {
       delegate.fail();
@@ -135,9 +136,10 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
 
       delegate.persistAll(persistentObjects, updateId, entries, dispatchables);
 
-      dispatchables.forEach(dispatcher::dispatch);
-      
       delegate.complete();
+
+      dispatchables.forEach(dispatcher::dispatch);
+
       interest.persistResultedIn(Success.of(Result.Success), persistentObjects, persistentObjects.size(), persistentObjects.size(), object);
     } catch (final Exception e) {
       delegate.fail();

@@ -97,10 +97,11 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
       final Dispatchable<Entry<String>, State<String>> dispatchable = buildDispatchable(raw, entries);
 
       delegate.persist(persistentObject, updateId, entries, dispatchable);
-      
-      dispatcher.dispatch(dispatchable);
 
       delegate.complete();
+
+      dispatcher.dispatch(dispatchable);
+
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, 1, object);
     } catch (final Exception e) {
       logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
@@ -127,9 +128,10 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
 
       delegate.persistAll(persistentObjects, updateId, entries, dispatchables);
 
+      delegate.complete();
+
       dispatchables.forEach(dispatcher::dispatch);
 
-      delegate.complete();
       interest.persistResultedIn(Success.of(Result.Success), persistentObjects, persistentObjects.size(), persistentObjects.size(), object);
     } catch (final Exception e) {
       logger.error("Persist all of: " + persistentObjects + " failed because: " + e.getMessage(), e);

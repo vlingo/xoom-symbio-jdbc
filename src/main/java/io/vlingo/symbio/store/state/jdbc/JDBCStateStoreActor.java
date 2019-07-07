@@ -167,8 +167,9 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
           writeStatement.execute();
           final String dispatchId = storeName + ":" + id;
           final List<Entry<?>> entries = appendEntries(sources, metadata);
-          dispatch(dispatchId, raw, entries);
           delegate.complete();
+
+          dispatch(dispatchId, raw, entries);
 
           interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, sources, object);
         } catch (final Exception e) {

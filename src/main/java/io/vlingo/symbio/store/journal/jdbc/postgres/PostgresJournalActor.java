@@ -42,7 +42,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -140,8 +139,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     final Consumer<Exception> whenFailed = (e) -> appendResultedInFailure(streamName, streamVersion, source, null, interest, object, e);
     final Entry<String> entry = asEntry(source, metadata, whenFailed);
     insertEntry(streamName, streamVersion, entry, whenFailed);
-    dispatch(streamName, streamVersion, Collections.singletonList(entry), null, whenFailed);
     doCommit(whenFailed);
+    dispatch(streamName, streamVersion, Collections.singletonList(entry), null, whenFailed);
     interest.appendResultedIn(Success.of(Result.Success), streamName, streamVersion, source, Optional.empty(), object);
   }
 
@@ -153,8 +152,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     insertEntry(streamName, streamVersion, entry, whenFailed);
     final Tuple2<Optional<ST>, Optional<TextState>> snapshotState = toState(streamName, snapshot, streamVersion);
     snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
-    dispatch(streamName, streamVersion, Collections.singletonList(entry), snapshotState._2.orElse(null), whenFailed);
     doCommit(whenFailed);
+    dispatch(streamName, streamVersion, Collections.singletonList(entry), snapshotState._2.orElse(null), whenFailed);
     interest.appendResultedIn(Success.of(Result.Success), streamName, streamVersion, source, snapshotState._1, object);
   }
 
@@ -167,8 +166,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     for (final Entry<String> entry : entries) {
       insertEntry(streamName, version++, entry, whenFailed);
     }
-    dispatch(streamName, fromStreamVersion, entries, null, whenFailed);
     doCommit(whenFailed);
+    dispatch(streamName, fromStreamVersion, entries, null, whenFailed);
     interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, Optional.empty(), object);
   }
 
@@ -183,8 +182,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
     final Tuple2<Optional<ST>, Optional<TextState>> snapshotState = toState(streamName, snapshot, fromStreamVersion);
     snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
-    dispatch(streamName, fromStreamVersion, entries, snapshotState._2.orElse(null), whenFailed);
     doCommit(whenFailed);
+    dispatch(streamName, fromStreamVersion, entries, snapshotState._2.orElse(null), whenFailed);
     interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, snapshotState._1, object);
   }
 
@@ -352,7 +351,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
   private void dispatch(final String streamName, final int streamVersion, final List<Entry<String>> entries, final TextState snapshot,
           final Consumer<Exception> whenFailed) {
     if (dispatcher != null) {
-      final String id = getDispatchId(streamName, streamVersion, entries);
+      final String id = getDispatchId(streamName, streamVersion);
       final Dispatchable<Entry<String>, TextState> dispatchable = new Dispatchable<>(id, LocalDateTime.now(), snapshot, entries);
       insertDispatchable(dispatchable, whenFailed);
       //dispatch only if insert successful
@@ -360,7 +359,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
   }
 
-  private String getDispatchId(final String streamName, final int streamVersion, final Collection<Entry<String>> entries) {
+  private String getDispatchId(final String streamName, final int streamVersion) {
     return streamName + ":" + streamVersion + ":" + identityGenerator.generate().toString();
   }
 }
