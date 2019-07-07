@@ -75,7 +75,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
                     DispatcherControlActor.class,
                     Definition.parameters(
                             dispatcher,
-                            delegate,
+                            delegate.copy(),
                             checkConfirmationExpirationInterval,
                             confirmationExpiration)));
   }

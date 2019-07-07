@@ -68,7 +68,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
                     DispatcherControlActor.class,         
                     Definition.parameters(
                             dispatcher,
-                            delegate,
+                            delegate.copy(),
                             checkConfirmationExpirationInterval,
                             confirmationExpiration)));
   }

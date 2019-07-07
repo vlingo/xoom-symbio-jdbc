@@ -362,7 +362,7 @@ public class JPAObjectStoreIntegrationTest {
   @Before
   public void setUp() throws Exception {
     world = World.startWithDefaults("jpa-test");
-    delegate = new JPAObjectStoreDelegate(world.stage(), "TEST");
+    delegate = new JPAObjectStoreDelegate("TEST", world.defaultLogger());
     dispatcher = new MockDispatcher<>();
     objectStore = world.actorFor(JPAObjectStore.class, JPAObjectStoreActor.class, delegate, dispatcher);
     EntryAdapterProvider.instance(world).registerAdapter(PersonAdded.class, new PersonAddedAdapter());

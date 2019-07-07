@@ -13,6 +13,7 @@ import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 
@@ -49,13 +50,14 @@ public class PostgresDispatcherControlDelegate implements DispatcherControl.Disp
   private final PreparedStatement selectDispatchables;
   private final PreparedStatement queryEntry;
 
-  PostgresDispatcherControlDelegate(final Connection connection, final String originatorId, final Logger logger) throws SQLException {
-    this.connection = connection;
+
+  public PostgresDispatcherControlDelegate(final Configuration configuration, final Logger logger) throws SQLException {
+    this.connection = configuration.connection;
     this.logger = logger;
 
     this.deleteDispatchable = this.connection.prepareStatement(DISPATCHABLE_DELETE);
     this.selectDispatchables = this.connection.prepareStatement(DISPATCHABLE_SELECT);
-    this.selectDispatchables.setString(1, originatorId);
+    this.selectDispatchables.setString(1, configuration.originatorId);
 
     this.queryEntry = this.connection.prepareStatement(QUERY_ENTRY);
   }

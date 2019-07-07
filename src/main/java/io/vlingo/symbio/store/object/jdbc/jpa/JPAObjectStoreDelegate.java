@@ -8,7 +8,6 @@
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
 import io.vlingo.actors.Logger;
-import io.vlingo.actors.Stage;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.Entry;
@@ -54,17 +53,21 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
   /**
    * Constructs my default state.
    *
-   * @param stage from which to obtain the default logger.
    * @param originatorId the ID of {@link Dispatchable} originator
+   * @param logger the instance of {@link Logger} to be used
    */
-  public JPAObjectStoreDelegate(final Stage stage, final String originatorId) {
-    logger = stage.world().defaultLogger();
+  public JPAObjectStoreDelegate(final String originatorId, final Logger logger) {
+    this.logger = logger;
     this.originatorId = originatorId;
     FlushModeType flushMode = em.getFlushMode();
     if (flushMode.equals(FlushModeType.AUTO))
       em.setFlushMode(FlushModeType.COMMIT);
     flushMode = em.getFlushMode();
     assert flushMode.equals(FlushModeType.COMMIT);
+  }
+
+  public JPAObjectStoreDelegate copy() {
+    return new JPAObjectStoreDelegate(this.originatorId, this.logger);
   }
   
   /*
@@ -301,5 +304,4 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
   private void appendDispatchable(final Dispatchable<Entry<String>, State<String>> stateDispatchable) {
      em.persist(JPADispatchable.fromDispatchable(originatorId, stateDispatchable));
   }
-  
 }

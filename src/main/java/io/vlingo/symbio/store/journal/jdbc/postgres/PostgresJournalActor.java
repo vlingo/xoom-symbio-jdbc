@@ -83,16 +83,16 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
   private final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher;
   private final DispatcherControl dispatcherControl;
 
-  public PostgresJournalActor(final Configuration configuration) throws SQLException {
+  public PostgresJournalActor(final Configuration configuration) throws Exception {
     this(null, configuration, 0L, 0L);
   }
 
-  public PostgresJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration) throws SQLException {
+  public PostgresJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration) throws Exception {
     this(dispatcher, configuration, 1000L, 1000L);
   }
 
   public PostgresJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration,
-          final long checkConfirmationExpirationInterval, final long confirmationExpiration) throws SQLException {
+          final long checkConfirmationExpirationInterval, final long confirmationExpiration) throws Exception {
     this.configuration = configuration;
     this.connection = configuration.connection;
 
@@ -111,8 +111,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     this.dispatchablesIdentityGenerator = new IdentityGenerator.RandomIdentityGenerator();
     if (dispatcher != null) {
       this.dispatcher = dispatcher;
-      final PostgresDispatcherControlDelegate dispatcherControlDelegate = new PostgresDispatcherControlDelegate(connection,
-              configuration.originatorId, stage().world().defaultLogger());
+      final PostgresDispatcherControlDelegate dispatcherControlDelegate =
+              new PostgresDispatcherControlDelegate(Configuration.cloneOf(configuration), stage().world().defaultLogger());
       this.dispatcherControl = stage().actorFor(DispatcherControl.class,
               Definition.has(DispatcherControlActor.class,
                   Definition.parameters(dispatcher,

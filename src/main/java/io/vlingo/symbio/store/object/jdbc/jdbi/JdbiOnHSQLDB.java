@@ -53,7 +53,7 @@ public class JdbiOnHSQLDB {
 
   public ObjectStore objectStore(final World world, final Dispatcher<Dispatchable<TextEntry, State.TextState>> dispatcher) {
     if (objectStore == null) {
-      final JdbiObjectStoreDelegate delegate = new JdbiObjectStoreDelegate(world.stage(), configuration, unconfirmedDispatchablesQueryExpression());
+      final JdbiObjectStoreDelegate delegate = new JdbiObjectStoreDelegate(configuration, unconfirmedDispatchablesQueryExpression(), world.defaultLogger());
       objectStore = world.actorFor(ObjectStore.class, JDBCObjectStoreActor.class, delegate, dispatcher);
       objectStore.registerMapper(textEntryPersistentObjectMapper());
       objectStore.registerMapper(dispatchableMapping());

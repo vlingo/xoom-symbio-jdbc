@@ -51,4 +51,5 @@ public abstract class JDBCObjectStoreDelegate implements ObjectStore, Dispatcher
 
   public abstract void fail();
 
+  public abstract JDBCObjectStoreDelegate copy() ;
 }

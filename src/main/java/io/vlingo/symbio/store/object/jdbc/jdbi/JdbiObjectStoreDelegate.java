@@ -8,7 +8,6 @@
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
 import io.vlingo.actors.Logger;
-import io.vlingo.actors.Stage;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
@@ -48,25 +47,26 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
 
   private final Handle handle;
   private final Logger logger;
-  private final Map<Class<?>,PersistentObjectMapper> mappers;
-  private final Map<Long,UnitOfWork> unitOfWorkRegistry;
+  private final Map<Class<?>, PersistentObjectMapper> mappers;
+  private final Map<Long, UnitOfWork> unitOfWorkRegistry;
   private long updateId;
   private final QueryExpression unconfirmedDispatchablesExpression;
 
   /**
    * Constructs my default state.
-   * @param stage the Stage I use
-   * @param configuration the Configuration used to configure my concrete subclasses
+   *
+   * @param configuration                      the Configuration used to configure my concrete subclasses
    * @param unconfirmedDispatchablesExpression the query expression to use for getting unconfirmed dispatchables
+   * @param logger the instance of {@link Logger} to be used
    */
-  public JdbiObjectStoreDelegate(final Stage stage, final Configuration configuration, final QueryExpression unconfirmedDispatchablesExpression) {
+  public JdbiObjectStoreDelegate(final Configuration configuration, final QueryExpression unconfirmedDispatchablesExpression, Logger logger) {
     super(configuration);
     this.handle = Jdbi.open(configuration.connection);
     this.unconfirmedDispatchablesExpression = unconfirmedDispatchablesExpression;
     this.mappers = new HashMap<>();
     this.unitOfWorkRegistry = new HashMap<>();
     this.updateId = 0;
-    this.logger = stage.world().defaultLogger();
+    this.logger = logger;
     initialize();
   }
 
@@ -95,6 +95,17 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   @Override
   public void fail() {
 
+  }
+
+  @Override
+  public JDBCObjectStoreDelegate copy() {
+    try {
+      return new JdbiObjectStoreDelegate(Configuration.cloneOf(configuration), this.unconfirmedDispatchablesExpression, logger);
+    } catch (Exception e) {
+      final String message = "Copy of JDBCObjectStoreDelegate failed because: " + e.getMessage();
+      logger.error(message, e);
+      throw new IllegalStateException(message, e);
+    }
   }
 
   @Override
@@ -136,7 +147,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   @Override
   public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
           final PersistResultInterest interest, final Object object) {
-      //not to be used
+    //not to be used
   }
 
   @Override
@@ -154,19 +165,11 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     final List<?> results;
 
     if (expression.isListQueryExpression()) {
-      results = handle.createQuery(expression.query)
-                      .bindList(BindListKey, expression.asListQueryExpression().parameters)
-                      .mapTo(expression.type)
-                      .list();
+      results = handle.createQuery(expression.query).bindList(BindListKey, expression.asListQueryExpression().parameters).mapTo(expression.type).list();
     } else if (expression.isMapQueryExpression()) {
-      results = handle.createQuery(expression.query)
-                      .bindMap(expression.asMapQueryExpression().parameters)
-                      .mapTo(expression.type)
-                      .list();
+      results = handle.createQuery(expression.query).bindMap(expression.asMapQueryExpression().parameters).mapTo(expression.type).list();
     } else {
-      results = handle.createQuery(expression.query)
-              .mapTo(expression.type)
-              .list();
+      results = handle.createQuery(expression.query).mapTo(expression.type).list();
     }
 
     final List<PersistentObject> resultsAsPersistentObjects = (List<PersistentObject>) results;
@@ -181,19 +184,11 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     final Optional<?> result;
 
     if (expression.isListQueryExpression()) {
-      result = handle.createQuery(expression.query)
-                     .bindList(BindListKey, expression.asListQueryExpression().parameters)
-                     .mapTo(expression.type)
-                     .findFirst();
+      result = handle.createQuery(expression.query).bindList(BindListKey, expression.asListQueryExpression().parameters).mapTo(expression.type).findFirst();
     } else if (expression.isMapQueryExpression()) {
-      result = handle.createQuery(expression.query)
-                     .bindMap(expression.asMapQueryExpression().parameters)
-                     .mapTo(expression.type)
-                     .findFirst();
+      result = handle.createQuery(expression.query).bindMap(expression.asMapQueryExpression().parameters).mapTo(expression.type).findFirst();
     } else {
-      result = handle.createQuery(expression.query)
-              .mapTo(expression.type)
-              .findFirst();
+      result = handle.createQuery(expression.query).mapTo(expression.type).findFirst();
     }
 
     final PersistentObject presistentObject = (PersistentObject) result.orElse(null);
@@ -224,21 +219,17 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     }
   }
 
-
   @Override
   @SuppressWarnings("unchecked")
   public Collection<Dispatchable<Entry<?>, State<?>>> allUnconfirmedDispatchableStates() {
-    return handle.createQuery(unconfirmedDispatchablesExpression.query)
-            .mapTo(new GenericType<Dispatchable<Entry<?>, State<?>>>(){})
-            .list();
+    return handle.createQuery(unconfirmedDispatchablesExpression.query).mapTo(new GenericType<Dispatchable<Entry<?>, State<?>>>() {
+    }).list();
   }
 
   @Override
   public void confirmDispatched(final String dispatchId) {
     final JdbiPersistMapper mapper = mappers.get(Dispatchable.class).persistMapper();
-    handle.createUpdate(mapper.updateStatement)
-            .bind("id", dispatchId)
-            .execute();
+    handle.createUpdate(mapper.updateStatement).bind("id", dispatchId).execute();
   }
 
   @Override
@@ -283,9 +274,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
 
       final JdbiPersistMapper mapper = mappers.get(type).persistMapper();
 
-      final Update statement = create ?
-              handle.createUpdate(mapper.insertStatement) :
-              handle.createUpdate(mapper.updateStatement);
+      final Update statement = create ? handle.createUpdate(mapper.insertStatement) : handle.createUpdate(mapper.updateStatement);
 
       return mapper.binder.apply(statement, persistentObject).execute();
     }
