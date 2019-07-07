@@ -60,12 +60,12 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
     this.logger = stage().world().defaultLogger();
-    this.identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
+    this.identityGenerator = new IdentityGenerator.RandomIdentityGenerator();
 
     this.dispatcherControl = stage().actorFor(
             DispatcherControl.class,
             Definition.has(
-                    DispatcherControlActor.class,
+                    DispatcherControlActor.class,         
                     Definition.parameters(
                             dispatcher,
                             delegate,

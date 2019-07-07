@@ -79,6 +79,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
   private final Map<String, JournalReader<TextEntry>> journalReaders;
   private final Map<String, StreamReader<String>> streamReaders;
   private final IdentityGenerator identityGenerator;
+  private final IdentityGenerator dispatchablesIdentityGenerator;
   private final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher;
   private final DispatcherControl dispatcherControl;
 
@@ -107,6 +108,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     this.streamReaders = new HashMap<>();
 
     this.identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
+    this.dispatchablesIdentityGenerator = new IdentityGenerator.RandomIdentityGenerator();
     if (dispatcher != null) {
       this.dispatcher = dispatcher;
       final PostgresDispatcherControlDelegate dispatcherControlDelegate = new PostgresDispatcherControlDelegate(connection,
@@ -360,6 +362,6 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
   }
 
   private String getDispatchId(final String streamName, final int streamVersion) {
-    return streamName + ":" + streamVersion + ":" + identityGenerator.generate().toString();
+    return streamName + ":" + streamVersion + ":" + dispatchablesIdentityGenerator.generate().toString();
   }
 }

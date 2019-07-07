@@ -64,7 +64,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
     this.logger = stage().world().defaultLogger();
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
-    this.identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
+    this.identityGenerator = new IdentityGenerator.RandomIdentityGenerator();
 
     final long timeout = delegate.configuration.transactionTimeoutMillis;
     stage().scheduler().schedule(selfAs(Scheduled.class), null, timeout, timeout);
