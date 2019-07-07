@@ -7,14 +7,6 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
@@ -179,9 +171,14 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
           writeStatement.execute();
           final String dispatchId = storeName + ":" + id;
           final List<Entry<?>> entries = appendEntries(sources, metadata);
+
+          final Dispatchable<Entry<?>, State<String>> dispatchable = buildDispatchable(dispatchId, raw, entries);
+          final PreparedStatement dispatchableStatement = delegate.dispatchableWriteExpressionFor(dispatchable);
+          dispatchableStatement.execute();
+
           delegate.complete();
 
-          dispatch(dispatchId, raw, entries);
+          dispatch(dispatchable);
 
           interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, sources, object);
         } catch (final Exception e) {
@@ -229,12 +226,13 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     }
   }
 
-  private void dispatch(final String dispatchId, final State<String> state, final List<Entry<?>> entries) throws Exception {
+  private void dispatch(final Dispatchable<Entry<?>, State<String>> dispatchable) {
     if (this.dispatcher != null) {
-      final Dispatchable<Entry<?>, State<String>> dispatchable = new Dispatchable<>(dispatchId, LocalDateTime.now(), state.asTextState(), entries);
       dispatcher.dispatch(dispatchable);
-      final PreparedStatement dispatchableStatement = delegate.dispatchableWriteExpressionFor(dispatchable);
-      dispatchableStatement.execute();
     }
+  }
+
+  private Dispatchable<Entry<?>, State<String>> buildDispatchable(final String dispatchId, final State<String> state, final List<Entry<?>> entries) {
+    return new Dispatchable<>(dispatchId, LocalDateTime.now(), state.asTextState(), entries);
   }
 }

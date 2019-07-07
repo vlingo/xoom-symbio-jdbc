@@ -141,8 +141,11 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     final Consumer<Exception> whenFailed = (e) -> appendResultedInFailure(streamName, streamVersion, source, null, interest, object, e);
     final Entry<String> entry = asEntry(source, metadata, whenFailed);
     insertEntry(streamName, streamVersion, entry, whenFailed);
+    final Dispatchable<Entry<String>, TextState> dispatchable = buildDispatchable(streamName, streamVersion, Collections.singletonList(entry), null);
+    insertDispatchable(dispatchable, whenFailed);
+
     doCommit(whenFailed);
-    dispatch(streamName, streamVersion, Collections.singletonList(entry), null, whenFailed);
+    dispatch(dispatchable);
     interest.appendResultedIn(Success.of(Result.Success), streamName, streamVersion, source, Optional.empty(), object);
   }
 
@@ -154,8 +157,14 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     insertEntry(streamName, streamVersion, entry, whenFailed);
     final Tuple2<Optional<ST>, Optional<TextState>> snapshotState = toState(streamName, snapshot, streamVersion);
     snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
+
+    final Dispatchable<Entry<String>, TextState> dispatchable = buildDispatchable(streamName, streamVersion,
+            Collections.singletonList(entry), snapshotState._2.orElse(null));
+    insertDispatchable(dispatchable, whenFailed);
+
     doCommit(whenFailed);
-    dispatch(streamName, streamVersion, Collections.singletonList(entry), snapshotState._2.orElse(null), whenFailed);
+
+    dispatch(dispatchable);
     interest.appendResultedIn(Success.of(Result.Success), streamName, streamVersion, source, snapshotState._1, object);
   }
 
@@ -168,8 +177,12 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     for (final Entry<String> entry : entries) {
       insertEntry(streamName, version++, entry, whenFailed);
     }
+    final Dispatchable<Entry<String>, TextState> dispatchable = buildDispatchable(streamName, fromStreamVersion, entries, null);
+    insertDispatchable(dispatchable, whenFailed);
+
     doCommit(whenFailed);
-    dispatch(streamName, fromStreamVersion, entries, null, whenFailed);
+    
+    dispatch(dispatchable);
     interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, Optional.empty(), object);
   }
 
@@ -184,8 +197,13 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
     final Tuple2<Optional<ST>, Optional<TextState>> snapshotState = toState(streamName, snapshot, fromStreamVersion);
     snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
+
+    final Dispatchable<Entry<String>, TextState> dispatchable = buildDispatchable(streamName, fromStreamVersion, entries, snapshotState._2.orElse(null));
+    insertDispatchable(dispatchable, whenFailed);
+
     doCommit(whenFailed);
-    dispatch(streamName, fromStreamVersion, entries, snapshotState._2.orElse(null), whenFailed);
+    dispatch(dispatchable);
+
     interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, snapshotState._1, object);
   }
 
@@ -350,15 +368,17 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
   }
 
-  private void dispatch(final String streamName, final int streamVersion, final List<Entry<String>> entries, final TextState snapshot,
-          final Consumer<Exception> whenFailed) {
+  private void dispatch(final Dispatchable<Entry<String>, TextState> dispatchable) {
     if (dispatcher != null) {
-      final String id = getDispatchId(streamName, streamVersion);
-      final Dispatchable<Entry<String>, TextState> dispatchable = new Dispatchable<>(id, LocalDateTime.now(), snapshot, entries);
-      insertDispatchable(dispatchable, whenFailed);
       //dispatch only if insert successful
       this.dispatcher.dispatch(dispatchable);
     }
+  }
+
+  private Dispatchable<Entry<String>, TextState> buildDispatchable(final String streamName, final int streamVersion, final List<Entry<String>> entries,
+          final TextState snapshot) {
+    final String id = getDispatchId(streamName, streamVersion);
+    return new Dispatchable<>(id, LocalDateTime.now(), snapshot, entries);
   }
 
   private String getDispatchId(final String streamName, final int streamVersion) {
