@@ -9,16 +9,18 @@ package io.vlingo.symbio.store.state.jdbc;
 
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.jdbc.CachedStatement;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 
 public abstract class JDBCDispatchableCachedStatements<T> {
   private final CachedStatement<T> appendDispatchable;
+  private final CachedStatement<T> queryEntry;
   private final CachedStatement<T> appendEntry;
   private final CachedStatement<T> appendEntryIdentity;
-  private final CachedStatement<T> delete;
-  private final CachedStatement<T> queryAll;
+  private final CachedStatement<T> deleteDispatchable;
+  private final CachedStatement<T> queryAllDispatchables;
 
   protected JDBCDispatchableCachedStatements(
           final String originatorId,
@@ -26,11 +28,12 @@ public abstract class JDBCDispatchableCachedStatements<T> {
           final DataFormat format,
           final T appendDataObject,
           final Logger logger) {
-    this.appendDispatchable = createStatement(appendDispatchableExpression(), appendDataObject, connection, logger);
+    this.queryEntry = createStatement(queryEntryExpression(), appendDataObject, connection, logger);
     this.appendEntry = createStatement(appendEntryExpression(), appendDataObject, connection, logger);
     this.appendEntryIdentity = createStatement(appendEntryIdentityExpression(), null, connection, logger);
-    this.delete = createStatement(deleteExpression(), null, connection, logger);
-    this.queryAll = prepareQuery(createStatement(selectExpression(), null, connection, logger), originatorId, logger);
+    this.appendDispatchable = createStatement(appendDispatchableExpression(), appendDataObject, connection, logger);
+    this.deleteDispatchable = createStatement(deleteDispatchableExpression(), null, connection, logger);
+    this.queryAllDispatchables = prepareQuery(createStatement(selectDispatchableExpression(), null, connection, logger), originatorId, logger);
   }
 
   public final CachedStatement<T> appendDispatchableStatement() {
@@ -46,18 +49,24 @@ public abstract class JDBCDispatchableCachedStatements<T> {
   }
 
   public final CachedStatement<T> deleteStatement() {
-    return delete;
+    return deleteDispatchable;
   }
 
   public final CachedStatement<T> queryAllStatement() {
-    return queryAll;
+    return queryAllDispatchables;
+  }
+  
+  public CachedStatement<T> getQueryEntry() {
+    return queryEntry;
   }
 
-  protected abstract String appendDispatchableExpression();
   protected abstract String appendEntryExpression();
+  protected abstract String queryEntryExpression();
+
+  protected abstract String appendDispatchableExpression();
   protected abstract String appendEntryIdentityExpression();
-  protected abstract String deleteExpression();
-  protected abstract String selectExpression();
+  protected abstract String deleteDispatchableExpression();
+  protected abstract String selectDispatchableExpression();
 
   private CachedStatement<T> createStatement(
           final String sql,

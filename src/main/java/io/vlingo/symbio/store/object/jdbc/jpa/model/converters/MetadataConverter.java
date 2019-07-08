@@ -4,19 +4,19 @@
 // Mozilla Public License, v. 2.0. If a copy of the MPL
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
-package io.vlingo.symbio.store.object.jdbc.jpa;
-
-import javax.persistence.AttributeConverter;
-import javax.persistence.Converter;
+package io.vlingo.symbio.store.object.jdbc.jpa.model.converters;
 
 import io.vlingo.common.serialization.JsonSerialization;
 import io.vlingo.symbio.Metadata;
+
+import javax.persistence.AttributeConverter;
+import javax.persistence.Converter;
 /**
  * EntryMetadataConverter is responsible for converting instances of
  * {@link Metadata} to and from a {@link String} representation.
  */
 @Converter(autoApply=true)
-public class EntryMetadataConverter implements AttributeConverter<Metadata, String> {
+public class MetadataConverter implements AttributeConverter<Metadata, String> {
 
   /* @see javax.persistence.AttributeConverter#convertToDatabaseColumn(java.lang.Object) */
   @Override

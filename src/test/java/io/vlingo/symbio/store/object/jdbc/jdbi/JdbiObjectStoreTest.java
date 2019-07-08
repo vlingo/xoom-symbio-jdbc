@@ -7,31 +7,21 @@
 
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
 import io.vlingo.actors.World;
+import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.common.Outcome;
+import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.common.MockDispatcher;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.hsqldb.HSQLDBConfigurationProvider;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.object.ListQueryExpression;
 import io.vlingo.symbio.store.object.MapQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStore;
@@ -44,11 +34,30 @@ import io.vlingo.symbio.store.object.PersistentEntry;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.jdbc.Person;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class JdbiObjectStoreTest {
   // private Jdbi jdbi;
   private ObjectStore objectStore;
   private World world;
+  private MockDispatcher<BaseEntry.TextEntry, State.TextState> dispatcher;
 
   @Test
   public void testThatObjectStoreConnects() {
@@ -57,6 +66,8 @@ public class JdbiObjectStoreTest {
 
   @Test
   public void testThatObjectStoreInsertsOneAndQuerys() {
+    dispatcher.afterCompleting(1);
+
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     persistInterest.until = TestUntil.happenings(1);
     final Person person = new Person("Jody Jones", 21, 1L);
@@ -89,17 +100,25 @@ public class JdbiObjectStoreTest {
     queryInterest.until.completes();
     assertNotNull(queryInterest.singleResult.get());
     assertEquals(person, queryInterest.singleResult.get().persistentObject);
+
+    final Map<String, Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatched = dispatcher.getDispatched();
+    assertEquals(1, dispatched.size());
   }
 
   @Test
   public void testThatObjectStoreInsertsOneWithEventAndQuerys() {
+    dispatcher.afterCompleting(1);
+
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     persistInterest.until = TestUntil.happenings(1);
     final Person person = new Person("Jody Jones", 21, 1L);
     final Event event = new Event("test-event");
-    objectStore.persist(person, Arrays.asList(event), persistInterest);
+    objectStore.persist(person, Collections.singletonList(event), persistInterest);
     persistInterest.until.completes();
     assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+
+    final Map<String, Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatched = dispatcher.getDispatched();
+    assertEquals(1, dispatched.size());
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
 
@@ -130,6 +149,8 @@ public class JdbiObjectStoreTest {
 
   @Test
   public void testThatObjectStoreInsertsMultipleAndQuerys() {
+    dispatcher.afterCompleting(3);
+
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     persistInterest.until = TestUntil.happenings(1);
     final Person person1 = new Person("Jody Jones", 21, 1L);
@@ -138,6 +159,9 @@ public class JdbiObjectStoreTest {
     objectStore.persistAll(Arrays.asList(person1, person2, person3), persistInterest);
     persistInterest.until.completes();
     assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+
+    final Map<String, Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatched = dispatcher.getDispatched();
+    assertEquals(3, dispatched.size());
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
 
@@ -246,6 +270,51 @@ public class JdbiObjectStoreTest {
     assertArrayEquals(modifiedPersons.toArray(), queryInterest.multiResults.get().persistentObjects.toArray());
   }
 
+  @Test
+  public void testRedispatch() {
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
+
+    accessDispatcher.writeUsing("processDispatch", false);
+
+    final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
+    persistInterest.until = TestUntil.happenings(1);
+    final Person person1 = new Person("Jody Jones", 21, 1L);
+    final Person person2 = new Person("Joey Jones", 21, 2L);
+    final Person person3 = new Person("Mira Jones", 25, 3L);
+
+    final Event event = new Event("test-event");
+    final Event event2 = new Event("test-event2");
+
+    objectStore.persistAll(Arrays.asList(person1, person2, person3), Arrays.asList(event, event2), persistInterest);
+    persistInterest.until.completes();
+    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+
+    try {
+      Thread.sleep(3000);
+    } catch (InterruptedException ex) {
+      //ignored
+    }
+
+    accessDispatcher.writeUsing("processDispatch", true);
+
+    final Map<String, Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatched = dispatcher.getDispatched();
+    assertEquals(3, dispatched.size());
+
+    final int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
+    assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
+
+    for (final Dispatchable<BaseEntry.TextEntry, State.TextState> dispatchable : dispatched.values()) {
+      Assert.assertNotNull(dispatchable.createdOn());
+      Assert.assertNotNull(dispatchable.id());
+      final Collection<BaseEntry.TextEntry> dispatchedEntries = dispatchable.entries();
+      Assert.assertEquals(2, dispatchedEntries.size());
+      for (final BaseEntry.TextEntry dispatchedEntry : dispatchedEntries) {
+        Assert.assertTrue(dispatchedEntry.id() != null && !dispatchedEntry.id().isEmpty());
+        Assert.assertEquals(event.getClass(), dispatchedEntry.typed());
+      }
+    }
+  }
+
   @Before
   public void setUp() throws Exception {
     final Configuration configuration = HSQLDBConfigurationProvider.testConfiguration(DataFormat.Native);
@@ -255,10 +324,12 @@ public class JdbiObjectStoreTest {
     jdbi.handle.execute("CREATE TABLE PERSON (id BIGINT PRIMARY KEY, name VARCHAR(200), age INTEGER)");
 
     jdbi.createTextEntryJournalTable();
+    jdbi.createDispatchableTable();
 
     world = World.startWithDefaults("jdbi-test");
 
-    objectStore = jdbi.objectStore(world);
+    dispatcher = new MockDispatcher<>();
+    objectStore = jdbi.objectStore(world, dispatcher);
 
     final PersistentObjectMapper personMapper =
             PersistentObjectMapper.with(

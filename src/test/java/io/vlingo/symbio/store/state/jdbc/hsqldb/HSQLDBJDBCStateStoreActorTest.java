@@ -7,15 +7,15 @@
 
 package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
-import java.util.UUID;
-
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
 import io.vlingo.symbio.store.common.jdbc.hsqldb.HSQLDBConfigurationProvider;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.state.jdbc.JDBCTextStateStoreActorTest;
+import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
 
-public class HSQLDBJDBCTextStateStoreActorTest extends JDBCTextStateStoreActorTest {
+import java.util.UUID;
+
+public class HSQLDBJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
 
   @Override
   protected StorageDelegate delegate() throws Exception {

@@ -7,16 +7,17 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.common.Outcome;
+import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.journal.Journal.AppendResultInterest;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MockAppendResultInterest implements AppendResultInterest {
   private AccessSafely access = afterCompleting(0);
@@ -24,31 +25,59 @@ public class MockAppendResultInterest implements AppendResultInterest {
   private AtomicInteger successCount = new AtomicInteger(0);
 
   @Override
-  public <S,ST> void appendResultedIn(Outcome<StorageException, Result> outcome, String streamName, int streamVersion,
-          Source<S> source, Optional<ST> snapshot, Object object) {
+  public <S, ST> void appendResultedIn(final Outcome<StorageException, Result> outcome, final String streamName, final int streamVersion,
+          final Source<S> source, final Optional<ST> snapshot, final Object object) {
     outcome
-      .andThen(result -> {
-        access.writeUsing("successCount", 1);
-        return result;
-      })
-      .otherwise(failure -> {
-        access.writeUsing("failureCount", 1);
-        return failure.result;
-      });
+            .andThen(result -> {
+              access.writeUsing("successCount", 1);
+              return result;
+            })
+            .otherwise(failure -> {
+              access.writeUsing("failureCount", 1);
+              return failure.result;
+            });
   }
 
   @Override
-  public <S,ST> void appendAllResultedIn(Outcome<StorageException, Result> outcome, String streamName, int streamVersion,
-          List<Source<S>> sources, Optional<ST> snapshot, Object object) {
+  public <S, ST> void appendResultedIn(final Outcome<StorageException, Result> outcome, final String streamName, final int streamVersion,
+          final Source<S> source, final Metadata metadata, final Optional<ST> snapshot, final Object object) {
     outcome
-      .andThen(result -> {
-        access.writeUsing("successCount", 1);
-        return result;
-      })
-      .otherwise(failure -> {
-        access.writeUsing("failureCount", 1);
-        return failure.result;
-      });
+            .andThen(result -> {
+              access.writeUsing("successCount", 1);
+              return result;
+            })
+            .otherwise(failure -> {
+              access.writeUsing("failureCount", 1);
+              return failure.result;
+            });
+  }
+
+  @Override
+  public <S, ST> void appendAllResultedIn(final Outcome<StorageException, Result> outcome, final String streamName, final int streamVersion,
+          final List<Source<S>> sources, final Optional<ST> snapshot, final Object object) {
+    outcome
+            .andThen(result -> {
+              access.writeUsing("successCount", 1);
+              return result;
+            })
+            .otherwise(failure -> {
+              access.writeUsing("failureCount", 1);
+              return failure.result;
+            });
+  }
+
+  @Override
+  public <S, ST> void appendAllResultedIn(final Outcome<StorageException, Result> outcome, final String streamName, final int streamVersion,
+          final List<Source<S>> sources, final Metadata metadata, final Optional<ST> snapshot, final Object object) {
+    outcome
+            .andThen(result -> {
+              access.writeUsing("successCount", 1);
+              return result;
+            })
+            .otherwise(failure -> {
+              access.writeUsing("failureCount", 1);
+              return failure.result;
+            });
   }
 
   public AccessSafely afterCompleting(final int times) {

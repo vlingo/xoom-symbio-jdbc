@@ -7,6 +7,22 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
+import io.vlingo.actors.Logger;
+import io.vlingo.common.Tuple2;
+import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.State.BinaryState;
+import io.vlingo.symbio.State.TextState;
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.jdbc.CachedStatement;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
+import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
+
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -20,21 +36,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-import io.vlingo.actors.Logger;
-import io.vlingo.common.Tuple2;
-import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.State.BinaryState;
-import io.vlingo.symbio.State.TextState;
-import io.vlingo.symbio.store.DataFormat;
-import io.vlingo.symbio.store.state.StateStore.Dispatchable;
-import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
+import static io.vlingo.symbio.Entry.typed;
 
-public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
+public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
+        DispatcherControl.DispatcherControlDelegate<Entry<?>, State<?>> {
+  private static final String DISPATCHEABLE_ENTRIES_DELIMITER = "|";
   protected final Connection connection;
   protected final JDBCDispatchableCachedStatements<T> dispatchableCachedStatements;
   protected final DataFormat format;
@@ -62,7 +70,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     this.writeStatements = new HashMap<>();
   }
 
-  @Override
   @SuppressWarnings("unchecked")
   public <A, E> A appendExpressionFor(final Entry<E> entry) throws Exception {
     final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendEntryStatement();
@@ -70,7 +77,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     return (A) cachedStatement.preparedStatement;
   }
 
-  @Override
   @SuppressWarnings("unchecked")
   public <A> A appendIdentityExpression() {
     final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendEntryIdentityStatement();
@@ -78,12 +84,12 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   }
 
   @Override
-  public <S extends State<?>> Collection<Dispatchable<S>> allUnconfirmedDispatchableStates() throws Exception {
-    final List<Dispatchable<S>> dispatchables = new ArrayList<>();
+  public Collection<Dispatchable<Entry<?>, State<?>>> allUnconfirmedDispatchableStates() throws Exception {
+    final List<Dispatchable<Entry<?>, State<?>>> dispatchables = new ArrayList<>();
 
     try (final ResultSet result = dispatchableCachedStatements.queryAllStatement().preparedStatement.executeQuery()) {
       while (result.next()) {
-        final Dispatchable<S> dispatchable = stateFrom(result);
+        final Dispatchable<Entry<?>, State<?>> dispatchable = dispatchableFrom(result);
         dispatchables.add(dispatchable);
       }
     }
@@ -91,8 +97,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     return dispatchables;
   }
 
-  @Override
-  public void beginRead() throws Exception {
+  public void beginRead() {
     if (mode != Mode.None) {
       logger.warn(getClass().getSimpleName() + ": Cannot begin read because currently: " + mode.name());
     } else {
@@ -100,7 +105,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     }
   }
 
-  @Override
   public void beginWrite() throws Exception {
     if (mode != Mode.None) {
 //      System.out.println("ALREADY IN WRITING MODE");
@@ -114,6 +118,11 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   }
 
   @Override
+  public void stop() {
+    close();
+  }
+
+  @Override
   public void close() {
     try {
       mode = Mode.None;
@@ -121,7 +130,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       if (connection != null) {
         connection.close();
       }
-    } catch (Exception e) {
+    } catch (final Exception e) {
       logger.error(getClass().getSimpleName() + ": Could not close because: " + e.getMessage(), e);
     }
   }
@@ -131,18 +140,16 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     try {
       return connection == null || connection.isClosed();
     }
-    catch (SQLException ex) {
+    catch (final SQLException ex) {
       return true;
     }
   }
 
-  @Override
   public void complete() throws Exception {
     mode = Mode.None;
     connection.commit();
   }
 
-  @Override
   @SuppressWarnings("unchecked")
   public <C> C connection() {
     return (C) connection;
@@ -156,7 +163,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       dispatchableCachedStatements.deleteStatement().preparedStatement.setString(1, dispatchId);
       dispatchableCachedStatements.deleteStatement().preparedStatement.executeUpdate();
       complete();
-    } catch (Exception e) {
+    } catch (final Exception e) {
       fail();
       logger.error(getClass().getSimpleName() +
               ": Confirm dispatched for: " + dispatchId +
@@ -164,15 +171,16 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     }
   }
 
-  @Override
   @SuppressWarnings("unchecked")
-  public <W, S> W dispatchableWriteExpressionFor(final String dispatchId, final State<S> state) throws Exception {
+  public <W, S> W dispatchableWriteExpressionFor(final Dispatchable<Entry<?>, State<S>> dispatchable) throws Exception{
     final PreparedStatement preparedStatement = dispatchableCachedStatements.appendDispatchableStatement().preparedStatement;
 
+    final State<S> state = dispatchable.typedState();
+
     preparedStatement.clearParameters();
-    preparedStatement.setObject(1, Timestamp.valueOf(LocalDateTime.now()));
+    preparedStatement.setObject(1, Timestamp.valueOf(dispatchable.createdOn()));
     preparedStatement.setString(2, originatorId);
-    preparedStatement.setString(3, dispatchId);
+    preparedStatement.setString(3, dispatchable.id());
     preparedStatement.setString(4, state.id);
     preparedStatement.setString(5, state.type);
     preparedStatement.setInt(6, state.typeVersion);
@@ -187,15 +195,87 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     final Tuple2<String, String> metadataObject = serialized(state.metadata.object);
     preparedStatement.setString(11, metadataObject._1);
     preparedStatement.setString(12, metadataObject._2);
+    if (dispatchable.entries() !=null && !dispatchable.entries().isEmpty()){
+      preparedStatement.setString(13,
+              dispatchable.entries()
+                      .stream()
+                      .map(Entry::id)
+                      .collect(Collectors.joining(DISPATCHEABLE_ENTRIES_DELIMITER))
+      );
+    } else {
+       preparedStatement.setString(13, "");
+    }
     return (W) preparedStatement;
   }
 
-  @Override
+  @SuppressWarnings({ "unchecked", "rawtypes" })
+  private <S extends State<?>> Dispatchable<Entry<?>, S> dispatchableFrom(final ResultSet resultSet) throws Exception {
+    final LocalDateTime createdAt = resultSet.getTimestamp(1).toLocalDateTime();
+    final String dispatchId = resultSet.getString(2);
+    final String id = resultSet.getString(3);
+    final Class<?> type = Class.forName(resultSet.getString(4));
+    final int typeVersion = resultSet.getInt(5);
+    // 6 below
+    final int dataVersion = resultSet.getInt(7);
+    final String metadataValue = resultSet.getString(8);
+    final String metadataOperation = resultSet.getString(9);
+    final String metadataObject = resultSet.getString(10);
+    final String metadataObjectType = resultSet.getString(11);
+
+    final Object object = metadataObject != null ?
+            JsonSerialization.deserialized(metadataObject, Class.forName(metadataObjectType)) : null;
+
+    final Metadata metadata = Metadata.with(object, metadataValue, metadataOperation);
+
+    final S state;
+    if (format.isBinary()) {
+      final byte[] data = binaryDataFrom(resultSet, 6);
+      state = ((S) new BinaryState(id, type, typeVersion, data, dataVersion, metadata));
+    } else {
+      final String data = textDataFrom(resultSet, 6);
+      state = ((S) new TextState(id, type, typeVersion, data, dataVersion, metadata));
+    }
+
+    final String entriesIds = resultSet.getString(12);
+    final List<Entry<?>> entries = new ArrayList<>();
+    if (entriesIds != null && !entriesIds.isEmpty()) {
+      final String[] ids = entriesIds.split("\\"+ DISPATCHEABLE_ENTRIES_DELIMITER);
+      for (final String entryId : ids) {
+          final PreparedStatement queryEntryStatement = dispatchableCachedStatements.getQueryEntry().preparedStatement;
+          queryEntryStatement.clearParameters();
+          queryEntryStatement.setObject(1, Long.valueOf(entryId));
+          queryEntryStatement.executeQuery();
+          try (final ResultSet result = queryEntryStatement.executeQuery()) {
+             if (result.next()) {
+               entries.add(entryFrom(result, entryId));
+             }
+          }
+          dispatchableCachedStatements.getQueryEntry().preparedStatement.clearParameters();
+      }
+    }
+    return new Dispatchable<>(dispatchId, createdAt, state, entries);
+  }
+
+  private Entry<?> entryFrom(final ResultSet result, final String id) throws Exception {
+    final String type = result.getString(2);
+    final int typeVersion = result.getInt(3);
+    final String metadataValue = result.getString(5);
+    final String metadataOperation = result.getString(6);
+
+    final Metadata metadata = Metadata.with(metadataValue, metadataOperation);
+
+    if (format.isBinary()) {
+      return new BaseEntry.BinaryEntry(id, typed(type), typeVersion, binaryDataFrom(result, 4), metadata);
+    } else {
+      return new BaseEntry.TextEntry(id, typed(type), typeVersion, textDataFrom(result, 4), metadata);
+    }
+  }
+
   public void fail() {
     try {
       mode = Mode.None;
       connection.rollback();
-    } catch (Exception e) {
+    } catch (final Exception e) {
       logger.error(getClass().getSimpleName() + ": Rollback failed because: " + e.getMessage(), e);
     }
   }
@@ -205,7 +285,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     return originatorId;
   }
 
-  @Override
   @SuppressWarnings("unchecked")
   public <R> R readExpressionFor(final String storeName, final String id) throws Exception {
     final CachedStatement<T> maybeCached = readStatements.get(storeName);
@@ -224,7 +303,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     return (R) maybeCached.preparedStatement;
   }
 
-  @Override
   public <S> S session() throws Exception {
     return null;
   }
@@ -257,7 +335,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     }
   }
 
-  @Override
   @SuppressWarnings("unchecked")
   public <W, S> W writeExpressionFor(final String storeName, final State<S> state) throws Exception {
     final CachedStatement<T> maybeCached = writeStatements.get(storeName);
@@ -303,7 +380,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
         statement.executeUpdate(dispatchableIdIndexCreateExpression());
         statement.executeUpdate(dispatchableOriginatorIdIndexCreateExpression());
         connection.commit();
-      } catch (Exception e) {
+      } catch (final Exception e) {
         throw new IllegalStateException("Cannot create table " + tableName + " because: " + e, e);
       }
     }
@@ -315,7 +392,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
       try (final Statement statement = connection.createStatement()) {
         statement.executeUpdate(entryTableCreateExpression());
         connection.commit();
-      } catch (Exception e) {
+      } catch (final Exception e) {
         throw new IllegalStateException("Cannot create table " + tableName + " because: " + e, e);
       }
     }
@@ -332,14 +409,14 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
   private void createTables() {
     try {
       createDispatchablesTable();
-    } catch (Exception e) {
+    } catch (final Exception e) {
       // assume table exists; could look at metadata
       logger.error("Could not create dispatchables table because: " + e.getMessage(), e);
     }
 
     try {
       createEntryTable();
-    } catch (Exception e) {
+    } catch (final Exception e) {
       // assume table exists; could look at metadata
       logger.error("Could not create entry table because: " + e.getMessage(), e);
     }
@@ -350,7 +427,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
         if (!tableExists(tableName)) {
           createStateStoreTable(storeName);
         }
-      } catch (Exception e) {
+      } catch (final Exception e) {
         // assume table exists; could look at metadata
         logger.error("Could not create " + tableName + " table because: " + e.getMessage(), e);
       }
@@ -398,38 +475,11 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate {
     return Tuple2.from(null, null);
   }
 
-  @SuppressWarnings({ "unchecked", "rawtypes" })
-  private <S extends State<?>> Dispatchable<S> stateFrom(final ResultSet resultSet) throws Exception {
-    final LocalDateTime createdAt = resultSet.getTimestamp(1).toLocalDateTime();
-    final String dispatchId = resultSet.getString(2);
-    final String id = resultSet.getString(3);
-    final Class<?> type = Class.forName(resultSet.getString(4));
-    final int typeVersion = resultSet.getInt(5);
-    // 6 below
-    final int dataVersion = resultSet.getInt(7);
-    final String metadataValue = resultSet.getString(8);
-    final String metadataOperation = resultSet.getString(9);
-    final String metadataObject = resultSet.getString(10);
-    final String metadataObjectType = resultSet.getString(11);
-
-    final Object object = metadataObject != null ?
-            JsonSerialization.deserialized(metadataObject, Class.forName(metadataObjectType)) : null;
-
-    final Metadata metadata = Metadata.with(object, metadataValue, metadataOperation);
-
-    if (format.isBinary()) {
-      final byte[] data = binaryDataFrom(resultSet, 6);
-      return new Dispatchable(dispatchId, createdAt, new BinaryState(id, type, typeVersion, data, dataVersion, metadata));
-    } else {
-      final String data = textDataFrom(resultSet, 6);
-      return new Dispatchable(dispatchId, createdAt, new TextState(id, type, typeVersion, data, dataVersion, metadata));
-    }
-  }
-
   private boolean tableExists(final String tableName) throws Exception {
     final DatabaseMetaData metadata = connection.getMetaData();
     try (final ResultSet resultSet = metadata.getTables(null, null, tableName, null)) {
       return resultSet.next();
     }
   }
+
 }

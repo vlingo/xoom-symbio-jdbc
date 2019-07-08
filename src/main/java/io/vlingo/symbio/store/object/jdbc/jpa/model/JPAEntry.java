@@ -5,10 +5,12 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.object.jdbc.jpa;
+package io.vlingo.symbio.store.object.jdbc.jpa.model;
 
-import java.time.LocalDate;
-import java.util.Comparator;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter;
+import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter;
 
 import javax.persistence.Column;
 import javax.persistence.Convert;
@@ -17,9 +19,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
-
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
+import java.time.LocalDate;
+import java.util.Comparator;
 /**
  * JPAEntry is an implementation of {@link Entry} that is designed
  * to be persisted via the Java Persistence API
@@ -34,14 +35,14 @@ public class JPAEntry implements Entry<String> {
   private String id;
 
   @Column(name="entry_timestamp", updatable = false, nullable = false)
-  @Convert(converter=LocalDateConverter.class)
+  @Convert(converter= LocalDateConverter.class)
   private LocalDate entryTimestamp;
 
   @Column(name="entry_data", updatable = false, nullable = false)
   private String entryData;
 
   @Column(name="metadata", updatable = false, nullable = false)
-  @Convert(converter=EntryMetadataConverter.class)
+  @Convert(converter= MetadataConverter.class)
   private Metadata metadata;
 
   @Column(name="entry_type", updatable = false, nullable = false)
@@ -146,14 +147,14 @@ public class JPAEntry implements Entry<String> {
   public <C> Class<C> typed() {
     try {
       return (Class<C>) Class.forName(type);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       throw new IllegalStateException("Cannot get class for type: " + type);
     }
   }
 
   /* @see java.lang.Comparable#compareTo(java.lang.Object) */
   @Override
-  public int compareTo(Entry<String> other) {
+  public int compareTo(final Entry<String> other) {
     final JPAEntry that = (JPAEntry) other;
     return Comparator
       .comparing((JPAEntry e) -> e.id)
