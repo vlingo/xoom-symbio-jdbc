@@ -44,7 +44,6 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   private final DispatcherControl dispatcherControl;
   private boolean closed;
   private final JDBCObjectStoreDelegate delegate;
-  private final JDBCObjectStoreDelegate dispatchControlDelegate;
   private final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher;
   private final Logger logger;
   private final EntryAdapterProvider entryAdapterProvider;
@@ -69,13 +68,12 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
     final long timeout = delegate.configuration.transactionTimeoutMillis;
     stage().scheduler().schedule(selfAs(Scheduled.class), null, timeout, timeout);
 
-    this.dispatchControlDelegate = delegate.copy();
     this.dispatcherControl = stage().actorFor(
             DispatcherControl.class,
             Definition.has(
                     DispatcherControlActor.class,
                     Definition.parameters(
-                            dispatcher, dispatchControlDelegate,
+                            dispatcher, delegate.copy(),
                             checkConfirmationExpirationInterval,
                             confirmationExpiration)));
   }
@@ -173,8 +171,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
    */
   @Override
   public void registerMapper(final PersistentObjectMapper mapper) {
-    this.delegate.registerMapper(mapper);
-    this.dispatchControlDelegate.registerMapper(mapper);
+    //not to be used
   }
 
   @Override

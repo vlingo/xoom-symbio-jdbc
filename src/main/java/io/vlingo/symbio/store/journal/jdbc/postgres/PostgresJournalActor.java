@@ -209,7 +209,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
   @Override
   @SuppressWarnings("unchecked")
-  public Completes<JournalReader<TextEntry>> journalReader(final String name) {
+  public Completes<JournalReader<? extends Entry<?>>> journalReader(final String name) {
     final JournalReader<TextEntry> reader = journalReaders.computeIfAbsent(name, (key) -> {
       final Address address = stage().world().addressFactory().uniquePrefixedWith("eventJournalReader-" + name);
       return stage().actorFor(JournalReader.class, Definition.has(PostgresJournalReaderActor.class, Definition.parameters(configuration, name)), address);

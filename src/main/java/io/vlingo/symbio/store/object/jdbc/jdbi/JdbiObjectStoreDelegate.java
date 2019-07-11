@@ -33,6 +33,7 @@ import org.jdbi.v3.core.statement.Update;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -57,17 +58,24 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
    *
    * @param configuration                      the Configuration used to configure my concrete subclasses
    * @param unconfirmedDispatchablesExpression the query expression to use for getting unconfirmed dispatchables
+   * @param mappers collection of {@code PersistentObjectMapper} to be registered
    * @param logger the instance of {@link Logger} to be used
    */
-  public JdbiObjectStoreDelegate(final Configuration configuration, final QueryExpression unconfirmedDispatchablesExpression, final Logger logger) {
+  public JdbiObjectStoreDelegate(final Configuration configuration, final QueryExpression unconfirmedDispatchablesExpression,
+          final Collection<PersistentObjectMapper> mappers, final Logger logger) {
     super(configuration);
     this.handle = Jdbi.open(configuration.connection);
     this.unconfirmedDispatchablesExpression = unconfirmedDispatchablesExpression;
-    this.mappers = new ConcurrentHashMap<>();
+    this.mappers = new HashMap<>();
     this.unitOfWorkRegistry = new ConcurrentHashMap<>();
     this.updateId = 0;
     this.logger = logger;
     initialize();
+
+    mappers.forEach(mapper -> {
+      this.mappers.put(mapper.type(), mapper);
+      this.handle.registerRowMapper((RowMapper<?>) mapper.queryMapper());
+    });
   }
 
   /*
@@ -100,7 +108,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   @Override
   public JDBCObjectStoreDelegate copy() {
     try {
-      return new JdbiObjectStoreDelegate(Configuration.cloneOf(configuration), this.unconfirmedDispatchablesExpression, logger);
+      return new JdbiObjectStoreDelegate(Configuration.cloneOf(configuration), this.unconfirmedDispatchablesExpression, mappers.values(), logger);
     } catch (final Exception e) {
       final String message = "Copy of JDBCObjectStoreDelegate failed because: " + e.getMessage();
       logger.error(message, e);
@@ -201,8 +209,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
    */
   @Override
   public void registerMapper(final PersistentObjectMapper mapper) {
-    mappers.put(mapper.type(), mapper);
-    handle.registerRowMapper((RowMapper<?>) mapper.queryMapper());
+    //not to be used
   }
 
   /*
