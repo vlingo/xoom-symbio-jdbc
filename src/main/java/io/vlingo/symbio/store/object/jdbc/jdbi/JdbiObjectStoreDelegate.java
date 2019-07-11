@@ -33,10 +33,10 @@ import org.jdbi.v3.core.statement.Update;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The {@code JDBCObjectStoreDelegate} for Jdbi.
@@ -63,8 +63,8 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     super(configuration);
     this.handle = Jdbi.open(configuration.connection);
     this.unconfirmedDispatchablesExpression = unconfirmedDispatchablesExpression;
-    this.mappers = new HashMap<>();
-    this.unitOfWorkRegistry = new HashMap<>();
+    this.mappers = new ConcurrentHashMap<>();
+    this.unitOfWorkRegistry = new ConcurrentHashMap<>();
     this.updateId = 0;
     this.logger = logger;
     initialize();
@@ -101,7 +101,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   public JDBCObjectStoreDelegate copy() {
     try {
       return new JdbiObjectStoreDelegate(Configuration.cloneOf(configuration), this.unconfirmedDispatchablesExpression, logger);
-    } catch (Exception e) {
+    } catch (final Exception e) {
       final String message = "Copy of JDBCObjectStoreDelegate failed because: " + e.getMessage();
       logger.error(message, e);
       throw new IllegalStateException(message, e);
@@ -220,7 +220,6 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Collection<Dispatchable<Entry<?>, State<?>>> allUnconfirmedDispatchableStates() {
     return handle.createQuery(unconfirmedDispatchablesExpression.query)
             .mapTo(new GenericType<Dispatchable<Entry<?>, State<?>>>() {})

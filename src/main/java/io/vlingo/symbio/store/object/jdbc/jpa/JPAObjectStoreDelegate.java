@@ -215,7 +215,6 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
    * {@inheritDoc}
    */
   @Override
-  @SuppressWarnings("unchecked")
   public List<Dispatchable<Entry<?>, State<?>>> allUnconfirmedDispatchableStates() throws Exception {
     return em.createNamedQuery("Dispatchables.getUnconfirmed", JPADispatchable.class)
             .setParameter("orignatorId", originatorId)

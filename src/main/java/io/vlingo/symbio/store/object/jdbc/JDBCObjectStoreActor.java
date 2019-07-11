@@ -51,7 +51,6 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   private final StateAdapterProvider stateAdapterProvider;
   private final IdentityGenerator identityGenerator;
 
-  @SuppressWarnings("unchecked")
   public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher) {
      this(delegate, dispatcher, 1000L, 1000L);
   }

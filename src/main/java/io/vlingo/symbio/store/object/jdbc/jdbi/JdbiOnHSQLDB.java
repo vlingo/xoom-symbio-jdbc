@@ -139,7 +139,6 @@ public class JdbiOnHSQLDB {
     );
   }
 
-  @SuppressWarnings("rawtypes")
   private static class DispatchablesMapper implements RowMapper<Dispatchable<Entry<?>, State<?>>> {
     @Override
     public Dispatchable<Entry<?>, State<?>> map(final ResultSet rs, final StatementContext ctx) throws SQLException {
