@@ -329,7 +329,6 @@ public class JdbiObjectStoreTest {
     world = World.startWithDefaults("jdbi-test");
 
     dispatcher = new MockDispatcher<>();
-    objectStore = jdbi.objectStore(world, dispatcher);
 
     final PersistentObjectMapper personMapper =
             PersistentObjectMapper.with(
@@ -340,7 +339,7 @@ public class JdbiObjectStoreTest {
                             (update,object) -> update.bindFields(object)),
                     new PersonMapper());
 
-    objectStore.registerMapper(personMapper);
+    objectStore = jdbi.objectStore(world, dispatcher, Collections.singletonList(personMapper));
   }
 
   @After

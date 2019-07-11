@@ -18,7 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
 
 public class MockDispatcher<E extends Entry<?>, RS extends State<?>> implements Dispatcher<Dispatchable<E,RS>> {
   public AccessSafely access;
@@ -53,7 +52,8 @@ public class MockDispatcher<E extends Entry<?>, RS extends State<?>> implements 
 
   @SuppressWarnings({ "rawtypes" })
   public AccessSafely afterCompleting(final int times) {
-    this.access = AccessSafely.afterCompleting(times).writingWith("dispatched", (BiConsumer<String, Dispatchable>) dispatched::put)
+    this.access = AccessSafely.afterCompleting(times)
+            .writingWith("dispatched", dispatched::put)
 
             .writingWith("processDispatch", processDispatch::set).readingWith("processDispatch", processDispatch::get)
 

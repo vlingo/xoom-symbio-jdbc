@@ -31,6 +31,8 @@ import org.jdbi.v3.core.statement.StatementContext;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -51,12 +53,19 @@ public class JdbiOnHSQLDB {
     return new EntryMapper();
   }
 
-  public ObjectStore objectStore(final World world, final Dispatcher<Dispatchable<TextEntry, State.TextState>> dispatcher) {
+  public ObjectStore objectStore(final World world,
+          final Dispatcher<Dispatchable<TextEntry, State.TextState>> dispatcher,
+          final Collection<PersistentObjectMapper> mappers
+  ) {
     if (objectStore == null) {
-      final JdbiObjectStoreDelegate delegate = new JdbiObjectStoreDelegate(configuration, unconfirmedDispatchablesQueryExpression(), world.defaultLogger());
+      final List<PersistentObjectMapper> objectMappers = new ArrayList<>(mappers);
+      objectMappers.add(textEntryPersistentObjectMapper());
+      objectMappers.add(dispatchableMapping());
+
+      final JdbiObjectStoreDelegate delegate = new JdbiObjectStoreDelegate(configuration,
+              unconfirmedDispatchablesQueryExpression(), objectMappers, world.defaultLogger());
+
       objectStore = world.actorFor(ObjectStore.class, JDBCObjectStoreActor.class, delegate, dispatcher);
-      objectStore.registerMapper(textEntryPersistentObjectMapper());
-      objectStore.registerMapper(dispatchableMapping());
     }
 
     return objectStore;
@@ -139,7 +148,6 @@ public class JdbiOnHSQLDB {
     );
   }
 
-  @SuppressWarnings("rawtypes")
   private static class DispatchablesMapper implements RowMapper<Dispatchable<Entry<?>, State<?>>> {
     @Override
     public Dispatchable<Entry<?>, State<?>> map(final ResultSet rs, final StatementContext ctx) throws SQLException {

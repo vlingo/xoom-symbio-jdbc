@@ -208,7 +208,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     return (W) preparedStatement;
   }
 
-  @SuppressWarnings({ "unchecked", "rawtypes" })
+  @SuppressWarnings({ "unchecked" })
   private <S extends State<?>> Dispatchable<Entry<?>, S> dispatchableFrom(final ResultSet resultSet) throws Exception {
     final LocalDateTime createdAt = resultSet.getTimestamp(1).toLocalDateTime();
     final String dispatchId = resultSet.getString(2);
