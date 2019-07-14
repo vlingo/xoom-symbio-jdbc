@@ -294,11 +294,16 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
    */
   private <E> void appendEntries(final Collection<Entry<String>> entries) {
     for (final Entry<String> entry : entries) {
-      final JPAEntry jpaEntry = entry instanceof JPAEntry
-        ? (JPAEntry) entry
-        : new JPAEntry(entry);
-      em.persist(jpaEntry);
-      ((BaseEntry<?>) entry).__internal__setId(jpaEntry.id());
+      final JPAEntry jpaEntry;
+      if (entry instanceof JPAEntry) {
+        jpaEntry = (JPAEntry) entry;
+        em.persist(entry);
+      } else {
+        jpaEntry = new JPAEntry(entry);
+        em.persist(jpaEntry);
+        ((BaseEntry<?>) entry).__internal__setId(jpaEntry.id());
+        logger.debug("BASEENTRY COPY: " + entry);
+      }
       logger.debug("em.persist(" + jpaEntry + ")");
     }
   }

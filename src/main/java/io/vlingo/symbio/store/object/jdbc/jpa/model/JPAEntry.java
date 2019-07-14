@@ -7,10 +7,8 @@
 
 package io.vlingo.symbio.store.object.jdbc.jpa.model;
 
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter;
-import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter;
+import java.time.LocalDate;
+import java.util.Comparator;
 
 import javax.persistence.Column;
 import javax.persistence.Convert;
@@ -19,8 +17,11 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
-import java.time.LocalDate;
-import java.util.Comparator;
+
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter;
+import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter;
 /**
  * JPAEntry is an implementation of {@link Entry} that is designed
  * to be persisted via the Java Persistence API
@@ -184,5 +185,9 @@ public class JPAEntry implements Entry<String> {
   @Override
   public Entry<String> withId(final String id) {
     return new JPAEntry(id, typed(), typeVersion, entryData, metadata);
+  }
+
+  public void __internal__setId(final String id) {
+    this.id = id;
   }
 }
