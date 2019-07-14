@@ -17,7 +17,6 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
   private static final String removeRepresentation1 = "remove(T, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
   private static final String removeRepresentation2 = "remove(T, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
   private static final String closeRepresentation3 = "close()";
-  private static final String registerMapperRepresentation4 = "registerMapper(io.vlingo.symbio.store.object.PersistentObjectMapper)";
   private static final String queryObjectRepresentation5 = "queryObject(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest, java.lang.Object)";
   private static final String queryObjectRepresentation6 = "queryObject(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest)";
   private static final String queryAllRepresentation7 = "queryAll(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest)";
@@ -67,16 +66,6 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
       else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, closeRepresentation3)); }
     } else {
       actor.deadLetters().failedDelivery(new DeadLetter(actor, closeRepresentation3));
-    }
-  }
-  @Override
-  public void registerMapper(final io.vlingo.symbio.store.object.PersistentObjectMapper arg0) {
-    if (!actor.isStopped()) {
-      final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.registerMapper(arg0);
-      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, registerMapperRepresentation4); }
-      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, registerMapperRepresentation4)); }
-    } else {
-      actor.deadLetters().failedDelivery(new DeadLetter(actor, registerMapperRepresentation4));
     }
   }
   @Override
