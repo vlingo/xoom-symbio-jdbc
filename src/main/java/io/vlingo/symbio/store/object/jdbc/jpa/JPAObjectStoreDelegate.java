@@ -7,9 +7,21 @@
 
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.FlushModeType;
+import javax.persistence.Persistence;
+import javax.persistence.TypedQuery;
+
 import io.vlingo.actors.Logger;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
@@ -25,16 +37,6 @@ import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.jdbc.jpa.model.JPADispatchable;
 import io.vlingo.symbio.store.object.jdbc.jpa.model.JPAEntry;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.FlushModeType;
-import javax.persistence.Persistence;
-import javax.persistence.TypedQuery;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * The {@code JDBCObjectStoreDelegate} for JPA.
@@ -69,7 +71,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
   public JPAObjectStoreDelegate copy() {
     return new JPAObjectStoreDelegate(this.originatorId, this.logger);
   }
-  
+
   /*
    * @see io.vlingo.symbio.store.object.ObjectStore#close()
    */
@@ -113,7 +115,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
       appendDispatchable(stateDispatchable);
     }
   }
-  
+
   @Override
   public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
           final PersistResultInterest interest, final Object object) {
@@ -246,7 +248,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
   public void stop() {
      this.close();
   }
-  
+
   /*
    * @see
    * io.vlingo.symbio.store.object.ObjectStore#registerMapper(io.vlingo.symbio.
@@ -296,6 +298,7 @@ public class JPAObjectStoreDelegate implements JPAObjectStore, DispatcherControl
         ? (JPAEntry) entry
         : new JPAEntry(entry);
       em.persist(jpaEntry);
+      ((BaseEntry<?>) entry).__internal__setId(jpaEntry.id());
       logger.debug("em.persist(" + jpaEntry + ")");
     }
   }
