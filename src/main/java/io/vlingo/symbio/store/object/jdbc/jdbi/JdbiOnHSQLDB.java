@@ -14,6 +14,7 @@ import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
@@ -62,8 +63,9 @@ public class JdbiOnHSQLDB {
       objectMappers.add(textEntryPersistentObjectMapper());
       objectMappers.add(dispatchableMapping());
 
-      final JdbiObjectStoreDelegate delegate = new JdbiObjectStoreDelegate(configuration,
-              unconfirmedDispatchablesQueryExpression(), objectMappers, world.defaultLogger());
+      final StateAdapterProvider stateAdapterProvider = StateAdapterProvider.instance(world);
+      
+      final JdbiObjectStoreDelegate delegate = new JdbiObjectStoreDelegate(configuration, stateAdapterProvider, unconfirmedDispatchablesQueryExpression(), objectMappers, world.defaultLogger());
 
       objectStore = world.actorFor(ObjectStore.class, JDBCObjectStoreActor.class, delegate, dispatcher);
     }

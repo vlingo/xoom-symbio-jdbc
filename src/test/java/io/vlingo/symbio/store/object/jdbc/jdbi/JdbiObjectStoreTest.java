@@ -320,7 +320,7 @@ public class JdbiObjectStoreTest {
     final Configuration configuration = HSQLDBConfigurationProvider.testConfiguration(DataFormat.Native);
 
     final JdbiOnHSQLDB jdbi = JdbiOnHSQLDB.openUsing(configuration);
-
+    jdbi.handle.execute("DROP SCHEMA PUBLIC CASCADE");
     jdbi.handle.execute("CREATE TABLE PERSON (id BIGINT PRIMARY KEY, name VARCHAR(200), age INTEGER)");
 
     jdbi.createTextEntryJournalTable();

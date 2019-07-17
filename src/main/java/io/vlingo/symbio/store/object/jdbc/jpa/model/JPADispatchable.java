@@ -180,7 +180,7 @@ public class JPADispatchable {
     return jpaDispatchable;
   }
 
-  public static Dispatchable<Entry<?>, State<?>> toDispatchable(final JPADispatchable jpaDispatchable) {
+  public static Dispatchable<Entry<String>, State<?>> toDispatchable(final JPADispatchable jpaDispatchable) {
 
     State<?> state = null;
     if (jpaDispatchable.stateId != null && jpaDispatchable.stateData !=null ){
@@ -198,7 +198,7 @@ public class JPADispatchable {
       );
     }
 
-    List<Entry<?>> entries = null;
+    List<Entry<String>> entries = null;
     if (jpaDispatchable.entries !=null && !jpaDispatchable.entries.isEmpty()){
       entries = JsonSerialization.deserializedList(jpaDispatchable.entries, new TypeToken<List<BaseEntry.TextEntry>>(){}.getType());
     }

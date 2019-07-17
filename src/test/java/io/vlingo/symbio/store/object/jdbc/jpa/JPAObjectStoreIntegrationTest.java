@@ -12,6 +12,7 @@ import io.vlingo.common.Outcome;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.State;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.MockDispatcher;
@@ -362,11 +363,12 @@ public class JPAObjectStoreIntegrationTest {
   @Before
   public void setUp() throws Exception {
     world = World.startWithDefaults("jpa-test");
-    delegate = new JPAObjectStoreDelegate("TEST", world.defaultLogger());
+    EntryAdapterProvider.instance(world).registerAdapter(PersonAdded.class, new PersonAddedAdapter());
+    EntryAdapterProvider.instance(world).registerAdapter(PersonRenamed.class, new PersonRenamedAdapter());
+    final StateAdapterProvider stateAdapterProvider = StateAdapterProvider.instance(world);
+    delegate = new JPAObjectStoreDelegate("TEST", stateAdapterProvider, world.defaultLogger());
     dispatcher = new MockDispatcher<>();
     objectStore = world.actorFor(JPAObjectStore.class, JPAObjectStoreActor.class, delegate, dispatcher);
-    EntryAdapterProvider.instance(world).registerAdapter(PersonAdded.class, new PersonAddedAdapter());
-    EntryAdapterProvider.instance(world).registerAdapter(PersonRenamed.class, new PersonRenamedAdapter());    
   }
 
   /**

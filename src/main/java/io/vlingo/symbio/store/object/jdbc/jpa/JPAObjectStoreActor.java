@@ -17,7 +17,6 @@ import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
-import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
@@ -25,7 +24,6 @@ import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.object.PersistentObject;
-import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 
 import java.time.LocalDateTime;
@@ -41,11 +39,9 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   private final Dispatcher<Dispatchable<Entry<String>, State<?>>> dispatcher;
   private boolean closed;
   private final JPAObjectStoreDelegate delegate;
-  private final JPAObjectStoreDelegate dispatcherControlDelegate;
   private final EntryAdapterProvider entryAdapterProvider;
   private final Logger logger;
   private final IdentityGenerator identityGenerator;
-  private final StateAdapterProvider stateAdapterProvider;
 
   public JPAObjectStoreActor(final JPAObjectStoreDelegate delegate,
           final Dispatcher<Dispatchable<Entry<String>, State<?>>> dispatcher) {
@@ -59,17 +55,16 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
     this.dispatcher = dispatcher;
     this.closed = false;
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
-    this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
     this.logger = stage().world().defaultLogger();
     this.identityGenerator = new IdentityGenerator.RandomIdentityGenerator();
 
-    this.dispatcherControlDelegate = delegate.copy();
     this.dispatcherControl = stage().actorFor(
             DispatcherControl.class,
             Definition.has(
-                    DispatcherControlActor.class,         
+                    DispatcherControlActor.class,
                     Definition.parameters(
-                            dispatcher, dispatcherControlDelegate,
+                            //Get a copy of storage delegate to use other connection
+                            dispatcher, delegate.copy(),
                             checkConfirmationExpirationInterval,
                             confirmationExpiration)));
   }
@@ -91,23 +86,28 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
           final PersistResultInterest interest, final Object object) {
 
     try {
-      delegate.beginWrite();
-      final State<?> raw = stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
       final List<Entry<String>> entries = entryAdapterProvider.asEntries(sources, metadata);
+
+      delegate.beginTransaction();
+      final State<?> raw = delegate.persist(persistentObject, updateId, metadata);
+      delegate.persistEntries(entries);
 
       final Dispatchable<Entry<String>, State<?>> dispatchable = buildDispatchable(raw, entries);
 
-      delegate.persist(persistentObject, updateId, entries, dispatchable);
+      delegate.persistDispatchable(dispatchable);
 
-      delegate.complete();
+      delegate.completeTransaction();
 
       dispatcher.dispatch(dispatchable);
 
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, 1, object);
+    } catch (final StorageException e) {
+      logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
+      delegate.failTransaction();
+      interest.persistResultedIn(Failure.of(e), persistentObject, 1, 0, object);
     } catch (final Exception e) {
       logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
-      delegate.fail();
-
+      delegate.failTransaction();
       interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), persistentObject,
               1, 0, object);
     }
@@ -116,32 +116,38 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   @Override
   public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final Metadata metadata,
           final long updateId, final PersistResultInterest interest, final Object object) {
+
     try {
-      delegate.beginWrite();
-
       final List<Entry<String>> entries = entryAdapterProvider.asEntries(sources, metadata);
+      final List<Dispatchable<Entry<String>, State<?>>> dispatchables = new ArrayList<>(persistentObjects.size());
 
-      final ArrayList<Dispatchable<Entry<String>, State<?>>> dispatchables = new ArrayList<>(persistentObjects.size());
-      for (final T persistentObject : persistentObjects) {
-        final State<?> raw = stateAdapterProvider.asRaw(String.valueOf(persistentObject.persistenceId()), persistentObject, 1, metadata);
-        dispatchables.add(buildDispatchable(raw, entries));
-      }
+      delegate.beginTransaction();
 
-      delegate.persistAll(persistentObjects, updateId, entries, dispatchables);
+      final Collection<State<?>> states = delegate.persistAll(persistentObjects, updateId, metadata);
+      states.forEach(state-> {
+        dispatchables.add(buildDispatchable(state, entries));
+      });
 
-      delegate.complete();
+      delegate.persistEntries(entries);
+      dispatchables.forEach(delegate::persistDispatchable);
 
+      delegate.completeTransaction();
+
+      //Dispatch after commit
       dispatchables.forEach(dispatcher::dispatch);
 
       interest.persistResultedIn(Success.of(Result.Success), persistentObjects, persistentObjects.size(), persistentObjects.size(), object);
+    } catch (final StorageException e) {
+      logger.error("Persist all of: " + persistentObjects + " failed because: " + e.getMessage(), e);
+      delegate.failTransaction();
+      interest.persistResultedIn(Failure.of(e), persistentObjects, persistentObjects.size(), 0, object);
     } catch (final Exception e) {
       logger.error("Persist all of: " + persistentObjects + " failed because: " + e.getMessage(), e);
-      delegate.fail();
+      delegate.failTransaction();
 
       interest.persistResultedIn(
               Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
-              persistentObjects, persistentObjects.size(), 0,
-              object);
+              persistentObjects, persistentObjects.size(), 0, object);
     }
   }
 
@@ -154,7 +160,13 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
    */
   @Override
   public void queryAll(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
-    delegate.queryAll(expression, interest, object);
+    try {
+      final QueryMultiResults results = delegate.queryAll(expression);
+      interest.queryAllResultedIn(Success.of(Result.Success), results, object);
+    } catch (final StorageException e) {
+      logger.error("Query all failed because: " + e.getMessage(), e);
+      interest.queryAllResultedIn(Failure.of(e), QueryMultiResults.of(null), object);
+    }
   }
 
   /*
@@ -166,23 +178,32 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
    */
   @Override
   public void queryObject(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
-    delegate.queryObject(expression, interest, object);
-  }
-
-  /*
-   * @see
-   * io.vlingo.symbio.store.object.ObjectStore#registerMapper(io.vlingo.symbio.
-   * store.object.PersistentObjectMapper)
-   */
-  @Override
-  public void registerMapper(final PersistentObjectMapper mapper) {
-    delegate.registerMapper(mapper);
-    dispatcherControlDelegate.registerMapper(mapper);
+    try {
+      final QuerySingleResult result = delegate.queryObject(expression);
+      if (result.persistentObject !=null ){
+        interest.queryObjectResultedIn(Success.of(Result.Success), result, object);
+      } else {
+        interest.queryObjectResultedIn(Failure.of(new StorageException(Result.NotFound, "No object identified by expression: " + expression)), result, object);
+      }
+    } catch (final StorageException e){
+      logger.error("Query all failed because: " + e.getMessage(), e);
+      interest.queryObjectResultedIn(Failure.of(e), QuerySingleResult.of(null), object);
+    }
   }
 
   @Override
   public <T extends PersistentObject> void remove(final T persistentObject, final long removeId, final PersistResultInterest interest, final Object object) {
-    delegate.remove(persistentObject, removeId, interest);
+    try {
+      final int count = delegate.remove(persistentObject, removeId);
+      interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, count, object);
+    } catch (final StorageException e){
+      logger.error("Remove failed because: " + e.getMessage(), e);
+      interest.persistResultedIn(Failure.of(e), persistentObject,1, 0, object);
+    } catch (final Exception e){
+      logger.error("Remove failed because: " + e.getMessage(), e);
+      interest.persistResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), persistentObject,
+              1, 0, object);
+    }
   }
 
   private Dispatchable<Entry<String>, State<?>> buildDispatchable(final State<?> state, final List<Entry<String>> entries){
