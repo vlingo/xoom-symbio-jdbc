@@ -236,7 +236,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
       insertEvent.setString(1, entry.entryData());
       insertEvent.setString(2, gson.toJson(entry.metadata()));
-      insertEvent.setString(3, entry.type());
+      insertEvent.setString(3, entry.typeName());
       insertEvent.setInt(4, entry.typeVersion());
       insertEvent.setString(5, streamName);
       insertEvent.setInt(6, streamVersion);
