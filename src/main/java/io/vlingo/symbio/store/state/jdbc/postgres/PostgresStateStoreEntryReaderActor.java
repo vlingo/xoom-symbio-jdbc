@@ -30,7 +30,10 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
   private long currentId;
   private final String name;
   private final PreparedStatement queryBatch;
+  private final PreparedStatement queryCount;
+  private final PreparedStatement queryLatestOffset;
   private final PreparedStatement queryOne;
+  private final PreparedStatement updateCurrentOffset;
 
   public PostgresStateStoreEntryReaderActor(final EntryReader.Advice advice, final String name) throws Exception {
     this.advice = advice;
@@ -39,7 +42,10 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
     this.currentId = 0;
 
     this.queryBatch = configuration.connection.prepareStatement(this.advice.queryEntryBatchExpression);
+    this.queryCount = configuration.connection.prepareStatement(this.advice.queryCount);
+    this.queryLatestOffset = configuration.connection.prepareStatement(this.advice.queryLatestOffset);
     this.queryOne = configuration.connection.prepareStatement(this.advice.queryEntryExpression);
+    this.updateCurrentOffset = configuration.connection.prepareStatement(this.advice.queryUpdateCurrentOffset);
   }
 
   @Override
@@ -77,7 +83,40 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
 
   @Override
   public Completes<String> seekTo(final String id) {
-    return null;
+    switch (id) {
+    case Beginning:
+        this.currentId = 1;
+        updateCurrentOffset();
+        break;
+    case End:
+        this.currentId = retrieveLatestOffset() + 1;
+        updateCurrentOffset();
+        break;
+    case Query:
+        break;
+    default:
+        this.currentId = Integer.parseInt(id);
+        updateCurrentOffset();
+        break;
+    }
+
+    return completes().with(String.valueOf(currentId));
+  }
+
+  @Override
+  public Completes<Long> size() {
+      try {
+        final ResultSet resultSet = queryCount.executeQuery();
+        if (resultSet.next()) {
+            final long count = resultSet.getLong(1);
+            return completes().with(count);
+        }
+      } catch (Exception e) {
+        logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
+        logger().error("vlingo/symbio-postgres: Rewinding the offset");
+      }
+
+      return completes().with(-1L);
   }
 
   private Entry<?> queryNext() {
@@ -146,5 +185,35 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
 
   private Class<?> typed(final String typeName) throws Exception {
     return Class.forName(typeName);
+  }
+
+  private long retrieveLatestOffset() {
+      try {
+          queryBatch.clearParameters();
+          queryLatestOffset.setString(1, name);
+          ResultSet resultSet = queryLatestOffset.executeQuery();
+          if (resultSet.next()) {
+              return resultSet.getLong(1);
+          }
+      } catch (Exception e) {
+          logger().error("vlingo/symbio-postgres: Could not retrieve latest offset, using current.");
+      }
+
+      return 0;
+  }
+
+  private void updateCurrentOffset() {
+      try {
+          updateCurrentOffset.clearParameters();
+          updateCurrentOffset.setLong(1, currentId);
+          updateCurrentOffset.setString(2, name);
+          updateCurrentOffset.setLong(3, currentId);
+
+          updateCurrentOffset.executeUpdate();
+          configuration.connection.commit();
+      } catch (Exception e) {
+          logger().error("vlingo/symbio-postgres: Could not persist the offset. Will retry on next read.");
+          logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
+      }
   }
 }
