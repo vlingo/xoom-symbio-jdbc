@@ -18,9 +18,9 @@ import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.EntryReader;
+import io.vlingo.symbio.store.common.jdbc.CachedStatement;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.common.jdbc.CachedStatement;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 
@@ -56,7 +56,10 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
               Configuration.cloneOf(configuration),
               HSQLDBStateStoreEntryReaderActor.class,
               namedEntry(SQL_QUERY_ENTRY_BATCH),
-              namedEntry(SQL_QUERY_ENTRY));
+              namedEntry(SQL_QUERY_ENTRY),
+              namedEntry(QUERY_COUNT),
+              namedEntryOffsets(QUERY_LATEST_OFFSET),
+              namedEntryOffsets(UPDATE_CURRENT_OFFSET));
     } catch (Exception e) {
       throw new IllegalStateException("Cannot create EntryReader.Advice because: " + e.getMessage(), e);
     }
@@ -108,8 +111,19 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
   }
 
   @Override
+  protected String entryOffsetsTableCreateExpression() {
+    return MessageFormat.format(SQL_CREATE_ENTRY_STORE_OFFSETS, entryOffsetsTableName(),
+            format.isBinary() ? SQL_FORMAT_BINARY : SQL_FORMAT_TEXT);
+  }
+
+  @Override
   protected String entryTableName() {
     return TBL_VLINGO_SYMBIO_STATE_ENTRY;
+  }
+
+  @Override
+  protected String entryOffsetsTableName() {
+    return TBL_VLINGO_SYMBIO_STATE_ENTRY_OFFSETS;
   }
 
   @Override
@@ -170,6 +184,11 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
 
   private String namedEntry(final String sql) {
     return MessageFormat.format(sql, entryTableName());
+  }
+
+  private String namedEntryOffsets(final String sql) {
+    final String formatted = MessageFormat.format(sql, entryOffsetsTableName());
+    return formatted;
   }
 
   private static Blob blobIfBinary(final Connection connection, DataFormat format, final Logger logger) {
