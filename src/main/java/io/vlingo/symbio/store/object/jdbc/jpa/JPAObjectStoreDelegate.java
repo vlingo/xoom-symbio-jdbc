@@ -7,6 +7,18 @@
 
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
+import javax.persistence.FlushModeType;
+import javax.persistence.Persistence;
+import javax.persistence.TypedQuery;
+
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
@@ -27,17 +39,6 @@ import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.jdbc.jpa.model.JPADispatchable;
 import io.vlingo.symbio.store.object.jdbc.jpa.model.JPAEntry;
-
-import javax.persistence.EntityManager;
-import javax.persistence.EntityManagerFactory;
-import javax.persistence.FlushModeType;
-import javax.persistence.Persistence;
-import javax.persistence.TypedQuery;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * The {@code JDBCObjectStoreDelegate} for JPA.
@@ -102,7 +103,7 @@ public class JPAObjectStoreDelegate implements ObjectStoreDelegate<Entry<String>
     }
     return states;
   }
-  
+
   @Override
   public <T extends PersistentObject> State<?> persist(final T persistentObject, final long updateId, final Metadata metadata) throws StorageException {
     final State<?> state = getRawState(metadata, persistentObject);
@@ -125,7 +126,6 @@ public class JPAObjectStoreDelegate implements ObjectStoreDelegate<Entry<String>
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public QueryMultiResults queryAll(final QueryExpression expression) throws StorageException {
 
     TypedQuery<?> query = em.createNamedQuery(expression.query, expression.type);
