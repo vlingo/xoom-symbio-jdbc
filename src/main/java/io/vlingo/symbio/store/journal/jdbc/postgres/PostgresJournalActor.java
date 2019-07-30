@@ -7,7 +7,23 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
 import com.google.gson.Gson;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Address;
 import io.vlingo.actors.Definition;
@@ -35,21 +51,6 @@ import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.StreamReader;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 public class PostgresJournalActor extends Actor implements Journal<String> {
   private static final String INSERT_EVENT =
@@ -181,7 +182,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     insertDispatchable(dispatchable, whenFailed);
 
     doCommit(whenFailed);
-    
+
     dispatch(dispatchable);
     interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, Optional.empty(), object);
   }
