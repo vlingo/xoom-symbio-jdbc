@@ -7,21 +7,7 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
-import io.vlingo.actors.Logger;
-import io.vlingo.common.Tuple2;
-import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.BaseEntry;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.State.BinaryState;
-import io.vlingo.symbio.State.TextState;
-import io.vlingo.symbio.store.DataFormat;
-import io.vlingo.symbio.store.common.jdbc.CachedStatement;
-import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.dispatch.DispatcherControl;
-import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
+import static io.vlingo.symbio.Entry.typed;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -38,7 +24,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static io.vlingo.symbio.Entry.typed;
+import io.vlingo.actors.Logger;
+import io.vlingo.common.Tuple2;
+import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.State.BinaryState;
+import io.vlingo.symbio.State.TextState;
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.jdbc.CachedStatement;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
+import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 
 public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
         DispatcherControl.DispatcherControlDelegate<Entry<?>, State<?>> {
@@ -362,6 +362,8 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   protected abstract String dispatchableTableName();
   protected abstract String entryTableCreateExpression();
   protected abstract String entryTableName();
+  protected abstract String entryOffsetsTableName();
+  protected abstract String entryOffsetsTableCreateExpression();
   protected abstract String readExpression(final String storeName, final String id);
   protected abstract <S> void setBinaryObject(final CachedStatement<T> cached, int columnIndex, final State<S> state) throws Exception;
   protected abstract <E> void setBinaryObject(final CachedStatement<T> cached, int columnIndex, final Entry<E> entry) throws Exception;
@@ -398,6 +400,18 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     }
   }
 
+  private void createEntryOffsetsTable() throws Exception {
+    final String tableName = entryOffsetsTableName();
+    if (!tableExists(tableName)) {
+      try (final Statement statement = connection.createStatement()) {
+        statement.executeUpdate(entryOffsetsTableCreateExpression());
+        connection.commit();
+      } catch (final Exception e) {
+        throw new IllegalStateException("Cannot create table " + tableName + " because: " + e, e);
+      }
+    }
+  }
+
   private void createStateStoreTable(final String storeName) throws Exception {
     final String sql = stateStoreTableCreateExpression(storeName);
     try (final Statement statement = connection.createStatement()) {
@@ -417,6 +431,13 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     try {
       createEntryTable();
     } catch (final Exception e) {
+      // assume table exists; could look at metadata
+      logger.error("Could not create entry table because: " + e.getMessage(), e);
+    }
+
+    try {
+      createEntryOffsetsTable();
+    } catch (Exception e) {
       // assume table exists; could look at metadata
       logger.error("Could not create entry table because: " + e.getMessage(), e);
     }
@@ -441,7 +462,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
 
   private <E> void prepareForAppend(final CachedStatement<T> cached, final Entry<E> entry) throws Exception {
     cached.preparedStatement.clearParameters();
-    cached.preparedStatement.setString(1, entry.type());
+    cached.preparedStatement.setString(1, entry.typeName());
     cached.preparedStatement.setInt(2, entry.typeVersion());
     if (format.isBinary()) {
       this.setBinaryObject(cached, 3, entry);
