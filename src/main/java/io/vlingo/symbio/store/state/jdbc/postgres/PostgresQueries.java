@@ -102,6 +102,14 @@ public interface PostgresQueries {
 
   final static String TBL_VLINGO_SYMBIO_STATE_ENTRY = "tbl_vlingo_symbio_state_entry";
 
+  final static String SQL_CREATE_ENTRY_STORE_OFFSETS =
+          "CREATE TABLE {0} (\n" +
+          "   reader_name VARCHAR(128) PRIMARY KEY," +
+          "   reader_offset BIGINT NOT NULL\n" +
+          ");";
+
+  final static String TBL_VLINGO_SYMBIO_STATE_ENTRY_OFFSETS = "tbl_vlingo_symbio_state_entry_offsets";
+
   final static String SQL_APPEND_ENTRY =
           "INSERT INTO {0} \n" +
                "(e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op) \n" +
@@ -117,4 +125,16 @@ public interface PostgresQueries {
   final static String SQL_QUERY_ENTRY =
           "SELECT e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op FROM " +
                   " {0} WHERE e_id = ? ";
+
+  final static String QUERY_LATEST_OFFSET =
+          "SELECT reader_offset FROM {0} " +
+                  "WHERE reader_name = ?";
+
+  final static String QUERY_COUNT =
+          "SELECT COUNT(*) FROM {0}";
+
+  final static String UPDATE_CURRENT_OFFSET =
+          "INSERT INTO {0}(reader_offset, reader_name) VALUES(?, ?) " +
+                  "ON CONFLICT (reader_name) DO UPDATE SET reader_offset=?";
+
 }
