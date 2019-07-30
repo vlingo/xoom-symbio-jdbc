@@ -7,22 +7,23 @@
 
 package io.vlingo.symbio.store.state.jdbc.postgres;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.text.MessageFormat;
+
+import org.postgresql.util.PGobject;
+
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.EntryReader.Advice;
-import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
-import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.common.jdbc.CachedStatement;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
-import org.postgresql.util.PGobject;
-
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.text.MessageFormat;
+import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 
 public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> implements StorageDelegate, PostgresQueries {
   private final Configuration configuration;
@@ -56,7 +57,10 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
               Configuration.cloneOf(configuration),
               PostgresStateStoreEntryReaderActor.class,
               namedEntry(SQL_QUERY_ENTRY_BATCH),
-              namedEntry(SQL_QUERY_ENTRY));
+              namedEntry(SQL_QUERY_ENTRY),
+              namedEntry(QUERY_COUNT),
+              namedEntryOffsets(QUERY_LATEST_OFFSET),
+              namedEntryOffsets(UPDATE_CURRENT_OFFSET));
     } catch (Exception e) {
       throw new IllegalStateException("Cannot create EntryReader.Advice because: " + e.getMessage(), e);
     }
@@ -106,8 +110,18 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
   }
 
   @Override
+  protected String entryOffsetsTableCreateExpression() {
+    return MessageFormat.format(SQL_CREATE_ENTRY_STORE_OFFSETS, entryOffsetsTableName());
+  }
+
+  @Override
   protected String entryTableName() {
     return TBL_VLINGO_SYMBIO_STATE_ENTRY;
+  }
+
+  @Override
+  protected String entryOffsetsTableName() {
+    return TBL_VLINGO_SYMBIO_STATE_ENTRY_OFFSETS;
   }
 
   @Override
@@ -170,6 +184,10 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
 
   private String namedEntry(final String sql) {
     return MessageFormat.format(sql, entryTableName());
+  }
+
+  private String namedEntryOffsets(final String sql) {
+    return MessageFormat.format(sql, entryOffsetsTableName());
   }
 
   class PostgresDispatchableCachedStatements<T> extends JDBCDispatchableCachedStatements<T> {
