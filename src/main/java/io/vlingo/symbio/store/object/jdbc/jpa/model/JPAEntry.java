@@ -60,7 +60,7 @@ public class JPAEntry implements Entry<String> {
     this.entryTimestamp = LocalDate.now();
     this.entryData = entry.entryData();
     this.metadata = entry.metadata();
-    this.type = entry.type();
+    this.type = entry.typeName();
     this.typeVersion = entry.typeVersion();
   }
 
@@ -114,7 +114,7 @@ public class JPAEntry implements Entry<String> {
 
   /* @see io.vlingo.symbio.Entry#type() */
   @Override
-  public String type() {
+  public String typeName() {
     return type;
   }
 
