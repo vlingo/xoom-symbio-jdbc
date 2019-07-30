@@ -71,9 +71,21 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
   }
 
   @Override
+  public Completes<T> readNext(final String fromId) {
+    seekTo(fromId);
+    return readNext();
+  }
+
+  @Override
   @SuppressWarnings("unchecked")
   public Completes<List<T>> readNext(final int maximumEntries) {
     return completes().with((List<T>) queryNext(maximumEntries));
+  }
+
+  @Override
+  public Completes<List<T>> readNext(final String fromId, final int maximumEntries) {
+    seekTo(fromId);
+    return readNext(maximumEntries);
   }
 
   @Override
