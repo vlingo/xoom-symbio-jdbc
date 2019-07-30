@@ -105,7 +105,13 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
     }
 
     @Override
-    public Completes<List<TextEntry>> readNext(int maximumEvents) {
+    public Completes<TextEntry> readNext(final String fromId) {
+      seekTo(fromId);
+      return readNext();
+    }
+
+    @Override
+    public Completes<List<TextEntry>> readNext(final int maximumEvents) {
         try {
             List<TextEntry> events = new ArrayList<>(maximumEvents);
             queryEventBatch.setLong(1, offset);
@@ -130,13 +136,19 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
     }
 
     @Override
+    public Completes<List<TextEntry>> readNext(final String fromId, final int maximumEntries) {
+      seekTo(fromId);
+      return readNext(maximumEntries);
+    }
+
+    @Override
     public void rewind() {
         this.offset = 1;
         updateCurrentOffset();
     }
 
     @Override
-    public Completes<String> seekTo(String id) {
+    public Completes<String> seekTo(final String id) {
         switch (id) {
             case Beginning:
                 this.offset = 1;
@@ -173,7 +185,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
         return completes().with(-1L);
     }
 
-    private TextEntry eventFromResultSet(ResultSet resultSet) throws SQLException, ClassNotFoundException {
+    private TextEntry eventFromResultSet(final ResultSet resultSet) throws SQLException, ClassNotFoundException {
         final String id = resultSet.getString(1);
         final String entryData = resultSet.getString(2);
         final String entryMetadata = resultSet.getString(3);
@@ -217,7 +229,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
 
     private long retrieveLatestOffset() {
         try {
-            ResultSet resultSet = queryLastOffset.executeQuery();
+          final ResultSet resultSet = queryLastOffset.executeQuery();
             if (resultSet.next()) {
                 return resultSet.getLong(1);
             }
@@ -228,7 +240,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
         return offset;
     }
 
-    private long nextOffsetFromResultSet(ResultSet resultSet) throws SQLException {
+    private long nextOffsetFromResultSet(final ResultSet resultSet) throws SQLException {
         return resultSet.getLong(6) + 1;
     }
 }
