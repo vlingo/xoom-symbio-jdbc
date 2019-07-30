@@ -55,8 +55,8 @@ public class PersistentEntry extends PersistentObject implements Entry {
   }
 
   @Override
-  public String type() {
-    return entry.type();
+  public String typeName() {
+    return entry.typeName();
   }
 
   @Override
