@@ -104,6 +104,14 @@ public interface HSQLDBQueries {
 
   final static String TBL_VLINGO_SYMBIO_STATE_ENTRY = "TBL_VLINGO_SYMBIO_STATE_ENTRY";
 
+  final static String SQL_CREATE_ENTRY_STORE_OFFSETS =
+          "CREATE TABLE {0} (\n" +
+          "   O_READER_NAME VARCHAR(128) PRIMARY KEY," +
+          "   O_READER_OFFSET BIGINT NOT NULL\n" +
+          ");";
+
+  final static String TBL_VLINGO_SYMBIO_STATE_ENTRY_OFFSETS = "TBL_VLINGO_SYMBIO_STATE_ENTRY_OFFSETS";
+
   final static String SQL_APPEND_ENTRY =
           "INSERT INTO {0} \n" +
                "(E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP) \n" +
@@ -119,4 +127,22 @@ public interface HSQLDBQueries {
   final static String SQL_QUERY_ENTRY =
           "SELECT E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP FROM " +
                   " {0} WHERE E_ID = ?";
+
+  final static String QUERY_LATEST_OFFSET =
+          "SELECT O_READER_OFFSET FROM {0} " +
+                  "WHERE O_READER_NAME = ?";
+
+  final static String QUERY_COUNT =
+          "SELECT COUNT(*) FROM {0}";
+
+  final static String UPDATE_CURRENT_OFFSET =
+          "MERGE INTO {0} \n" +
+          "USING (VALUES ?, ?) \n " +
+          "O (O_READER_NAME, O_READER_OFFSET) \n" +
+          "ON ({0}.O_READER_NAME = O.O_READER_NAME) \n" +
+          "WHEN MATCHED THEN UPDATE \n" +
+                  "SET {0}.O_READER_OFFSET = O.O_READER_OFFSET \n" +
+          "WHEN NOT MATCHED THEN INSERT \n" +
+                  "(O_READER_NAME, O_READER_OFFSET) \n" +
+                  "VALUES (O.O_READER_NAME, O.O_READER_OFFSET)";
 }
