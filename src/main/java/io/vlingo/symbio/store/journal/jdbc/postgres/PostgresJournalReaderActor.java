@@ -25,6 +25,9 @@ import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.journal.JournalReader;
 
 public class PostgresJournalReaderActor extends Actor implements JournalReader<TextEntry> {
+    private static final String QUERY_COUNT =
+            "SELECT COUNT(*) FROM vlingo_symbio_journal";
+
     private static final String QUERY_CURRENT_OFFSET =
             "SELECT reader_offset FROM vlingo_symbio_journal_offsets WHERE reader_name=?";
 
@@ -45,6 +48,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
 
     private final Connection connection;
     private final String name;
+    private final PreparedStatement queryCount;
     private final PreparedStatement queryCurrentOffset;
     private final PreparedStatement updateCurrentOffset;
     private final PreparedStatement querySingleEvent;
@@ -58,6 +62,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
         this.connection = configuration.connection;
         this.name = name;
 
+        this.queryCount = this.connection.prepareStatement(QUERY_COUNT);
         this.queryCurrentOffset = this.connection.prepareStatement(QUERY_CURRENT_OFFSET);
         this.updateCurrentOffset = this.connection.prepareStatement(UPDATE_CURRENT_OFFSET);
         this.querySingleEvent = this.connection.prepareStatement(QUERY_SINGLE);
@@ -152,6 +157,21 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
         return completes().with(String.valueOf(offset));
     }
 
+    @Override
+    public Completes<Long> size() {
+        try {
+          final ResultSet resultSet = queryCount.executeQuery();
+          if (resultSet.next()) {
+              final long count = resultSet.getLong(1);
+              return completes().with(count);
+          }
+        } catch (Exception e) {
+          logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
+          logger().error("vlingo/symbio-postgres: Rewinding the offset");
+        }
+
+        return completes().with(-1L);
+    }
 
     private TextEntry eventFromResultSet(ResultSet resultSet) throws SQLException, ClassNotFoundException {
         final String id = resultSet.getString(1);
