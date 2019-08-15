@@ -16,9 +16,10 @@ import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.Configuration.ConfigurationInterest;
 import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
+import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 
 public class PostgresConfigurationProvider {
-  private static final ConfigurationInterest interest = new ConfigurationInterest() {
+  public static final ConfigurationInterest interest = new ConfigurationInterest() {
     private Configuration configuration;
 
     @Override public void afterConnect(final Connection connection) { }
@@ -31,7 +32,7 @@ public class PostgresConfigurationProvider {
     public void createDatabase(final Connection connection, final String databaseName) throws Exception {
       try (final Statement statement = connection.createStatement()) {
         connection.setAutoCommit(true);
-        statement.executeUpdate("CREATE DATABASE " + databaseName + " WITH OWNER = " + configuration.username);
+        statement.executeUpdate("CREATE DATABASE " + databaseName + " WITH OWNER = " + configuration.connectionProvider.username);
         connection.setAutoCommit(false);
       } catch (Exception e) {
         final List<String> message = Arrays.asList(e.getMessage().split(" "));
@@ -63,6 +64,7 @@ public class PostgresConfigurationProvider {
           final String originatorId,
           final boolean createTables) throws Exception {
     return new Configuration(
+            DatabaseType.Postgres,
             interest,
             "org.postgresql.Driver",
             format,
@@ -77,6 +79,7 @@ public class PostgresConfigurationProvider {
 
   public static TestConfiguration testConfiguration(final DataFormat format) throws Exception {
     return new TestConfiguration(
+            DatabaseType.Postgres,
             interest,
             "org.postgresql.Driver",
             format,

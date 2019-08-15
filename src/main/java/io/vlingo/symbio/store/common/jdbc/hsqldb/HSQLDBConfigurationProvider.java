@@ -16,9 +16,10 @@ import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.Configuration.ConfigurationInterest;
 import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
+import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 
 public class HSQLDBConfigurationProvider {
-  private static final ConfigurationInterest interest = new ConfigurationInterest() {
+  public static final ConfigurationInterest interest = new ConfigurationInterest() {
     private Server databaseSever;
     private AtomicInteger databaseCount = new AtomicInteger(0);
 
@@ -57,6 +58,7 @@ public class HSQLDBConfigurationProvider {
           final boolean createTables)
   throws Exception {
     return new Configuration(
+            DatabaseType.HSQLDB,
             interest,
             "org.hsqldb.jdbc.JDBCDriver",
             format,
@@ -75,6 +77,7 @@ public class HSQLDBConfigurationProvider {
 
   public static TestConfiguration testConfiguration(final DataFormat format, final String databaseName) throws Exception {
     return new TestConfiguration(
+            DatabaseType.HSQLDB,
             interest,
             "org.hsqldb.jdbc.JDBCDriver",
             format,

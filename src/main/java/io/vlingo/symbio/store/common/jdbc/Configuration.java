@@ -8,9 +8,7 @@
 package io.vlingo.symbio.store.common.jdbc;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.Statement;
-import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.vlingo.symbio.store.DataFormat;
@@ -20,6 +18,7 @@ import io.vlingo.symbio.store.DataFormat;
  * {@code StateStore}, {@code Journal}, and {@code ObjectStore}.
  */
 public class Configuration {
+
   /**
    * A default timeout for transactions if not specified by the client.
    * Note that this is not used as a database timeout, but rather the
@@ -39,26 +38,27 @@ public class Configuration {
 
   public final String actualDatabaseName;
   public final Connection connection;
-  public final String databaseName;
-  public final String driverClassname;
+  public final ConnectionProvider connectionProvider;
+  public final DatabaseType databaseType;
   public final DataFormat format;
-  public final String url;
-  public final String username;
-  public final String password;
-  public final boolean useSSL;
   public final String originatorId;
   public final boolean createTables;
   public final long transactionTimeoutMillis;
 
   protected final ConfigurationInterest interest;
 
-  public static Configuration cloneOf(final Configuration other) throws Exception {
-    return new Configuration(other.interest, other.driverClassname, other.format,
-            other.url, other.actualDatabaseName, other.username, other.password, other.useSSL,
-            other.originatorId, other.createTables, other.transactionTimeoutMillis, true);
+  public static Configuration cloneOf(final Configuration other) {
+    try {
+      return new Configuration(other.databaseType, other.interest, other.connectionProvider.driverClassname, other.format,
+              other.connectionProvider.url, other.actualDatabaseName, other.connectionProvider.username, other.connectionProvider.password, other.connectionProvider.useSSL,
+              other.originatorId, other.createTables, other.transactionTimeoutMillis, true);
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Cannot clone the configuration for " + other.connectionProvider.url + " because: " + e.getMessage(), e);
+    }
   }
 
   public Configuration(
+          final DatabaseType databaseType,
           final ConfigurationInterest interest,
           final String driverClassname,
           final DataFormat format,
@@ -70,11 +70,12 @@ public class Configuration {
           final String originatorId,
           final boolean createTables)
     throws Exception {
-    this(interest, driverClassname, format, url, databaseName, username, password,
+    this(databaseType, interest, driverClassname, format, url, databaseName, username, password,
             useSSL, originatorId, createTables, DefaultTransactionTimeout);
   }
 
   public Configuration(
+          final DatabaseType databaseType,
           final ConfigurationInterest interest,
           final String driverClassname,
           final DataFormat format,
@@ -87,12 +88,12 @@ public class Configuration {
           final boolean createTables,
           final long transactionTimeoutMillis)
     throws Exception {
-    this(interest, driverClassname, format, url, databaseName, username, password,
+    this(databaseType, interest, driverClassname, format, url, databaseName, username, password,
             useSSL, originatorId, createTables, DefaultTransactionTimeout, false);
   }
 
-
   private Configuration(
+          final DatabaseType databaseType,
           final ConfigurationInterest interest,
           final String driverClassname,
           final DataFormat format,
@@ -107,25 +108,21 @@ public class Configuration {
           final boolean reuseDatabaseName)
     throws Exception {
 
+    this.databaseType = databaseType;
     this.interest = interest;
-    this.driverClassname = driverClassname;
     this.format = format;
-    this.databaseName = databaseName;
     this.actualDatabaseName = reuseDatabaseName ? databaseName : actualDatabaseName(databaseName);
-    this.url = url;
-    this.username = username;
-    this.password = password;
-    this.useSSL = useSSL;
     this.originatorId = originatorId;
     this.createTables = createTables;
     this.transactionTimeoutMillis = transactionTimeoutMillis;
+    this.connectionProvider = new ConnectionProvider(driverClassname, url, databaseName, username, password, useSSL);
     beforeConnect();
-    this.connection = connect(url, this.databaseName);
+    this.connection = connect();
     afterConnect();
   }
 
   protected String actualDatabaseName(final String databaseName) {
-    return this.databaseName;
+    return connectionProvider.databaseName;
   }
 
   protected void afterConnect() throws Exception {
@@ -136,19 +133,8 @@ public class Configuration {
     interest.beforeConnect(this);
   }
 
-  protected Connection connect(final String url, final String databaseName) {
-    try {
-      Class.forName(driverClassname);
-      final Properties properties = new Properties();
-      properties.setProperty("user", username);
-      properties.setProperty("password", password);
-      properties.setProperty("ssl", Boolean.toString(useSSL));
-      final Connection connection = DriverManager.getConnection(url + databaseName, properties);
-      connection.setAutoCommit(false);
-      return connection;
-    }  catch (Exception e) {
-      throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because database unavilable or wrong credentials.");
-    }
+  protected Connection connect() {
+    return connectionProvider.connection();
   }
 
   public interface ConfigurationInterest {
@@ -162,6 +148,7 @@ public class Configuration {
     static private final AtomicInteger uniqueNumber = new AtomicInteger(0);
 
     public TestConfiguration(
+            final DatabaseType databaseType,
             final ConfigurationInterest interest,
             final String driverClassname,
             final DataFormat format,
@@ -173,7 +160,7 @@ public class Configuration {
             final String originatorId,
             final boolean createTables)
     throws Exception {
-      super(interest, driverClassname, format, url, databaseName, username, password, useSSL, originatorId, createTables);
+      super(databaseType, interest, driverClassname, format, url, databaseName, username, password, useSSL, originatorId, createTables);
     }
 
     public void cleanUp() {
@@ -200,13 +187,14 @@ public class Configuration {
     }
 
     @Override
-    protected Connection connect(final String url, final String databaseName) {
-      final Connection connection = super.connect(url, databaseName);
+    protected Connection connect() {
+      final Connection connection = super.connect();
 
       try (final Statement statement = connection.createStatement()) {
         interest.createDatabase(connection, actualDatabaseName);
         connection.close();
-        return super.connect(url, actualDatabaseName);
+        final ConnectionProvider copy = connectionProvider.copyReplacing(actualDatabaseName);
+        return copy.connection();
       }  catch (Exception e) {
         throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because the server or database unavilable, or wrong credentials.", e);
       }
@@ -215,7 +203,7 @@ public class Configuration {
     private Connection swapConnections() {
       try {
         connection.close();
-        return super.connect(url, databaseName);
+        return connectionProvider.connection();
       } catch (Exception e) {
         throw new IllegalStateException(getClass().getSimpleName() + ": Cannot swap database to owner's because: " + e.getMessage(), e);
       }
