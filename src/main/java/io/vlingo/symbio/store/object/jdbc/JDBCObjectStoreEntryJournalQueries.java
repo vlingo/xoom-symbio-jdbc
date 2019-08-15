@@ -226,7 +226,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
 
   /**
    * Create all common tables.
-   * @throws SQLException
+   * @throws SQLException when creation fails
    */
   public void createCommonTables() throws SQLException {
     createTextEntryJournalTable();
@@ -236,7 +236,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
 
   /**
    * Creates the table to store {@code Dispatchable} objects.
-   * @throws SQLException
+   * @throws SQLException when creation fails
    */
   public void createDispatchableTable() throws SQLException {
     final String wideTextDataType = wideTextDataType();
@@ -270,7 +270,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
 
   /**
    * Creates the table used to store journal {@code Entry} objects.
-   * @throws SQLException
+   * @throws SQLException when creation fails
    */
   public void createTextEntryJournalTable() throws SQLException {
     connection
@@ -281,7 +281,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
 
   /**
    * Creates the table used to store the current offsets of entry readers.
-   * @throws SQLException
+   * @throws SQLException when creation fails
    */
   public void createTextEntryJournalReaderOffsetsTable() throws SQLException {
     connection
@@ -293,7 +293,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
   /**
    * Answer the {@code PreparedStatement} for retrieving the last entry id.
    * @return PreparedStatement
-   * @throws SQLException
+   * @throws SQLException when creation fails
    */
   public PreparedStatement statementForQueryLastEntryId() throws SQLException {
     return connection.prepareStatement(lastEntryIdQuery());
@@ -302,7 +302,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
   /**
    * Answer the {@code PreparedStatement} for retrieving the size (number of entries) in the journal.
    * @return PreparedStatement
-   * @throws SQLException
+   * @throws SQLException when creation fails
    */
   public PreparedStatement statementForSizeQuery() throws SQLException {
     return connection.prepareStatement(sizeQuery());
@@ -310,9 +310,8 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
 
   /**
    * Answer the parameterized {@code PreparedStatement} for retrieving a single {@code Entry} instance.
-   * @param id the long identity to select (possibly greater than this id)
    * @return PreparedStatement
-   * @throws SQLException
+   * @throws SQLException when creation fails
    */
   public PreparedStatement statementForEntryQuery() throws SQLException {
     return connection.prepareStatement(entryQuery());
@@ -322,7 +321,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
    * Answer the {@code PreparedStatement} for retrieving a single {@code Entry} instance.
    * @param id the long identity to select (possibly greater than this id)
    * @return PreparedStatement
-   * @throws SQLException
+   * @throws SQLException when creation fails
    */
   public PreparedStatement statementForEntryQuery(final long id) throws SQLException {
     return connection.prepareStatement(entryQuery(id));
@@ -332,6 +331,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
    * Answer the parameterized {@code PreparedStatement} for retrieving multiple {@code Entry} instances.
    * @param placeholders the String[] of parameter placeholders
    * @return PreparedStatement
+   * @throws SQLException  when creation fails
    */
   public PreparedStatement statementForEntriesQuery(final String[] placeholders) throws SQLException {
     return connection.prepareStatement(entriesQuery(placeholders));
@@ -342,6 +342,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
    * @param id the long identity to begin selection (possibly greater than this id)
    * @param count the int Entry instance limit
    * @return PreparedStatement
+   * @throws SQLException  when creation fails
    */
   public PreparedStatement statementForEntriesQuery(final long id, final int count) throws SQLException {
     return connection.prepareStatement(entriesQuery(id, count));
@@ -351,6 +352,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
    * Answer the {@code PreparedStatement} for inserting/updating the current entry offset.
    * @param placeholders the {@code String[]} placeholders for the dispatchable data parameters
    * @return PreparedStatement
+   * @throws SQLException  when creation fails
    */
   public PreparedStatement statementForUpsertCurrentEntryOffsetQuery(final String[] placeholders) throws SQLException {
     return connection.prepareStatement(upsertCurrentEntryOffsetQuery(placeholders));
