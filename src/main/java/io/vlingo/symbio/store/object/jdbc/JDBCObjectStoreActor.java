@@ -7,9 +7,18 @@
 
 package io.vlingo.symbio.store.object.jdbc;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.Address;
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
+import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Scheduled;
 import io.vlingo.common.Success;
@@ -19,20 +28,21 @@ import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.object.ObjectStore;
+import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
 import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.QueryExpression;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import io.vlingo.symbio.store.object.jdbc.jdbi.JdbiObjectStoreEntryReaderActor;
+import io.vlingo.symbio.store.object.jdbc.jdbi.JdbiOnDatabase;
 
 /**
  * The actor implementing the {@code ObjectStore} protocol in behalf of
@@ -43,6 +53,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   private boolean closed;
   private final JDBCObjectStoreDelegate delegate;
   private final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher;
+  private final Map<String,ObjectStoreEntryReader<?>> entryReaders;
   private final Logger logger;
   private final EntryAdapterProvider entryAdapterProvider;
   private final IdentityGenerator identityGenerator;
@@ -60,6 +71,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
     this.logger = stage().world().defaultLogger();
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.identityGenerator = new IdentityGenerator.RandomIdentityGenerator();
+    this.entryReaders = new HashMap<>();
 
     final long timeout = delegate.configuration.transactionTimeoutMillis;
     stage().scheduler().schedule(selfAs(Scheduled.class), null, timeout, timeout);
@@ -87,6 +99,36 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
       }
       closed = true;
     }
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public Completes<EntryReader<? extends Entry<?>>> entryReader(final String name) {
+    ObjectStoreEntryReader<? extends Entry<?>> entryReader = entryReaders.get(name);
+    if (entryReader == null) {
+      final Configuration clonedConfiguration = Configuration.cloneOf(delegate.configuration);
+      final Address address = stage().world().addressFactory().uniquePrefixedWith("objectStoreEntryReader-" + name);
+      final Class<? extends Actor> actorType;
+      List<Object> parameters = null;
+
+      switch (delegate.type()) {
+      case Jdbi:
+        actorType = JdbiObjectStoreEntryReaderActor.class;
+        parameters = Definition.parameters(JdbiOnDatabase.openUsing(clonedConfiguration), delegate.registeredMappers(), name);
+        break;
+      case JDBC:
+      case JPA:
+        actorType = JDBCObjectStoreEntryReaderActor.class;
+        parameters = Definition.parameters(DatabaseType.databaseType(clonedConfiguration.connection), clonedConfiguration.connection, name);
+        break;
+      default:
+        throw new IllegalStateException(getClass().getSimpleName() + ": Cannot create entry reader '" + name + "' due to unknown type: " + delegate.type());
+      }
+
+      entryReader = stage().actorFor(ObjectStoreEntryReader.class, Definition.has(actorType, parameters), address);
+    }
+
+    return completes().with(entryReader);
   }
 
   @Override
