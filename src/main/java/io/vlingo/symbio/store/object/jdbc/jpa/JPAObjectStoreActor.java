@@ -6,9 +6,18 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
+import java.sql.Connection;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
+import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.common.identity.IdentityGenerator;
@@ -17,42 +26,65 @@ import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.common.jdbc.ConnectionProvider;
+import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
+import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
 import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.QueryExpression;
-
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryReaderActor;
 
 /**
  * JPAObjectStoreActor
  */
 public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
+  private final ConnectionProvider connectionProvider;
   private final DispatcherControl dispatcherControl;
   private final Dispatcher<Dispatchable<Entry<String>, State<?>>> dispatcher;
   private boolean closed;
   private final JPAObjectStoreDelegate delegate;
   private final EntryAdapterProvider entryAdapterProvider;
+  private final Map<String,ObjectStoreEntryReader<?>> entryReaders;
   private final Logger logger;
   private final IdentityGenerator identityGenerator;
 
-  public JPAObjectStoreActor(final JPAObjectStoreDelegate delegate,
+  /**
+   * Construct my default state.
+   * @param delegate the JPAObjectStoreDelegate
+   * @param connectionProvider the ConnectionProvider
+   * @param dispatcher the Dispatcher
+   */
+  public JPAObjectStoreActor(
+          final JPAObjectStoreDelegate delegate,
+          final ConnectionProvider connectionProvider,
           final Dispatcher<Dispatchable<Entry<String>, State<?>>> dispatcher) {
-    this(delegate, dispatcher, 1000L, 1000L);
+    this(delegate, connectionProvider, dispatcher, 1000L, 1000L);
   }
 
-  public JPAObjectStoreActor(final JPAObjectStoreDelegate delegate,
+  /**
+   * Construct my default state.
+   * @param delegate the JPAObjectStoreDelegate
+   * @param connectionProvider the ConnectionProvider
+   * @param dispatcher the Dispatcher
+   * @param checkConfirmationExpirationInterval the long confirmation expiration interval
+   * @param confirmationExpiration the long confirmation expiration
+   */
+  public JPAObjectStoreActor(
+          final JPAObjectStoreDelegate delegate,
+          final ConnectionProvider connectionProvider,
           final Dispatcher<Dispatchable<Entry<String>, State<?>>> dispatcher,
-          final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+          final long checkConfirmationExpirationInterval,
+          final long confirmationExpiration) {
     this.delegate = delegate;
+    this.connectionProvider = connectionProvider;
     this.dispatcher = dispatcher;
+    this.entryReaders = new HashMap<>();
     this.closed = false;
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.logger = stage().world().defaultLogger();
@@ -79,6 +111,21 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
       }
       this.closed = true;
     }
+  }
+
+  @Override
+  public Completes<EntryReader<? extends Entry<?>>> entryReader(final String name) {
+    ObjectStoreEntryReader<?> reader = entryReaders.get(name);
+    if (reader == null) {
+      final Connection connection = connectionProvider.connection();
+      final DatabaseType databaseType = DatabaseType.databaseType(connection);
+
+      reader = childActorFor(
+              ObjectStoreEntryReader.class,
+              Definition.has(JDBCObjectStoreEntryReaderActor.class, Definition.parameters(databaseType, connection, name)));
+      entryReaders.put(name, reader);
+    }
+    return completes().with(reader);
   }
 
   @Override
