@@ -21,51 +21,52 @@ import javax.persistence.Table;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter;
-import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter;
 /**
  * JPAEntry is an implementation of {@link Entry} that is designed
  * to be persisted via the Java Persistence API
  */
 @Entity
-@Table(name="tbl_objectstore_event_journal")
+@Table(name="tbl_vlingo_objectstore_entry_journal")
 public class JPAEntry implements Entry<String> {
 
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
-  @Column(name = "id", updatable = false, nullable = false)
-  private String id;
+  @Column(name = "e_id", updatable = false, nullable = false)
+  private long id;
 
-  @Column(name="entry_timestamp", updatable = false, nullable = false)
-  @Convert(converter= LocalDateConverter.class)
-  private LocalDate entryTimestamp;
-
-  @Column(name="entry_data", updatable = false, nullable = false)
+  @Column(name="e_data", updatable = false, nullable = false)
   private String entryData;
 
-  @Column(name="metadata", updatable = false, nullable = false)
-  @Convert(converter= MetadataConverter.class)
-  private Metadata metadata;
+  @Column(name="e_metadata_value", updatable = false, nullable = false)
+  private String metadataValue;
 
-  @Column(name="entry_type", updatable = false, nullable = false)
+  @Column(name="e_metadata_op", updatable = false, nullable = false)
+  private String metadataOp;
+
+  @Column(name="e_type", updatable = false, nullable = false)
   private String type;
 
-  @Column(name="entry_type_version", updatable = false, nullable = false)
+  @Column(name="e_type_version", updatable = false, nullable = false)
   private int typeVersion;
+
+  @Column(name="e_timestamp", updatable = false, nullable = false)
+  @Convert(converter= LocalDateConverter.class)
+  private LocalDate entryTimestamp;
 
   public JPAEntry() {
     super();
   }
 
   public JPAEntry(final Entry<String> entry) {
-    this.entryTimestamp = LocalDate.now();
     this.entryData = entry.entryData();
-    this.metadata = entry.metadata();
+    this.metadataValue = entry.metadata().value;
+    this.metadataOp = entry.metadata().operation;
     this.type = entry.typeName();
     this.typeVersion = entry.typeVersion();
+    this.entryTimestamp = LocalDate.now();
   }
 
   public JPAEntry(final Class<?> type, final int typeVersion, final String entryData, final Metadata metadata) {
-    this.entryTimestamp = LocalDate.now();
     if (type == null) throw new IllegalArgumentException("Entry type must not be null.");
     this.type = type.getName();
     if (typeVersion <= 0) throw new IllegalArgumentException("Entry typeVersion must be greater than 0.");
@@ -73,13 +74,14 @@ public class JPAEntry implements Entry<String> {
     if (entryData == null) throw new IllegalArgumentException("Entry entryData must not be null.");
     this.entryData = entryData;
     if (metadata == null) throw new IllegalArgumentException("Entry metadata must not be null.");
-    this.metadata = metadata;
+    this.metadataValue = metadata().value;
+    this.metadataOp = metadata().operation;
+    this.entryTimestamp = LocalDate.now();
   }
 
   public JPAEntry(final String id, final Class<?> type, final int typeVersion, final String entryData, final Metadata metadata) {
     if (id == null) throw new IllegalArgumentException("Entry id must not be null.");
-    this.id = id;
-    this.entryTimestamp = LocalDate.now();
+    this.id = Long.parseLong(id);
     if (type == null) throw new IllegalArgumentException("Entry type must not be null.");
     this.type = type.getName();
     if (typeVersion <= 0) throw new IllegalArgumentException("Entry typeVersion must be greater than 0.");
@@ -87,13 +89,15 @@ public class JPAEntry implements Entry<String> {
     if (entryData == null) throw new IllegalArgumentException("Entry entryData must not be null.");
     this.entryData = entryData;
     if (metadata == null) throw new IllegalArgumentException("Entry metadata must not be null.");
-    this.metadata = metadata;
+    this.metadataValue = metadata().value;
+    this.metadataOp = metadata().operation;
+    this.entryTimestamp = LocalDate.now();
   }
 
   /* @see io.vlingo.symbio.Entry#id() */
   @Override
   public String id() {
-    return id;
+    return String.valueOf(id);
   }
 
   public LocalDate entryTimestamp() {
@@ -109,7 +113,7 @@ public class JPAEntry implements Entry<String> {
   /* @see io.vlingo.symbio.Entry#metadata() */
   @Override
   public Metadata metadata() {
-    return metadata;
+    return Metadata.with(metadataValue, metadataOp);
   }
 
   /* @see io.vlingo.symbio.Entry#type() */
@@ -127,7 +131,7 @@ public class JPAEntry implements Entry<String> {
   /* @see io.vlingo.symbio.Entry#hasMetadata() */
   @Override
   public boolean hasMetadata() {
-    return !metadata.isEmpty();
+    return !metadataValue.isEmpty();
   }
 
   /* @see io.vlingo.symbio.Entry#isEmpty() */
@@ -163,7 +167,8 @@ public class JPAEntry implements Entry<String> {
       .thenComparing(e -> e.entryData)
       .thenComparing(e -> e.type)
       .thenComparingInt(e -> e.typeVersion)
-      .thenComparing(e -> e.metadata)
+      .thenComparing(e -> e.metadataValue)
+      .thenComparing(e -> e.metadataOp)
       .compare(this, that);
   }
 
@@ -175,7 +180,7 @@ public class JPAEntry implements Entry<String> {
       .append("id=").append(id)
       .append(", entryTimestamp=").append(entryTimestamp)
       .append(", entryData=").append(entryData)
-      .append(", metadata=").append(metadata)
+      .append(", metadata=").append(metadataValue).append(",").append(metadataOp)
       .append(", type=").append(type)
       .append(", typeVersion=").append(typeVersion)
       .append(")")
@@ -184,10 +189,10 @@ public class JPAEntry implements Entry<String> {
 
   @Override
   public Entry<String> withId(final String id) {
-    return new JPAEntry(id, typed(), typeVersion, entryData, metadata);
+    return new JPAEntry(id, typed(), typeVersion, entryData, Metadata.with(metadataValue, metadataOp));
   }
 
   public void __internal__setId(final String id) {
-    this.id = id;
+    this.id = Long.parseLong(id);
   }
 }
