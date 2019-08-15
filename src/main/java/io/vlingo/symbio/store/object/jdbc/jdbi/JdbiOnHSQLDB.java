@@ -26,7 +26,7 @@ public class JdbiOnHSQLDB extends JdbiOnDatabase {
   }
 
   /**
-   * @see io.vlingo.symbio.store.object.jdbc.jdbi.JdbiOnDatabase#currentEntryOffsetMapper()
+   * @see io.vlingo.symbio.store.object.jdbc.jdbi.JdbiOnDatabase#currentEntryOffsetMapper(java.lang.String[])
    */
   @Override
   public JdbiPersistMapper currentEntryOffsetMapper(final String[] placeholders) {
