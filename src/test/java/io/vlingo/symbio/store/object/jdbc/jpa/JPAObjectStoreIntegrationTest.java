@@ -6,53 +6,34 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
-import io.vlingo.actors.World;
-import io.vlingo.actors.testkit.AccessSafely;
-import io.vlingo.common.Outcome;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.EntryAdapterProvider;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.StateAdapterProvider;
-import io.vlingo.symbio.store.Result;
-import io.vlingo.symbio.store.StorageException;
-import io.vlingo.symbio.store.common.MockDispatcher;
-import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.object.ListQueryExpression;
-import io.vlingo.symbio.store.object.MapQueryExpression;
-import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
-import io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest;
-import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
-import io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest;
-import io.vlingo.symbio.store.object.QueryExpression;
-import io.vlingo.symbio.store.object.jdbc.jpa.PersonEntryAdapters.PersonAddedAdapter;
-import io.vlingo.symbio.store.object.jdbc.jpa.PersonEntryAdapters.PersonRenamedAdapter;
-import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonAdded;
-import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonRenamed;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.Assert;
+import org.junit.Test;
+
+import io.vlingo.actors.testkit.AccessSafely;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.Result;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.object.ListQueryExpression;
+import io.vlingo.symbio.store.object.MapQueryExpression;
+import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonAdded;
+import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonRenamed;
 
 /**
  * JPAObjectStoreIntegrationTest is responsible for testing {@link JPAObjectStore}
  */
-public class JPAObjectStoreIntegrationTest {
-  private JPAObjectStoreDelegate delegate;
-  private JPAObjectStore objectStore;
-  private World world;
-  private MockDispatcher<Entry<String>, State<String>> dispatcher;
+public class JPAObjectStoreIntegrationTest extends JPAObjectStoreTest {
 
   @Test
   public void testThatObjectStoreInsertsOneAndQuerys() {
@@ -61,20 +42,20 @@ public class JPAObjectStoreIntegrationTest {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
     Person person = new Person(1L, 21, "Jody Jones");
-    
+
     objectStore.persist(person,
             Collections.singletonList(new PersonAdded(person)),
             person.persistenceId(),
             persistInterest);
-    assertEquals(Result.Success, persistInterestAccess.readFrom("result")); 
+    assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
     AccessSafely queryInterestAccess = queryInterest.afterCompleting(1);
 
     MapQueryExpression expression = MapQueryExpression.using(Person.class, null, MapQueryExpression.map("id", 1L));
     objectStore.queryObject(expression, queryInterest);
-    assertNotNull( queryInterestAccess.readFrom("singleResult")); 
-    assertEquals(person, queryInterestAccess.readFrom("singleResultValue")); 
+    assertNotNull( queryInterestAccess.readFrom("singleResult"));
+    assertEquals(person, queryInterestAccess.readFrom("singleResultValue"));
 
     // cleanup db
     final TestPersistResultInterest removeInterest = new TestPersistResultInterest();
@@ -117,9 +98,9 @@ public class JPAObjectStoreIntegrationTest {
     QueryExpression queryExpression = QueryExpression.using(Person.class, "Person.allPersons");
     objectStore.queryAll(queryExpression, queryInterest);
     assertNotNull(queryInterestAccess.readFrom("multiResults"));
-    assertEquals(3, (int)queryInterestAccess.readFrom("multiResultsSize")); 
-    assertEquals(person1, queryInterestAccess.readFrom("multiResultsValue", 0)); 
-    assertEquals(person2, queryInterestAccess.readFrom("multiResultsValue", 1)); 
+    assertEquals(3, (int)queryInterestAccess.readFrom("multiResultsSize"));
+    assertEquals(person1, queryInterestAccess.readFrom("multiResultsValue", 0));
+    assertEquals(person2, queryInterestAccess.readFrom("multiResultsValue", 1));
     assertEquals(person3, queryInterestAccess.readFrom("multiResultsValue", 2));
 
     // cleanup db
@@ -186,7 +167,7 @@ public class JPAObjectStoreIntegrationTest {
       Arrays.asList(person1, person2, person3),
       Arrays.asList(new PersonAdded(person1), new PersonAdded(person2), new PersonAdded(person3)),
       persistInterest);
-    assertEquals(Result.Success, persistInterestAccess.readFrom("result")); 
+    assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
     final AccessSafely queryInterestAccess = queryInterest.afterCompleting(1);
@@ -221,7 +202,7 @@ public class JPAObjectStoreIntegrationTest {
 
     assertEquals(3, (int)queryInterest2Access.readFrom("multiResultsSize"));
     for (int i = 0; i < 3; i++) {
-      Person modifiedPerson = (Person) modifiedPersons.get(i);
+      Person modifiedPerson = modifiedPersons.get(i);
       Person queriedPerson = (Person) queryInterest2Access.readFrom("multiResultsValue", i);
       assertEquals(modifiedPerson.persistenceId(), queriedPerson.persistenceId());
       assertEquals(modifiedPerson.age, queriedPerson.age);
@@ -354,92 +335,6 @@ public class JPAObjectStoreIntegrationTest {
         Assert.assertTrue(dispatchedEntry.id() != null && !dispatchedEntry.id().isEmpty());
         Assert.assertEquals(PersonAdded.class, dispatchedEntry.typed());
       }
-    }
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {
-    world = World.startWithDefaults("jpa-test");
-    EntryAdapterProvider.instance(world).registerAdapter(PersonAdded.class, new PersonAddedAdapter());
-    EntryAdapterProvider.instance(world).registerAdapter(PersonRenamed.class, new PersonRenamedAdapter());
-    final StateAdapterProvider stateAdapterProvider = StateAdapterProvider.instance(world);
-    delegate = new JPAObjectStoreDelegate("TEST", stateAdapterProvider, world.defaultLogger());
-    dispatcher = new MockDispatcher<>();
-    objectStore = world.actorFor(JPAObjectStore.class, JPAObjectStoreActor.class, delegate, dispatcher);
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
-  public void tearDown() throws Exception {
-    objectStore.close();
-  }
-
-  private static class TestQueryResultInterest implements QueryResultInterest {
-    public AtomicReference<QueryMultiResults> multiResults = new AtomicReference<>();
-    public AtomicReference<QuerySingleResult> singleResult = new AtomicReference<>();
-    private AccessSafely access = AccessSafely.afterCompleting(1);
-
-    @Override
-    public void queryAllResultedIn(final Outcome<StorageException, Result> outcome, final QueryMultiResults results, final Object object) {
-      access.writeUsing( "addAll", results );
-    }
-
-    @Override
-    public void queryObjectResultedIn(final Outcome<StorageException, Result> outcome, final QuerySingleResult result, final Object object) {
-      access.writeUsing( "add", result );
-    }
-    
-    public AccessSafely afterCompleting( final int times ) {
-      access =
-        AccessSafely
-          .afterCompleting( times )
-          .writingWith("add", (value)-> singleResult.set((QuerySingleResult)value))
-          .writingWith("addAll", (values) -> multiResults.set((QueryMultiResults)values))
-          .readingWith("singleResult", () -> singleResult.get())
-          .readingWith("singleResultValue", () -> singleResult.get().persistentObject)
-          .readingWith("multiResults", () -> multiResults.get())
-          .readingWith("multiResultsValue", () -> multiResults.get().persistentObjects)
-          .readingWith("multiResultsSize", () -> multiResults.get().persistentObjects().size())
-          .readingWith("multiResultsValue", (index) -> {
-            Person person = null;
-            if ( multiResults.get().persistentObjects.size() > (int)index )
-            {
-              person = (Person)multiResults.get().persistentObjects.toArray()[(int)index];
-            }
-            return person;
-          })
-          .readingWith("multiResultsValueAsArray", () -> multiResults.get().persistentObjects.toArray());
-      return access;
-    }
-  }
-
-  private static class TestPersistResultInterest implements PersistResultInterest {
-    public AtomicReference<Outcome<StorageException, Result>> outcome = new AtomicReference<>();
-    public AtomicInteger count = new AtomicInteger(0);
-    private AccessSafely access = AccessSafely.afterCompleting(1);
-
-    @Override
-    public void persistResultedIn(Outcome<StorageException, Result> outcome, Object persistentObject, int possible, int actual, Object object) {
-      access.writeUsing("set", outcome);
-    }
-
-    @SuppressWarnings("unchecked")
-    public AccessSafely afterCompleting( final int times ) {
-      access =
-        AccessSafely
-          .afterCompleting(times)
-          .writingWith("set", (value) -> {
-            outcome.set((Outcome<StorageException,Result>)value);
-            count.getAndAdd(1);
-          })
-          .readingWith("result", () -> outcome.get().andThen(success -> success).get())
-          .readingWith("count", () -> count.get());
-      return access;
     }
   }
 }
