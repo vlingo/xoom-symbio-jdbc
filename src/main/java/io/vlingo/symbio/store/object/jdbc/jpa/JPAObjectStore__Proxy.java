@@ -1,22 +1,27 @@
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
+import java.util.Collection;
+import java.util.List;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.DeadLetter;
 import io.vlingo.actors.LocalMessage;
 import io.vlingo.actors.Mailbox;
+import io.vlingo.common.BasicCompletes;
+import io.vlingo.common.Completes;
+import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
+import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.PersistentObject;
-
-import java.util.Collection;
-import java.util.List;
 
 public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStore {
 
   private static final String removeRepresentation1 = "remove(T, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
   private static final String removeRepresentation2 = "remove(T, long, io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
   private static final String closeRepresentation3 = "close()";
+  private static final String entryReaderRepresentation4 = "entryReader(java.lang.String)";
   private static final String queryObjectRepresentation5 = "queryObject(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest, java.lang.Object)";
   private static final String queryObjectRepresentation6 = "queryObject(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest)";
   private static final String queryAllRepresentation7 = "queryAll(io.vlingo.symbio.store.object.QueryExpression, io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest)";
@@ -67,6 +72,19 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     } else {
       actor.deadLetters().failedDelivery(new DeadLetter(actor, closeRepresentation3));
     }
+  }
+  @Override
+  public Completes<EntryReader<? extends Entry<?>>> entryReader(final String arg0) {
+    if (!actor.isStopped()) {
+      final java.util.function.Consumer<ObjectStore> consumer = (actor) -> actor.entryReader(arg0);
+      final Completes<EntryReader<? extends Entry<?>>> completes = new BasicCompletes<>(actor.scheduler());
+      if (mailbox.isPreallocated()) { mailbox.send(actor, ObjectStore.class, consumer, completes, entryReaderRepresentation4); }
+      else { mailbox.send(new LocalMessage<ObjectStore>(actor, ObjectStore.class, consumer, completes, entryReaderRepresentation4)); }
+      return completes;
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, entryReaderRepresentation4));
+    }
+    return null;
   }
   @Override
   public void queryObject(final io.vlingo.symbio.store.object.QueryExpression arg0, final io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1, final java.lang.Object arg2) {
