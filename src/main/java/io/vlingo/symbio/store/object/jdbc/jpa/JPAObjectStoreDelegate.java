@@ -49,10 +49,11 @@ public class JPAObjectStoreDelegate implements ObjectStoreDelegate<Entry<String>
   public static final String JPA_HSQLDB_PERSISTENCE_UNIT = "JpaHsqldbService";
   public static final String JPA_POSTGRES_PERSISTENCE_UNIT = "JpaPostgresService";
 
-  private final EntityManagerFactory emf = Persistence.createEntityManagerFactory(JPA_POSTGRES_PERSISTENCE_UNIT);
-  private final EntityManager em = emf.createEntityManager();
+  private final EntityManagerFactory emf;
+  private final EntityManager em;
   private final Logger logger;
   private final String originatorId;
+  private final String persistenceUnitName;
   private final StateAdapterProvider stateAdapterProvider;
 
   /**
@@ -61,7 +62,10 @@ public class JPAObjectStoreDelegate implements ObjectStoreDelegate<Entry<String>
    * @param stateAdapterProvider   {@code StateAdapterProvider} used get raw {@code State<?>} from {@code PersistentObject}
    * @param logger the instance of {@link Logger} to be used
    */
-  public JPAObjectStoreDelegate(final String originatorId, final StateAdapterProvider stateAdapterProvider, final Logger logger) {
+  public JPAObjectStoreDelegate(final String persistenceUnitName, final Map<String,Object> properties, final String originatorId, final StateAdapterProvider stateAdapterProvider, final Logger logger) {
+    this.persistenceUnitName = persistenceUnitName;
+    this.emf = Persistence.createEntityManagerFactory(persistenceUnitName, properties);
+    this.em = emf.createEntityManager();
     this.stateAdapterProvider = stateAdapterProvider;
     this.logger = logger;
     this.originatorId = originatorId;
@@ -74,7 +78,7 @@ public class JPAObjectStoreDelegate implements ObjectStoreDelegate<Entry<String>
 
   @Override
   public JPAObjectStoreDelegate copy() {
-    return new JPAObjectStoreDelegate(this.originatorId, stateAdapterProvider, this.logger);
+    return new JPAObjectStoreDelegate(this.persistenceUnitName, emf.getProperties(), this.originatorId, stateAdapterProvider, this.logger);
   }
 
   @Override
@@ -237,6 +241,14 @@ public class JPAObjectStoreDelegate implements ObjectStoreDelegate<Entry<String>
   @Override
   public void stop() {
      this.close();
+  }
+
+  /*
+   * @see io.vlingo.symbio.store.object.ObjectStoreDelegate#registeredMappers()
+   */
+  @Override
+  public Collection<PersistentObjectMapper> registeredMappers() {
+    throw new UnsupportedOperationException("registeredMappers is unnecessary for JPA.");
   }
 
   /*
