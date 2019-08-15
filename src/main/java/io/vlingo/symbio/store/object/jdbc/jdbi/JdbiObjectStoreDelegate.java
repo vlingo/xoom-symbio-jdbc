@@ -7,6 +7,21 @@
 
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.generic.GenericType;
+import org.jdbi.v3.core.mapper.RowMapper;
+import org.jdbi.v3.core.result.ResultBearing;
+import org.jdbi.v3.core.statement.Update;
+
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
@@ -26,20 +41,6 @@ import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreDelegate;
 import io.vlingo.symbio.store.object.jdbc.jdbi.UnitOfWork.AlwaysModifiedUnitOfWork;
-import org.jdbi.v3.core.Handle;
-import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.core.generic.GenericType;
-import org.jdbi.v3.core.mapper.RowMapper;
-import org.jdbi.v3.core.result.ResultBearing;
-import org.jdbi.v3.core.statement.Update;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The {@code JDBCObjectStoreDelegate} for Jdbi.
@@ -146,7 +147,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     final State<?> state = getRawState(metadata, persistentObject);
 
     persistEach(handle, unitOfWork, persistentObject, create);
-    
+
     unitOfWorkRegistry.remove(updateId);
     return state;
   }
@@ -199,8 +200,16 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     } else {
       result = handle.createQuery(expression.query).mapTo(expression.type).findFirst();
     }
-    
+
     return querySingleResult(result.orElse(null), expression.mode);
+  }
+
+  /*
+   * @see io.vlingo.symbio.store.object.ObjectStoreDelegate#registeredMappers()
+   */
+  @Override
+  public Collection<PersistentObjectMapper> registeredMappers() {
+    return mappers.values();
   }
 
   /*
@@ -209,6 +218,14 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   @Override
   public void registerMapper(final PersistentObjectMapper mapper) {
     //not to be used
+  }
+
+  /*
+   * @see io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreDelegate#type()
+   */
+  @Override
+  public Type type() {
+    return Type.Jdbi;
   }
 
   /*
