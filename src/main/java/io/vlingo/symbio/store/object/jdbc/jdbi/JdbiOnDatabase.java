@@ -74,7 +74,7 @@ public abstract class JdbiOnDatabase {
 
   /**
    * Create all common tables.
-   * @throws SQLException
+   * @throws SQLException when creation fails
    */
   public void createCommonTables() throws SQLException {
     queries.createCommonTables();
@@ -82,7 +82,7 @@ public abstract class JdbiOnDatabase {
 
   /**
    * Creates the table to store {@code Dispatchable} objects.
-   * @throws SQLException
+   * @throws SQLException when creation fails
    */
   public void createDispatchableTable() throws SQLException {
     queries.createDispatchableTable();
@@ -90,7 +90,7 @@ public abstract class JdbiOnDatabase {
 
   /**
    * Creates the table used to store journal {@code Entry} objects.
-   * @throws SQLException
+   * @throws SQLException when creation fails
    */
   public void createTextEntryJournalTable() throws SQLException {
     queries.createTextEntryJournalTable();
@@ -98,7 +98,7 @@ public abstract class JdbiOnDatabase {
 
   /**
    * Creates the table used to store the current offsets of entry readers.
-   * @throws SQLException
+   * @throws SQLException when creation fails
    */
   public void createTextEntryJournalReaderOffsetsTable() throws SQLException {
     queries.createTextEntryJournalReaderOffsetsTable();
