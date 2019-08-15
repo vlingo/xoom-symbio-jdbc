@@ -18,6 +18,8 @@ import io.vlingo.symbio.store.object.ObjectStoreDelegate;
  * and also extended by any number of those concrete delegates.
  */
 public abstract class JDBCObjectStoreDelegate implements ObjectStoreDelegate<Entry<?>, State<?>> {
+  public static enum Type { Jdbi, JDBC, JPA };
+
   public final Configuration configuration;
 
   /**
@@ -33,4 +35,12 @@ public abstract class JDBCObjectStoreDelegate implements ObjectStoreDelegate<Ent
    * Check for timed out transactions.
    */
   public abstract void timeoutCheck();
+
+  /**
+   * Answer my Type.
+   * @return Type
+   */
+  public Type type() {
+    return Type.JDBC;
+  }
 }
