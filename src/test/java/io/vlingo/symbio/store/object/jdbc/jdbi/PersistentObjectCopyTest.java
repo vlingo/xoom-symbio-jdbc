@@ -17,8 +17,6 @@ import java.util.Map;
 
 import org.junit.Test;
 
-import io.vlingo.symbio.store.object.jdbc.Person;
-
 public class PersistentObjectCopyTest {
   @Test
   public void testThatObjectSerializes() {
