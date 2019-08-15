@@ -12,6 +12,15 @@ import io.vlingo.symbio.Source;
 public class Event extends Source<Event> {
   private String value;
 
+  public Event(final String value) {
+    super();
+    this.value = value;
+  }
+
+  public Event(final int eventTypeVersion) {
+    super(eventTypeVersion);
+  }
+
   public String value() {
     return value;
   }
@@ -34,14 +43,5 @@ public class Event extends Source<Event> {
   @Override
   public String toString() {
     return "[Event value=" + value + "]";
-  }
-
-  protected Event(final String value) {
-    super();
-    this.value = value;
-  }
-
-  protected Event(final int eventTypeVersion) {
-    super(eventTypeVersion);
   }
 }
