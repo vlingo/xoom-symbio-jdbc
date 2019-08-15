@@ -58,6 +58,8 @@ public class JPAObjectStoreDelegate implements ObjectStoreDelegate<Entry<String>
 
   /**
    * Constructs my default state.
+   * @param persistenceUnitName the String name of the persistence unit
+   * @param properties the {@code Map<String,Object>} of properties for the EntityManagerFactory creation
    * @param originatorId the ID of {@link Dispatchable} originator
    * @param stateAdapterProvider   {@code StateAdapterProvider} used get raw {@code State<?>} from {@code PersistentObject}
    * @param logger the instance of {@link Logger} to be used
