@@ -95,7 +95,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
             if (resultSet.next()) {
                 offset = nextOffsetFromResultSet(resultSet);
                 updateCurrentOffset();
-                return completes().with(eventFromResultSet(resultSet));
+                return completes().with(entryFromResultSet(resultSet));
             }
         } catch (Exception e) {
             logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
@@ -119,7 +119,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
 
             final ResultSet resultSet = queryEventBatch.executeQuery();
             while (resultSet.next()) {
-                events.add(eventFromResultSet(resultSet));
+                events.add(entryFromResultSet(resultSet));
                 if (resultSet.isLast()) {
                     offset = nextOffsetFromResultSet(resultSet);
                 }
@@ -185,7 +185,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
         return completes().with(-1L);
     }
 
-    private TextEntry eventFromResultSet(final ResultSet resultSet) throws SQLException, ClassNotFoundException {
+    private TextEntry entryFromResultSet(final ResultSet resultSet) throws SQLException, ClassNotFoundException {
         final String id = resultSet.getString(1);
         final String entryData = resultSet.getString(2);
         final String entryMetadata = resultSet.getString(3);
