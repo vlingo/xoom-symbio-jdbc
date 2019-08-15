@@ -16,8 +16,6 @@ import java.util.Arrays;
 
 import org.junit.Test;
 
-import io.vlingo.symbio.store.object.jdbc.Person;
-
 public class UnitOfWorkTest {
 
   @Test
