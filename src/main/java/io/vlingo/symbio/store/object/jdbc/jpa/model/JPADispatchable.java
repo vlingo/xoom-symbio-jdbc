@@ -7,14 +7,8 @@
 
 package io.vlingo.symbio.store.object.jdbc.jpa.model;
 
-import com.google.gson.reflect.TypeToken;
-import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.BaseEntry;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateTimeConverter;
+import java.time.LocalDateTime;
+import java.util.List;
 
 import javax.persistence.Column;
 import javax.persistence.Convert;
@@ -28,19 +22,27 @@ import javax.persistence.NamedNativeQuery;
 import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
-import java.time.LocalDateTime;
-import java.util.List;
+
+import com.google.gson.reflect.TypeToken;
+
+import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateTimeConverter;
 
 /**
  * JPAEntry is an implementation of {@link io.vlingo.symbio.store.dispatch.Dispatchable} that is designed
  * to be persisted via the Java Persistence API
  */
 @Entity(name = "Dispatchables")
-@Table(name="tbl_objectstore_dispatchables")
+@Table(name="tbl_vlingo_objectstore_dispatchables")
 @NamedNativeQueries({
         @NamedNativeQuery(
                 name = "Dispatchables.deleteByDispatchId",
-                query  = "DELETE FROM tbl_objectstore_dispatchables WHERE dispatch_id = ?"
+                query  = "DELETE FROM tbl_vlingo_objectstore_dispatchables WHERE dispatch_id = ?"
         ),
 })
 @NamedQueries({
