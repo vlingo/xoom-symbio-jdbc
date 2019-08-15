@@ -57,13 +57,13 @@ The Docker image is run in the foreground because after each test session you ca
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>0.8.6</version>
+      <version>0.8.7</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio-jdbc</artifactId>
-      <version>0.8.6</version>
+      <version>0.8.7</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -71,8 +71,8 @@ The Docker image is run in the foreground because after each test session you ca
 
 ```gradle
 dependencies {
-    compile 'io.vlingo:vlingo-symbio:0.8.6'
-    compile 'io.vlingo:vlingo-symbio-jdbc:0.8.6'
+    compile 'io.vlingo:vlingo-symbio:0.8.7'
+    compile 'io.vlingo:vlingo-symbio-jdbc:0.8.7'
 }
 
 repositories {
