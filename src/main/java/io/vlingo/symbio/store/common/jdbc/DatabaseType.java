@@ -8,7 +8,6 @@
 package io.vlingo.symbio.store.common.jdbc;
 
 import java.sql.Connection;
-import java.sql.SQLException;
 
 /**
  *  Enumerated database types.
@@ -20,26 +19,14 @@ public enum DatabaseType {
    * Answer the {@code DatabaseType} given a {@code Connection}.
    * @param connection the Connection
    * @return DatabaseType
-   * @throws SQLException
    */
   public static DatabaseType databaseType(final Connection connection) {
-    return databaseType(connection, "");
-  }
-
-  /**
-   * Answer the {@code DatabaseType} given a {@code Connection}.
-   * @param connection the Connection
-   * @return DatabaseType
-   * @throws SQLException
-   */
-  public static DatabaseType databaseType(final Connection connection, final String discriminator) {
     String url = "uninitialized-database-url";
     try {
       url = connection.getMetaData().getURL().toLowerCase();
       for (final DatabaseType type : DatabaseType.values()) {
         if (url.contains(type.name().toLowerCase())) {
-          final String discriminatedType = type.name() + discriminator;
-          return DatabaseType.valueOf(discriminatedType);
+          return type;
         }
       }
     } catch (Exception e) {
