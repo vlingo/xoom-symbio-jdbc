@@ -7,6 +7,25 @@
 
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.actors.testkit.TestUntil;
@@ -29,29 +48,10 @@ import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMode;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
-import io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest;
 import io.vlingo.symbio.store.object.PersistentEntry;
 import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
-import io.vlingo.symbio.store.object.jdbc.Person;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
-
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries;
 
 public class JdbiObjectStoreTest {
   // private Jdbi jdbi;
@@ -69,11 +69,11 @@ public class JdbiObjectStoreTest {
     dispatcher.afterCompleting(1);
 
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
-    persistInterest.until = TestUntil.happenings(1);
+    final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person = new Person("Jody Jones", 21, 1L);
     objectStore.persist(person, persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
+    assertEquals(Result.Success, outcome.andThen(success -> success).get());
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
 
@@ -110,12 +110,12 @@ public class JdbiObjectStoreTest {
     dispatcher.afterCompleting(1);
 
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
-    persistInterest.until = TestUntil.happenings(1);
+    final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person = new Person("Jody Jones", 21, 1L);
     final Event event = new Event("test-event");
     objectStore.persist(person, Collections.singletonList(event), persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
+    assertEquals(Result.Success, outcome.andThen(success -> success).get());
 
     final Map<String, Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatched = dispatcher.getDispatched();
     assertEquals(1, dispatched.size());
@@ -137,7 +137,7 @@ public class JdbiObjectStoreTest {
     // Event
     queryInterest.until = TestUntil.happenings(1);
     objectStore.queryObject(
-            ListQueryExpression.using(Entry.class, "SELECT * FROM ENTRY_JOURNAL"),
+            ListQueryExpression.using(Entry.class, "SELECT * FROM " + JDBCObjectStoreEntryJournalQueries.EntryJournalTableName),
             queryInterest);
     queryInterest.until.completes();
     assertNotNull(queryInterest.singleResult.get());
@@ -152,13 +152,13 @@ public class JdbiObjectStoreTest {
     dispatcher.afterCompleting(3);
 
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
-    persistInterest.until = TestUntil.happenings(1);
+    final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person1 = new Person("Jody Jones", 21, 1L);
     final Person person2 = new Person("Joey Jones", 21, 2L);
     final Person person3 = new Person("Mira Jones", 25, 3L);
     objectStore.persistAll(Arrays.asList(person1, person2, person3), persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
+    assertEquals(Result.Success, outcome.andThen(success -> success).get());
 
     final Map<String, Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatched = dispatcher.getDispatched();
     assertEquals(3, dispatched.size());
@@ -184,11 +184,11 @@ public class JdbiObjectStoreTest {
   @Test
   public void testThatSingleEntityUpdates() {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
-    persistInterest.until = TestUntil.happenings(1);
+    final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person = new Person("Jody Jones", 21, 1L);
     objectStore.persist(person, persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
+    assertEquals(Result.Success, outcome.andThen(success -> success).get());
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
 
@@ -205,12 +205,12 @@ public class JdbiObjectStoreTest {
     assertNotNull(queryInterest.singleResult.get());
     assertEquals(person, queryInterest.singleResult.get().persistentObject);
 
-    persistInterest.until = TestUntil.happenings(1);
+    final AccessSafely access1 = persistInterest.afterCompleting(1);
     final Person queriedPerson = queryInterest.singleResult.get().persistentObject();
     final Person modifiedPerson = queriedPerson.withName("Jody Mojo Jojo");
     objectStore.persist(modifiedPerson, queryInterest.singleResult.get().updateId, persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    final Outcome<StorageException, Result> outcome1 = access1.readFrom("outcome");
+    assertEquals(Result.Success, outcome1.andThen(success -> success).get());
 
     // List
     queryInterest.until = TestUntil.happenings(1);
@@ -228,13 +228,13 @@ public class JdbiObjectStoreTest {
   @Test
   public void testThatMultipleEntitiesUpdate() {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
-    persistInterest.until = TestUntil.happenings(1);
+    final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person1 = new Person("Jody Jones", 21, 1L);
     final Person person2 = new Person("Joey Jones", 21, 2L);
     final Person person3 = new Person("Mira Jones", 25, 3L);
     objectStore.persistAll(Arrays.asList(person1, person2, person3), persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
+    assertEquals(Result.Success, outcome.andThen(success -> success).get());
 
     final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
 
@@ -255,10 +255,10 @@ public class JdbiObjectStoreTest {
       final Person person = iterator.next();
       modifiedPersons.add(person.withName(person.name + " " + person.id));
     }
-    persistInterest.until = TestUntil.happenings(1);
+    final AccessSafely access1 = persistInterest.afterCompleting(1);
     objectStore.persistAll(modifiedPersons, queryInterest.multiResults.get().updateId, persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    final Outcome<StorageException, Result> outcome1 = access1.readFrom("outcome");
+    assertEquals(Result.Success, outcome1.andThen(success -> success).get());
 
     queryInterest.multiResults.set(null);
     queryInterest.until = TestUntil.happenings(1);
@@ -277,7 +277,7 @@ public class JdbiObjectStoreTest {
     accessDispatcher.writeUsing("processDispatch", false);
 
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
-    persistInterest.until = TestUntil.happenings(1);
+    final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person1 = new Person("Jody Jones", 21, 1L);
     final Person person2 = new Person("Joey Jones", 21, 2L);
     final Person person3 = new Person("Mira Jones", 25, 3L);
@@ -286,8 +286,8 @@ public class JdbiObjectStoreTest {
     final Event event2 = new Event("test-event2");
 
     objectStore.persistAll(Arrays.asList(person1, person2, person3), Arrays.asList(event, event2), persistInterest);
-    persistInterest.until.completes();
-    assertEquals(Result.Success, persistInterest.outcome.get().andThen(success -> success).get());
+    final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
+    assertEquals(Result.Success, outcome.andThen(success -> success).get());
 
     try {
       Thread.sleep(3000);
@@ -319,9 +319,9 @@ public class JdbiObjectStoreTest {
   public void setUp() throws Exception {
     final Configuration configuration = HSQLDBConfigurationProvider.testConfiguration(DataFormat.Native);
 
-    final JdbiOnHSQLDB jdbi = JdbiOnHSQLDB.openUsing(configuration);
-    jdbi.handle.execute("DROP SCHEMA PUBLIC CASCADE");
-    jdbi.handle.execute("CREATE TABLE PERSON (id BIGINT PRIMARY KEY, name VARCHAR(200), age INTEGER)");
+    final JdbiOnDatabase jdbi = JdbiOnHSQLDB.openUsing(configuration);
+    jdbi.handle().execute("DROP SCHEMA PUBLIC CASCADE");
+    jdbi.handle().execute("CREATE TABLE PERSON (id BIGINT PRIMARY KEY, name VARCHAR(200), age INTEGER)");
 
     jdbi.createTextEntryJournalTable();
     jdbi.createDispatchableTable();
@@ -361,17 +361,6 @@ public class JdbiObjectStoreTest {
     @Override
     public void queryObjectResultedIn(final Outcome<StorageException, Result> outcome, final QuerySingleResult result, final Object object) {
       singleResult.set(result);
-      until.happened();
-    }
-  }
-
-  private static class TestPersistResultInterest implements PersistResultInterest {
-    public AtomicReference<Outcome<StorageException, Result>> outcome = new AtomicReference<>();
-    public TestUntil until;
-
-    @Override
-    public void persistResultedIn(Outcome<StorageException, Result> outcome, Object persistentObject, int possible, int actual, Object object) {
-      this.outcome.set(outcome);
       until.happened();
     }
   }
