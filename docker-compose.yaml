@@ -9,3 +9,6 @@ services:
     environment:
       POSTGRES_USER: vlingo_test
       POSTGRES_PASSWORD: vlingo123
+
+volumes:
+  vlingo-symbio-jdbc-postgres:
