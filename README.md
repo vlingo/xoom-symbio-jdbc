@@ -18,31 +18,15 @@ Adding additional JDBC storage delegates is a straightforward process requiring 
 
 We welcome you to add support for your favorite database!
 
-### Running Tests
+## Docker and Bouncing the Server Volume
+Postrgres must be run for some tests. See the `pgbounce.sh`. This shell script can be used to bounce the Postgres volume named in `docker-compose.yml`:
 
-Postrgres must be run for some tests. We provide a Docker image for Postgres, which can be run from this project's root using the following command line:
+  `vlingo-symbio-jdbc-postgres`
 
-`$ docker-compose up`
+Run the server using the following, which both stops and current instance and then starts a new instance.
 
-You can also use the `-d` option to run it in the background:
+`$ ./pgbounce.sh`
 
-`$ docker-compose up -d`
-
-However, this may not work well for some test cases because you may need to start and stop Docker Postgres frequently during some development on this repository project code. Why? Currently Postrgres data may not be cleaned up well by tests, so the next test run will encounter some unique constraint violations (same PKs reused, etc.). Sure, we'd love to improve the tests, such as with random key generation, which you could contribute :)
-
-Until the tests are improved, before each test run execute this in a separate terminal window:
-
-`$ . ./src/test/postgres/pgclean.sh`
-
-This is what it does:
-
-```# start postgres in docker with a clean data for test
-docker-compose down
-docker volume rm $(docker volume ls -q)
-docker-compose up
-```
-
-The Docker image is run in the foreground because after each test session you can go to the terminal window and `^C` out of the process. Then just re-run the same script to get a clean Postgres test environment. If you'd like to help us make our test environment better by incorporating better tools and procedures, we welcome your contribution.
 
 ### Bintray
 
