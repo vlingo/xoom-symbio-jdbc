@@ -14,7 +14,7 @@ import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.object.ObjectStore;
-import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.StateObject;
 
 public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStore {
 
@@ -44,7 +44,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
   }
 
   @Override
-  public <T extends io.vlingo.symbio.store.object.PersistentObject>void remove(final T arg0, final long arg1, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2) {
+  public <T extends io.vlingo.symbio.store.object.StateObject>void remove(final T arg0, final long arg1, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.remove(arg0, arg1, arg2);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, removeRepresentation1); }
@@ -54,7 +54,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public <T extends io.vlingo.symbio.store.object.PersistentObject>void remove(final T arg0, final long arg1, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2, final java.lang.Object arg3) {
+  public <T extends io.vlingo.symbio.store.object.StateObject>void remove(final T arg0, final long arg1, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2, final java.lang.Object arg3) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.remove(arg0, arg1, arg2, arg3);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, removeRepresentation2); }
@@ -127,7 +127,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public <T extends io.vlingo.symbio.store.object.PersistentObject>void persist(final T arg0, final long arg1, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2) {
+  public <T extends io.vlingo.symbio.store.object.StateObject>void persist(final T arg0, final long arg1, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1, arg2);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistRepresentation9); }
@@ -137,7 +137,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public <T extends io.vlingo.symbio.store.object.PersistentObject>void persist(final T arg0, final long arg1, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2, final java.lang.Object arg3) {
+  public <T extends io.vlingo.symbio.store.object.StateObject>void persist(final T arg0, final long arg1, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2, final java.lang.Object arg3) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1, arg2, arg3);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistRepresentation11); }
@@ -147,7 +147,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public <T extends io.vlingo.symbio.store.object.PersistentObject>void persist(final T arg0, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1) {
+  public <T extends io.vlingo.symbio.store.object.StateObject>void persist(final T arg0, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistRepresentation13); }
@@ -157,7 +157,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public <T extends io.vlingo.symbio.store.object.PersistentObject>void persist(final T arg0, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1, final java.lang.Object arg2) {
+  public <T extends io.vlingo.symbio.store.object.StateObject>void persist(final T arg0, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1, final java.lang.Object arg2) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1, arg2);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistRepresentation15); }
@@ -167,7 +167,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public <T extends PersistentObject, E> void persist(final T arg0, final List<Source<E>> arg1, final long arg2, final PersistResultInterest arg3, final Object arg4) {
+  public <T extends StateObject, E> void persist(final T arg0, final List<Source<E>> arg1, final long arg2, final PersistResultInterest arg3, final Object arg4) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1, arg2, arg3, arg4);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistRepresentation15); }
@@ -178,7 +178,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
   }
 
   @Override
-  public <T extends PersistentObject, E> void persist(
+  public <T extends StateObject, E> void persist(
           final T arg0, final List<Source<E>> arg1, final Metadata arg2, final long arg3, final PersistResultInterest arg4, final Object arg5) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1, arg2, arg3, arg4, arg5);
@@ -190,7 +190,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
   }
 
   @Override
-  public <T extends io.vlingo.symbio.store.object.PersistentObject>void persistAll(final java.util.Collection<T> arg0, final long arg1, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2) {
+  public <T extends io.vlingo.symbio.store.object.StateObject>void persistAll(final java.util.Collection<T> arg0, final long arg1, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1, arg2);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistAllRepresentation18); }
@@ -200,7 +200,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public <T extends io.vlingo.symbio.store.object.PersistentObject>void persistAll(final java.util.Collection<T> arg0, final long arg1, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2, final java.lang.Object arg3) {
+  public <T extends io.vlingo.symbio.store.object.StateObject>void persistAll(final java.util.Collection<T> arg0, final long arg1, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2, final java.lang.Object arg3) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1, arg2, arg3);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistAllRepresentation19); }
@@ -210,7 +210,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public <T extends io.vlingo.symbio.store.object.PersistentObject>void persistAll(final java.util.Collection<T> arg0, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1) {
+  public <T extends io.vlingo.symbio.store.object.StateObject>void persistAll(final java.util.Collection<T> arg0, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistAllRepresentation21); }
@@ -220,7 +220,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public <T extends io.vlingo.symbio.store.object.PersistentObject>void persistAll(final java.util.Collection<T> arg0, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1, final java.lang.Object arg2) {
+  public <T extends io.vlingo.symbio.store.object.StateObject>void persistAll(final java.util.Collection<T> arg0, final io.vlingo.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1, final java.lang.Object arg2) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1, arg2);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistAllRepresentation23); }
@@ -230,7 +230,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public <T extends PersistentObject, E> void persistAll(final Collection<T> arg0, final List<Source<E>> arg1, final long arg2, final PersistResultInterest arg3, final Object arg4) {
+  public <T extends StateObject, E> void persistAll(final Collection<T> arg0, final List<Source<E>> arg1, final long arg2, final PersistResultInterest arg3, final Object arg4) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1, arg2, arg3, arg4);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistAllRepresentation23); }
@@ -241,7 +241,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
   }
 
   @Override
-  public <T extends PersistentObject, E> void persistAll(
+  public <T extends StateObject, E> void persistAll(
           final Collection<T> arg0, final List<Source<E>> arg1, final Metadata arg2, final long arg3, final PersistResultInterest arg4, final Object arg5) {
     if (!actor.isStopped()) {
       final java.util.function.Consumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1, arg2, arg3, arg4, arg5);

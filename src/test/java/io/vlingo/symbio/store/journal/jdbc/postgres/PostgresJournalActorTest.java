@@ -7,6 +7,20 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
+import static java.util.Arrays.asList;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.common.Completes;
 import io.vlingo.common.serialization.JsonSerialization;
@@ -25,19 +39,6 @@ import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.Stream;
 import io.vlingo.symbio.store.journal.StreamReader;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class PostgresJournalActorTest extends BasePostgresJournalTest {
     private Entity1Adapter entity1Adapter = new Entity1Adapter();

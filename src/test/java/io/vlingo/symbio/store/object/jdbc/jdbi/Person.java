@@ -7,9 +7,9 @@
 
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
-import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.StateObject;
 
-public class Person extends PersistentObject {
+public class Person extends StateObject {
   private static final long serialVersionUID = 1L;
 
   public final int age;

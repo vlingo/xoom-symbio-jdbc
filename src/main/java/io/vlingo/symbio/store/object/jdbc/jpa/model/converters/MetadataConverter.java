@@ -6,11 +6,11 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.jdbc.jpa.model.converters;
 
-import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.Metadata;
-
 import javax.persistence.AttributeConverter;
 import javax.persistence.Converter;
+
+import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.Metadata;
 /**
  * EntryMetadataConverter is responsible for converting instances of
  * {@link Metadata} to and from a {@link String} representation.

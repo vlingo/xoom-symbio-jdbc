@@ -7,6 +7,10 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.common.Outcome;
 import io.vlingo.symbio.Metadata;
@@ -14,10 +18,6 @@ import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.journal.Journal.AppendResultInterest;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class MockAppendResultInterest implements AppendResultInterest {
   private AccessSafely access = afterCompleting(0);

@@ -8,9 +8,9 @@
 package io.vlingo.symbio.store.common.event;
 
 import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.EntryAdapter;
 import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.BaseEntry.TextEntry;
 
 public final class TestEventAdapter implements EntryAdapter<TestEvent,TextEntry> {
   @Override

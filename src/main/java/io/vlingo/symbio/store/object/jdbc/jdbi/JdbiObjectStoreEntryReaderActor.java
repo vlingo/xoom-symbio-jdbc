@@ -17,8 +17,8 @@ import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
-import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateObjectMapper;
 
 /**
  * An {@code ObjectStoreEntryReader} for Jdbi.
@@ -32,7 +32,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
 
   private long offset;
 
-  public JdbiObjectStoreEntryReaderActor(final JdbiOnDatabase jdbi, final Collection<PersistentObjectMapper> mappers, final String name) {
+  public JdbiObjectStoreEntryReaderActor(final JdbiOnDatabase jdbi, final Collection<StateObjectMapper> mappers, final String name) {
     this.jdbi = jdbi;
     this.name = name;
     this.offset = 1L;

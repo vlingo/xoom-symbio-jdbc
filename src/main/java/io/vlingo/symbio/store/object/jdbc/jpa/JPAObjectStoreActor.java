@@ -36,8 +36,8 @@ import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
-import io.vlingo.symbio.store.object.PersistentObject;
 import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryReaderActor;
 
 /**
@@ -129,7 +129,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   }
 
   @Override
-  public <T extends PersistentObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
+  public <T extends StateObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
           final PersistResultInterest interest, final Object object) {
 
     try {
@@ -161,7 +161,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   }
 
   @Override
-  public <T extends PersistentObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final Metadata metadata,
+  public <T extends StateObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final Metadata metadata,
           final long updateId, final PersistResultInterest interest, final Object object) {
 
     try {
@@ -227,7 +227,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   public void queryObject(final QueryExpression expression, final QueryResultInterest interest, final Object object) {
     try {
       final QuerySingleResult result = delegate.queryObject(expression);
-      if (result.persistentObject !=null ){
+      if (result.stateObject !=null ){
         interest.queryObjectResultedIn(Success.of(Result.Success), result, object);
       } else {
         interest.queryObjectResultedIn(Failure.of(new StorageException(Result.NotFound, "No object identified by expression: " + expression)), result, object);
@@ -239,7 +239,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   }
 
   @Override
-  public <T extends PersistentObject> void remove(final T persistentObject, final long removeId, final PersistResultInterest interest, final Object object) {
+  public <T extends StateObject> void remove(final T persistentObject, final long removeId, final PersistResultInterest interest, final Object object) {
     try {
       final int count = delegate.remove(persistentObject, removeId);
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, count, object);

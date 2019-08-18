@@ -141,19 +141,19 @@ public abstract class JPAObjectStoreTest {
           .writingWith("add", (value)-> singleResult.set((QuerySingleResult)value))
           .writingWith("addAll", (values) -> multiResults.set((QueryMultiResults)values))
           .readingWith("singleResult", () -> singleResult.get())
-          .readingWith("singleResultValue", () -> singleResult.get().persistentObject)
+          .readingWith("singleResultValue", () -> singleResult.get().stateObject)
           .readingWith("multiResults", () -> multiResults.get())
-          .readingWith("multiResultsValue", () -> multiResults.get().persistentObjects)
-          .readingWith("multiResultsSize", () -> multiResults.get().persistentObjects().size())
+          .readingWith("multiResultsValue", () -> multiResults.get().stateObjects)
+          .readingWith("multiResultsSize", () -> multiResults.get().stateObjects().size())
           .readingWith("multiResultsValue", (index) -> {
             Person person = null;
-            if ( multiResults.get().persistentObjects.size() > (int)index )
+            if ( multiResults.get().stateObjects.size() > (int)index )
             {
-              person = (Person)multiResults.get().persistentObjects.toArray()[(int)index];
+              person = (Person)multiResults.get().stateObjects.toArray()[(int)index];
             }
             return person;
           })
-          .readingWith("multiResultsValueAsArray", () -> multiResults.get().persistentObjects.toArray());
+          .readingWith("multiResultsValueAsArray", () -> multiResults.get().stateObjects.toArray());
       return access;
     }
   }

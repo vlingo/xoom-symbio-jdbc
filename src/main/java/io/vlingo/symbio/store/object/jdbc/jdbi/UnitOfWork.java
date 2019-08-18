@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.vlingo.symbio.store.object.ObjectStore;
-import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.StateObject;
 
 /**
  * Maintains a record of the potential updates to perform
@@ -21,18 +21,18 @@ import io.vlingo.symbio.store.object.PersistentObject;
  * thereof.
  */
 class UnitOfWork {
-  public final Map<Long,PersistentObjectCopy> presistentObjects;
+  public final Map<Long,StateObjectCopy> presistentObjects;
   public final long timestamp;
   public final long unitOfWorkId;
 
   /**
-   * Answer a new {@code UnitOfWork} for the given {@code unitOfWorkId} and {@code persistentObject}.
+   * Answer a new {@code UnitOfWork} for the given {@code unitOfWorkId} and {@code stateObject}.
    * @param unitOfWorkId the long unique identity for the UnitOfWork
-   * @param persistentObject the Object to place under the UnitOfWork
+   * @param stateObject the Object to place under the UnitOfWork
    * @return UnitOfWork
    */
-  static UnitOfWork acquireFor(final long unitOfWorkId, final Object persistentObject) {
-    return new UnitOfWork(unitOfWorkId, persistentObject);
+  static UnitOfWork acquireFor(final long unitOfWorkId, final Object stateObject) {
+    return new UnitOfWork(unitOfWorkId, stateObject);
   }
 
   /**
@@ -48,17 +48,17 @@ class UnitOfWork {
   /**
    * Constructs me state.
    * @param unitOfWorkId my long identity
-   * @param persistentObject the Object to manage
+   * @param stateObject the Object to manage
    */
-  UnitOfWork(final long unitOfWorkId, final Object persistentObject) {
+  UnitOfWork(final long unitOfWorkId, final Object stateObject) {
     this.unitOfWorkId = unitOfWorkId;
-    this.presistentObjects = PersistentObjectCopy.of(PersistentObject.from(persistentObject));
+    this.presistentObjects = StateObjectCopy.of(StateObject.from(stateObject));
     this.timestamp = System.currentTimeMillis();
   }
 
   UnitOfWork(final long unitOfWorkId, final List<?> persistentObjects) {
     this.unitOfWorkId = unitOfWorkId;
-    this.presistentObjects = PersistentObjectCopy.all(persistentObjects);
+    this.presistentObjects = StateObjectCopy.all(persistentObjects);
     this.timestamp = System.currentTimeMillis();
   }
 
@@ -72,14 +72,14 @@ class UnitOfWork {
   }
 
   /**
-   * Answer whether or not {@code persistentObject} is modified by comparing it
-   * to it's {@code PersistentObjectCopy}.
-   * @param persistentObject the PersistentObject to compare
+   * Answer whether or not {@code stateObject} is modified by comparing it
+   * to it's {@code StateObjectCopy}.
+   * @param stateObject the StateObject to compare
    * @return boolean
    */
-  boolean isModified(final PersistentObject persistentObject) {
-    final PersistentObjectCopy original = presistentObjects.get(persistentObject.persistenceId());
-    return original.differsFrom(persistentObject);
+  boolean isModified(final StateObject stateObject) {
+    final StateObjectCopy original = presistentObjects.get(stateObject.persistenceId());
+    return original.differsFrom(stateObject);
   }
 
   /**
@@ -95,7 +95,7 @@ class UnitOfWork {
      * @return boolean.
      */
     @Override
-    boolean isModified(final PersistentObject persistentObject) {
+    boolean isModified(final StateObject stateObject) {
       return true;
     }
   }

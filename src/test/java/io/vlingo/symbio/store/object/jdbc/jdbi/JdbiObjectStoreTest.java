@@ -49,8 +49,8 @@ import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
 import io.vlingo.symbio.store.object.PersistentEntry;
-import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateObjectMapper;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries;
 
 public class JdbiObjectStoreTest {
@@ -87,7 +87,7 @@ public class JdbiObjectStoreTest {
             queryInterest);
     queryInterest.until.completes();
     assertNotNull(queryInterest.singleResult.get());
-    assertEquals(person, queryInterest.singleResult.get().persistentObject);
+    assertEquals(person, queryInterest.singleResult.get().stateObject);
 
     // List
     queryInterest.until = TestUntil.happenings(1);
@@ -99,7 +99,7 @@ public class JdbiObjectStoreTest {
             queryInterest);
     queryInterest.until.completes();
     assertNotNull(queryInterest.singleResult.get());
-    assertEquals(person, queryInterest.singleResult.get().persistentObject);
+    assertEquals(person, queryInterest.singleResult.get().stateObject);
 
     final Map<String, Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatched = dispatcher.getDispatched();
     assertEquals(1, dispatched.size());
@@ -132,7 +132,7 @@ public class JdbiObjectStoreTest {
             queryInterest);
     queryInterest.until.completes();
     assertNotNull(queryInterest.singleResult.get());
-    assertEquals(person, queryInterest.singleResult.get().persistentObject);
+    assertEquals(person, queryInterest.singleResult.get().stateObject);
 
     // Event
     queryInterest.until = TestUntil.happenings(1);
@@ -143,7 +143,7 @@ public class JdbiObjectStoreTest {
     assertNotNull(queryInterest.singleResult.get());
 
     final EntryAdapterProvider provider = EntryAdapterProvider.instance(world);
-    final PersistentEntry entry = queryInterest.singleResult.get().persistentObject();
+    final PersistentEntry entry = queryInterest.singleResult.get().stateObject();
     assertEquals(event, entry.asSource(provider));
   }
 
@@ -173,9 +173,9 @@ public class JdbiObjectStoreTest {
     queryInterest.until.completes();
     final QueryMultiResults mapResults = queryInterest.multiResults.get();
     assertNotNull(mapResults);
-    assertEquals(3, mapResults.persistentObjects.size());
+    assertEquals(3, mapResults.stateObjects.size());
     @SuppressWarnings("unchecked")
-    final Iterator<Person> iterator = (Iterator<Person>) mapResults.persistentObjects.iterator();
+    final Iterator<Person> iterator = (Iterator<Person>) mapResults.stateObjects.iterator();
     assertEquals(person1, iterator.next());
     assertEquals(person2, iterator.next());
     assertEquals(person3, iterator.next());
@@ -203,10 +203,10 @@ public class JdbiObjectStoreTest {
             queryInterest);
     queryInterest.until.completes();
     assertNotNull(queryInterest.singleResult.get());
-    assertEquals(person, queryInterest.singleResult.get().persistentObject);
+    assertEquals(person, queryInterest.singleResult.get().stateObject);
 
     final AccessSafely access1 = persistInterest.afterCompleting(1);
-    final Person queriedPerson = queryInterest.singleResult.get().persistentObject();
+    final Person queriedPerson = queryInterest.singleResult.get().stateObject();
     final Person modifiedPerson = queriedPerson.withName("Jody Mojo Jojo");
     objectStore.persist(modifiedPerson, queryInterest.singleResult.get().updateId, persistInterest);
     final Outcome<StorageException, Result> outcome1 = access1.readFrom("outcome");
@@ -222,7 +222,7 @@ public class JdbiObjectStoreTest {
             queryInterest);
     queryInterest.until.completes();
     assertNotNull(queryInterest.singleResult.get());
-    assertEquals(modifiedPerson, queryInterest.singleResult.get().persistentObject);
+    assertEquals(modifiedPerson, queryInterest.singleResult.get().stateObject);
   }
 
   @Test
@@ -249,7 +249,7 @@ public class JdbiObjectStoreTest {
 
     final QueryMultiResults mapResults = queryInterest.multiResults.get();
     @SuppressWarnings("unchecked")
-    final Iterator<Person> iterator = (Iterator<Person>) mapResults.persistentObjects.iterator();
+    final Iterator<Person> iterator = (Iterator<Person>) mapResults.stateObjects.iterator();
     final List<Person> modifiedPersons = new ArrayList<>();
     while (iterator.hasNext()) {
       final Person person = iterator.next();
@@ -267,7 +267,7 @@ public class JdbiObjectStoreTest {
             queryInterest);
     queryInterest.until.completes();
 
-    assertArrayEquals(modifiedPersons.toArray(), queryInterest.multiResults.get().persistentObjects.toArray());
+    assertArrayEquals(modifiedPersons.toArray(), queryInterest.multiResults.get().stateObjects.toArray());
   }
 
   @Test
@@ -330,8 +330,8 @@ public class JdbiObjectStoreTest {
 
     dispatcher = new MockDispatcher<>();
 
-    final PersistentObjectMapper personMapper =
-            PersistentObjectMapper.with(
+    final StateObjectMapper personMapper =
+            StateObjectMapper.with(
                     Person.class,
                     JdbiPersistMapper.with(
                             "INSERT INTO PERSON(id, name, age) VALUES (:id, :name, :age)",

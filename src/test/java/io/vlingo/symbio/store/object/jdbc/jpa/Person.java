@@ -12,7 +12,7 @@ import javax.persistence.NamedQueries;
 import javax.persistence.NamedQuery;
 import javax.persistence.Table;
 
-import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.StateObject;
 /**
  * Person
  */
@@ -23,13 +23,13 @@ import io.vlingo.symbio.store.object.PersistentObject;
   @NamedQuery(name="Person.adultsParmList", query="SELECT p FROM Person p WHERE p.age >= ?1 ORDER BY p.persistenceId ASC"),
   @NamedQuery(name="Person.adultsParmMap", query="SELECT p FROM Person p WHERE p.age >= :age ORDER BY p.persistenceId ASC")
 })
-public class Person extends PersistentObject {
+public class Person extends StateObject {
 
   private static final long serialVersionUID = 1L;
 
   @Column(name="age")
   protected int age;
-  
+
   @Column(name="name")
   protected String name;
 

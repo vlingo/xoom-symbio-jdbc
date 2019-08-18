@@ -4,13 +4,13 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-import io.vlingo.symbio.store.common.event.TestEvent;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import io.vlingo.actors.Definition;
 import io.vlingo.symbio.State.TextState;
+import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.journal.Stream;
 import io.vlingo.symbio.store.journal.StreamReader;
 

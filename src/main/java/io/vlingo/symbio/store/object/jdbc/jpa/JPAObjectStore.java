@@ -7,14 +7,14 @@
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
 import io.vlingo.symbio.store.object.ObjectStore;
-import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.StateObject;
 /**
  * JPAObjectStore
  */
 public interface JPAObjectStore extends ObjectStore {
-  default <T extends PersistentObject> void remove(final T persistentObject, final long removeId, final PersistResultInterest interest) {
+  default <T extends StateObject> void remove(final T persistentObject, final long removeId, final PersistResultInterest interest) {
     remove(persistentObject, removeId, interest, null);
   }
 
-  <T extends PersistentObject> void remove(final T persistentObject, final long removeId, final PersistResultInterest interest, final Object object);
+  <T extends StateObject> void remove(final T persistentObject, final long removeId, final PersistResultInterest interest, final Object object);
 }

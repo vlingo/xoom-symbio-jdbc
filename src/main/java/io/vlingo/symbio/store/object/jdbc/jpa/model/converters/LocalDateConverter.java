@@ -6,10 +6,11 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.jdbc.jpa.model.converters;
 
-import javax.persistence.AttributeConverter;
-import javax.persistence.Converter;
 import java.sql.Date;
 import java.time.LocalDate;
+
+import javax.persistence.AttributeConverter;
+import javax.persistence.Converter;
 /**
  * LocalDateTimeConverter
  */

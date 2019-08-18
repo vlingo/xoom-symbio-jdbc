@@ -7,12 +7,12 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.CachedStatement;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 
 public abstract class JDBCDispatchableCachedStatements<T> {
   private final CachedStatement<T> appendDispatchable;

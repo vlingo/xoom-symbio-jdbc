@@ -13,7 +13,7 @@ import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.Source;
 
 @SuppressWarnings("rawtypes")
-public class PersistentEntry extends PersistentObject implements Entry {
+public class PersistentEntry extends StateObject implements Entry {
   private static final long serialVersionUID = 1L;
 
   private final Entry entry;

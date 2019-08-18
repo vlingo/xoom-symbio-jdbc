@@ -36,9 +36,9 @@ import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMode;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
 import io.vlingo.symbio.store.object.PersistentEntry;
-import io.vlingo.symbio.store.object.PersistentObject;
-import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateObject;
+import io.vlingo.symbio.store.object.StateObjectMapper;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreDelegate;
 import io.vlingo.symbio.store.object.jdbc.jdbi.UnitOfWork.AlwaysModifiedUnitOfWork;
 
@@ -52,7 +52,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   private final StateAdapterProvider stateAdapterProvider;
   private final Handle handle;
   private final Logger logger;
-  private final Map<Class<?>, PersistentObjectMapper> mappers;
+  private final Map<Class<?>, StateObjectMapper> mappers;
   private final Map<Long, UnitOfWork> unitOfWorkRegistry;
   private long updateId;
   private final QueryExpression unconfirmedDispatchablesExpression;
@@ -67,7 +67,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
    * @param logger                             the instance of {@link Logger} to be used
    */
   public JdbiObjectStoreDelegate(final Configuration configuration, final StateAdapterProvider stateAdapterProvider,
-          final QueryExpression unconfirmedDispatchablesExpression, final Collection<PersistentObjectMapper> mappers, final Logger logger) {
+          final QueryExpression unconfirmedDispatchablesExpression, final Collection<StateObjectMapper> mappers, final Logger logger) {
     super(configuration);
     this.handle = Jdbi.open(configuration.connection);
     this.stateAdapterProvider = stateAdapterProvider;
@@ -124,7 +124,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   }
 
   @Override
-  public <T extends PersistentObject> Collection<State<?>> persistAll(final Collection<T> persistentObjects, final long updateId, final Metadata metadata)
+  public <T extends StateObject> Collection<State<?>> persistAll(final Collection<T> persistentObjects, final long updateId, final Metadata metadata)
           throws StorageException {
     final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
@@ -141,7 +141,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   }
 
   @Override
-  public <T extends PersistentObject> State<?> persist(final T persistentObject, final long updateId, final Metadata metadata) throws StorageException {
+  public <T extends StateObject> State<?> persist(final T persistentObject, final long updateId, final Metadata metadata) throws StorageException {
     final boolean create = ObjectStoreReader.isNoId(updateId);
     final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
     final State<?> state = getRawState(metadata, persistentObject);
@@ -152,7 +152,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     return state;
   }
 
-  private <T extends PersistentObject> State<?> getRawState(final Metadata metadata, final T detachedEntity) {
+  private <T extends StateObject> State<?> getRawState(final Metadata metadata, final T detachedEntity) {
     return this.stateAdapterProvider.asRaw(String.valueOf(detachedEntity.persistenceId()), detachedEntity, 1, metadata);
   }
 
@@ -208,7 +208,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
    * @see io.vlingo.symbio.store.object.ObjectStoreDelegate#registeredMappers()
    */
   @Override
-  public Collection<PersistentObjectMapper> registeredMappers() {
+  public Collection<StateObjectMapper> registeredMappers() {
     return mappers.values();
   }
 
@@ -216,7 +216,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
    * @see io.vlingo.symbio.store.object.ObjectStore#registerMapper(java.lang.Object)
    */
   @Override
-  public void registerMapper(final PersistentObjectMapper mapper) {
+  public void registerMapper(final StateObjectMapper mapper) {
     //not to be used
   }
 
@@ -272,9 +272,9 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     }
   }
 
-  private <T extends PersistentObject> int persistEach(final Handle handle, final UnitOfWork unitOfWork, final T persistentObject, final boolean create) {
+  private <T extends StateObject> int persistEach(final Handle handle, final UnitOfWork unitOfWork, final T persistentObject, final boolean create) {
 
-    final PersistentObject typed = PersistentObject.from(persistentObject);
+    final StateObject typed = StateObject.from(persistentObject);
 
     if (unitOfWork.isModified(typed)) {
       final Class<?> type = persistentObject.getClass();

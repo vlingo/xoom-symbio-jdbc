@@ -34,9 +34,9 @@ import io.vlingo.symbio.store.object.ObjectStoreDelegate;
 import io.vlingo.symbio.store.object.ObjectStoreReader;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
-import io.vlingo.symbio.store.object.PersistentObject;
-import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateObject;
+import io.vlingo.symbio.store.object.StateObjectMapper;
 import io.vlingo.symbio.store.object.jdbc.jpa.model.JPADispatchable;
 import io.vlingo.symbio.store.object.jdbc.jpa.model.JPAEntry;
 
@@ -99,7 +99,7 @@ public class JPAObjectStoreDelegate implements ObjectStoreDelegate<Entry<String>
   }
 
   @Override
-  public <T extends PersistentObject> Collection<State<?>> persistAll(final Collection<T> persistentObjects, final long updateId, final Metadata metadata)
+  public <T extends StateObject> Collection<State<?>> persistAll(final Collection<T> persistentObjects, final long updateId, final Metadata metadata)
           throws StorageException {
     final List<State<?>> states = new ArrayList<>();
     for (final T detachedEntity : persistentObjects) {
@@ -111,13 +111,13 @@ public class JPAObjectStoreDelegate implements ObjectStoreDelegate<Entry<String>
   }
 
   @Override
-  public <T extends PersistentObject> State<?> persist(final T persistentObject, final long updateId, final Metadata metadata) throws StorageException {
+  public <T extends StateObject> State<?> persist(final T persistentObject, final long updateId, final Metadata metadata) throws StorageException {
     final State<?> state = getRawState(metadata, persistentObject);
     createOrUpdate(persistentObject, updateId);
     return state;
   }
 
-  private <T extends PersistentObject> State<?> getRawState(final Metadata metadata, final T detachedEntity) {
+  private <T extends StateObject> State<?> getRawState(final Metadata metadata, final T detachedEntity) {
     return this.stateAdapterProvider.asRaw(String.valueOf(detachedEntity.persistenceId()), detachedEntity, 1, metadata);
   }
 
@@ -186,10 +186,10 @@ public class JPAObjectStoreDelegate implements ObjectStoreDelegate<Entry<String>
   }
 
 
-  public <T extends PersistentObject> int remove(final T persistentObject, final long removeId) {
+  public <T extends StateObject> int remove(final T persistentObject, final long removeId) {
     try {
       int count = 0;
-      final PersistentObject managedEntity = (PersistentObject) findEntity(persistentObject.getClass(), removeId);
+      final StateObject managedEntity = (StateObject) findEntity(persistentObject.getClass(), removeId);
       if (managedEntity != null) {
         em.getTransaction().begin();
         em.remove(managedEntity);
@@ -249,7 +249,7 @@ public class JPAObjectStoreDelegate implements ObjectStoreDelegate<Entry<String>
    * @see io.vlingo.symbio.store.object.ObjectStoreDelegate#registeredMappers()
    */
   @Override
-  public Collection<PersistentObjectMapper> registeredMappers() {
+  public Collection<StateObjectMapper> registeredMappers() {
     throw new UnsupportedOperationException("registeredMappers is unnecessary for JPA.");
   }
 
@@ -259,7 +259,7 @@ public class JPAObjectStoreDelegate implements ObjectStoreDelegate<Entry<String>
    * store.object.PersistentObjectMapper)
    */
   @Override
-  public void registerMapper(final PersistentObjectMapper mapper) {
+  public void registerMapper(final StateObjectMapper mapper) {
     throw new UnsupportedOperationException("registerMapper is unnecessary for JPA.");
   }
 

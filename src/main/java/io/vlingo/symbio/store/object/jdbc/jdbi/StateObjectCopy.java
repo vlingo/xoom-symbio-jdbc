@@ -15,10 +15,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import io.vlingo.symbio.store.object.PersistentObject;
+import io.vlingo.symbio.store.object.StateObject;
 
 /**
- * A binary copy of a given {@code PersistentObject}.
+ * A binary copy of a given {@code StateObject}.
  * <p>
  * This is not thread-safe and is intended for use by an
  * actor-based implementation where a single copy will
@@ -26,7 +26,7 @@ import io.vlingo.symbio.store.object.PersistentObject;
  * and {@code serializer} are intentionally static.
  * </p>
  */
-final class PersistentObjectCopy {
+final class StateObjectCopy {
   // TODO: Improve choice of serializer
   private static final ByteArrayOutputStream byteStream;
   private static final ObjectOutputStream serializer;
@@ -36,33 +36,33 @@ final class PersistentObjectCopy {
       byteStream = new ByteArrayOutputStream();
       serializer = new ObjectOutputStream(byteStream);
     } catch (Exception e) {
-      throw new IllegalStateException("Cannot initialize PersistentObjectCopy.");
+      throw new IllegalStateException("Cannot initialize StateObjectCopy.");
     }
   }
 
   private final byte[] image;
 
   /**
-   * Answer a new {@code Map<Long, PersistentObjectCopy>} from the {@code persistentObjects}.
+   * Answer a new {@code Map<Long, StateObjectCopy>} from the {@code persistentObjects}.
    * @param persistentObjects the {@code List<?>}
-   * @return {@code Map<Long, PersistentObjectCopy>}
+   * @return {@code Map<Long, StateObjectCopy>}
    */
-  static Map<Long,PersistentObjectCopy> all(final List<?> persistentObjects) {
-    final Map<Long,PersistentObjectCopy> all = new HashMap<>(persistentObjects.size());
+  static Map<Long,StateObjectCopy> all(final List<?> persistentObjects) {
+    final Map<Long,StateObjectCopy> all = new HashMap<>(persistentObjects.size());
     for (final Object persistentObject : persistentObjects) {
-      final PersistentObject typed = PersistentObject.from(persistentObject);
-      all.put(typed.persistenceId(), new PersistentObjectCopy(typed));
+      final StateObject typed = StateObject.from(persistentObject);
+      all.put(typed.persistenceId(), new StateObjectCopy(typed));
     }
     return all;
   }
 
   /**
-   * Answer a new {@code Map<Long, PersistentObjectCopy>} from the {@code persistentObject}.
-   * @param persistentObject the PersistentObject
-   * @return {@code Map<Long, PersistentObjectCopy>}
+   * Answer a new {@code Map<Long, StateObjectCopy>} from the {@code persistentObject}.
+   * @param persistentObject the StateObject
+   * @return {@code Map<Long, StateObjectCopy>}
    */
-  static Map<Long, PersistentObjectCopy> of(final PersistentObject persistentObject) {
-    return Collections.singletonMap(persistentObject.persistenceId(), new PersistentObjectCopy(persistentObject));
+  static Map<Long, StateObjectCopy> of(final StateObject persistentObject) {
+    return Collections.singletonMap(persistentObject.persistenceId(), new StateObjectCopy(persistentObject));
   }
 
   static String readable(byte[] data) {
@@ -75,18 +75,18 @@ final class PersistentObjectCopy {
 
   /**
    * Constructs my state from the {@code persistentObject}.
-   * @param persistentObject the {@code PersistentObject} to copy.
+   * @param persistentObject the {@code StateObject} to copy.
    */
-  PersistentObjectCopy(final PersistentObject persistentObject) {
+  StateObjectCopy(final StateObject persistentObject) {
     this.image = toBytes(persistentObject);
   }
 
   /**
    * Answer whether or not this {@code image} differs from that of the {@code persistentObject}.
-   * @param persistentObject the PersistentObject to compare
+   * @param persistentObject the StateObject to compare
    * @return boolean
    */
-  boolean differsFrom(final PersistentObject persistentObject) {
+  boolean differsFrom(final StateObject persistentObject) {
     final byte[] other = toBytes(persistentObject);
     return !Arrays.equals(image, other);
   }
@@ -97,22 +97,22 @@ final class PersistentObjectCopy {
 
   @Override
   public String toString() {
-    return "PersistentObjectCopy[image=" + readable(image) + "]";
+    return "StateObjectCopy[image=" + readable(image) + "]";
   }
 
   /**
    * Answer the byte array of the serialized {@code persistentObject}.
-   * @param persistentObject the PersistentObject to serialize
+   * @param persistentObject the StateObject to serialize
    * @return byte[]
    */
-  private byte[] toBytes(final PersistentObject persistentObject) {
+  private byte[] toBytes(final StateObject persistentObject) {
     try {
       byteStream.reset();
       serializer.reset();
       serializer.writeObject(persistentObject);
       return byteStream.toByteArray();
     } catch (Exception e) {
-      throw new IllegalStateException("Cannot initialize PersistentObjectCopy.");
+      throw new IllegalStateException("Cannot initialize StateObjectCopy.");
     }
   }
 }

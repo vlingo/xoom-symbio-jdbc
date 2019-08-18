@@ -7,13 +7,13 @@
 
 package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
+import java.util.UUID;
+
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
 import io.vlingo.symbio.store.common.jdbc.hsqldb.HSQLDBConfigurationProvider;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
-
-import java.util.UUID;
 
 public class HSQLDBJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
 

@@ -7,7 +7,17 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
+import static java.util.Collections.emptyList;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.google.gson.Gson;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.BaseEntry;
@@ -17,15 +27,6 @@ import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.journal.Stream;
 import io.vlingo.symbio.store.journal.StreamReader;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-
-import static java.util.Collections.emptyList;
 
 public class PostgresStreamReaderActor extends Actor implements StreamReader<String> {
     private static final String QUERY_EVENTS =

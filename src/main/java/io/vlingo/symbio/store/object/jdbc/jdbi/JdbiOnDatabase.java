@@ -27,8 +27,8 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.object.ListQueryExpression;
 import io.vlingo.symbio.store.object.ObjectStore;
-import io.vlingo.symbio.store.object.PersistentObjectMapper;
 import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateObjectMapper;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreActor;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries;
 
@@ -129,9 +129,9 @@ public abstract class JdbiOnDatabase {
   public ObjectStore objectStore(
           final World world,
           final Dispatcher<Dispatchable<TextEntry, State.TextState>> dispatcher,
-          final Collection<PersistentObjectMapper> mappers) {
+          final Collection<StateObjectMapper> mappers) {
     if (objectStore == null) {
-      final List<PersistentObjectMapper> objectMappers = new ArrayList<>(mappers);
+      final List<StateObjectMapper> objectMappers = new ArrayList<>(mappers);
       objectMappers.add(textEntryPersistentObjectMapper());
       objectMappers.add(dispatchableMapping());
 
@@ -210,9 +210,9 @@ public abstract class JdbiOnDatabase {
    * Answer my {@code PersistentObjectMapper} for {@code Entry<String>} instances.
    * @return PersistentObjectMapper
    */
-  public PersistentObjectMapper textEntryPersistentObjectMapper() {
-    final PersistentObjectMapper persistentObjectMapper =
-            PersistentObjectMapper.with(
+  public StateObjectMapper textEntryPersistentObjectMapper() {
+    final StateObjectMapper persistentObjectMapper =
+            StateObjectMapper.with(
                     Entry.class,
                     JdbiPersistMapper.with(
                             queries.insertEntriesQuery(
@@ -232,8 +232,8 @@ public abstract class JdbiOnDatabase {
     this.queries = JDBCObjectStoreEntryJournalQueries.using(DatabaseType.databaseType(configuration.connection), configuration.connection);
   }
 
-  private PersistentObjectMapper dispatchableMapping() {
-    return PersistentObjectMapper.with(
+  private StateObjectMapper dispatchableMapping() {
+    return StateObjectMapper.with(
             Dispatchable.class,
             JdbiPersistMapper.with(
                     queries.insertDispatchableQuery(

@@ -17,11 +17,11 @@ import java.util.Map;
 
 import org.junit.Test;
 
-public class PersistentObjectCopyTest {
+public class StateObjectCopyTest {
   @Test
   public void testThatObjectSerializes() {
     final Person person1 = new Person("Ben Charleston", 21, 1L);
-    final Map<Long,PersistentObjectCopy> copy1 = PersistentObjectCopy.of(person1);
+    final Map<Long,StateObjectCopy> copy1 = StateObjectCopy.of(person1);
     assertNotNull(copy1);
     assertEquals(1, copy1.size());
     assertNotNull(copy1.get(1L));
@@ -32,7 +32,7 @@ public class PersistentObjectCopyTest {
   @Test
   public void testThatModifiedObjectsDiffer() {
     final Person person1 = new Person("Ben Charleston", 21, 1L);
-    final Map<Long,PersistentObjectCopy> copy1 = PersistentObjectCopy.of(person1);
+    final Map<Long,StateObjectCopy> copy1 = StateObjectCopy.of(person1);
     final Person person2 = new Person("Ben Charleston", 22, 1L);
     assertTrue(copy1.get(1L).differsFrom(person2));
   }
@@ -42,7 +42,7 @@ public class PersistentObjectCopyTest {
     final Person person1 = new Person("Ben Charleston", 21, 1L);
     final Person person2 = new Person("Lucy Marcus", 25, 2L);
     final Person person3 = new Person("Jack Jones", 30, 3L);
-    final Map<Long,PersistentObjectCopy> copy1 = PersistentObjectCopy.all(Arrays.asList(person1, person2, person3));
+    final Map<Long,StateObjectCopy> copy1 = StateObjectCopy.all(Arrays.asList(person1, person2, person3));
     final Person person1_2 = new Person("Ben Charleston", 22, 1L);
     assertTrue(copy1.get(person1_2.persistenceId()).differsFrom(person1_2));
     final Person person2_2 = new Person("Lucy Marqus", 25, 2L);

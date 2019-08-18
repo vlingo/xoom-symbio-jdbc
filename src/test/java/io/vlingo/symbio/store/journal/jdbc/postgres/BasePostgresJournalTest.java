@@ -7,24 +7,26 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import com.google.gson.Gson;
-import io.vlingo.actors.World;
-import io.vlingo.common.identity.IdentityGenerator;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.store.DataFormat;
-import io.vlingo.symbio.store.common.event.TestEvent;
-import io.vlingo.symbio.store.common.jdbc.Configuration;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
+import static io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
+import static org.junit.Assert.assertEquals;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.UUID;
 
-import static io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
-import static org.junit.Assert.assertEquals;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+
+import com.google.gson.Gson;
+
+import io.vlingo.actors.World;
+import io.vlingo.common.identity.IdentityGenerator;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.event.TestEvent;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
 
 public abstract class BasePostgresJournalTest {
     private static final String EVENT_TABLE =

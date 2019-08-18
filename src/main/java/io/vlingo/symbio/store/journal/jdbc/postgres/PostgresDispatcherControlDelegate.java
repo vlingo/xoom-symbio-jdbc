@@ -7,16 +7,6 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
-import io.vlingo.actors.Logger;
-import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.BaseEntry;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.dispatch.DispatcherControl;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -26,6 +16,16 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
+
+import io.vlingo.actors.Logger;
+import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
 
 public class PostgresDispatcherControlDelegate implements DispatcherControl.DispatcherControlDelegate<Entry<String>, State.TextState> {
   static final String DISPATCHEABLE_ENTRIES_DELIMITER = "|";

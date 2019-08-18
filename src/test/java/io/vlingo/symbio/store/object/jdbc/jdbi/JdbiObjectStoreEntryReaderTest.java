@@ -32,7 +32,7 @@ import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.MockDispatcher;
 import io.vlingo.symbio.store.object.ObjectStore;
-import io.vlingo.symbio.store.object.PersistentObjectMapper;
+import io.vlingo.symbio.store.object.StateObjectMapper;
 
 public abstract class JdbiObjectStoreEntryReaderTest {
   protected MockDispatcher<BaseEntry.TextEntry, State.TextState> dispatcher;
@@ -134,8 +134,8 @@ public abstract class JdbiObjectStoreEntryReaderTest {
 
     dispatcher = new MockDispatcher<>();
 
-    final PersistentObjectMapper personMapper =
-            PersistentObjectMapper.with(
+    final StateObjectMapper personMapper =
+            StateObjectMapper.with(
                     Person.class,
                     JdbiPersistMapper.with(
                             "INSERT INTO PERSON(id, name, age) VALUES (:id, :name, :age)",
