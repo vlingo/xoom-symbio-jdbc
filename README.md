@@ -23,7 +23,7 @@ Postrgres must be run for some tests. See the `pgbounce.sh`. This shell script c
 
   `vlingo-symbio-jdbc-postgres`
 
-Run the server using the following, which both stops and current instance and then starts a new instance.
+Run the server using the following, which both stops the current instance and then starts a new instance.
 
 `$ ./pgbounce.sh`
 
