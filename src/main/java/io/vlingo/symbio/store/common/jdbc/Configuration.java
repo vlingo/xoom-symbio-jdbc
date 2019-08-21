@@ -111,11 +111,11 @@ public class Configuration {
     this.databaseType = databaseType;
     this.interest = interest;
     this.format = format;
+    this.connectionProvider = new ConnectionProvider(driverClassname, url, databaseName, username, password, useSSL);
     this.actualDatabaseName = reuseDatabaseName ? databaseName : actualDatabaseName(databaseName);
     this.originatorId = originatorId;
     this.createTables = createTables;
     this.transactionTimeoutMillis = transactionTimeoutMillis;
-    this.connectionProvider = new ConnectionProvider(driverClassname, url, databaseName, username, password, useSSL);
     beforeConnect();
     this.connection = connect();
     afterConnect();
