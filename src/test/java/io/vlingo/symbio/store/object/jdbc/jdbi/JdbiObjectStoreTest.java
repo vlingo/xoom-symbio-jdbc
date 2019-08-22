@@ -39,6 +39,7 @@ import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.MockDispatcher;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.common.jdbc.hsqldb.HSQLDBConfigurationProvider;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.object.ListQueryExpression;
@@ -54,7 +55,7 @@ import io.vlingo.symbio.store.object.StateObjectMapper;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries;
 
 public class JdbiObjectStoreTest {
-  // private Jdbi jdbi;
+  private JdbiOnDatabase jdbi;
   private ObjectStore objectStore;
   private World world;
   private MockDispatcher<BaseEntry.TextEntry, State.TextState> dispatcher;
@@ -315,11 +316,17 @@ public class JdbiObjectStoreTest {
     }
   }
 
+  @Test
+  public void testThatDatabaseTypeIsHSQLDB() {
+    assertEquals(DatabaseType.HSQLDB, jdbi.databaseType());
+  }
+
   @Before
   public void setUp() throws Exception {
     final Configuration configuration = HSQLDBConfigurationProvider.testConfiguration(DataFormat.Native);
 
-    final JdbiOnDatabase jdbi = JdbiOnHSQLDB.openUsing(configuration);
+    jdbi = JdbiOnHSQLDB.openUsing(configuration);
+
     jdbi.handle().execute("DROP SCHEMA PUBLIC CASCADE");
     jdbi.handle().execute("CREATE TABLE PERSON (id BIGINT PRIMARY KEY, name VARCHAR(200), age INTEGER)");
 
