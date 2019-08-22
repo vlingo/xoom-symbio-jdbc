@@ -112,6 +112,14 @@ public abstract class JdbiOnDatabase {
   public abstract JdbiPersistMapper currentEntryOffsetMapper(final String[] placeholders);
 
   /**
+   * Answer my {@code DatabaseType}.
+   * @return DatabaseType
+   */
+  public DatabaseType databaseType() {
+    return DatabaseType.databaseType(configuration.connection);
+  }
+
+  /**
    * Answer my {@code Handle}.
    * @return Handle
    */
