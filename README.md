@@ -1,7 +1,8 @@
 # vlingo-symbio-jdbc
-Implementation of vlingo-symbio for JDBC.
 
 [![Javadocs](http://javadoc.io/badge/io.vlingo/vlingo-symbio-jdbc.svg?color=brightgreen)](http://javadoc.io/doc/io.vlingo/vlingo-symbio-jdbc) [![Build Status](https://travis-ci.org/vlingo/vlingo-symbio-jdbc.svg?branch=master)](https://travis-ci.org/vlingo/vlingo-symbio-jdbc) [ ![Download](https://api.bintray.com/packages/vlingo/vlingo-platform-java/vlingo-symbio-jdbc/images/download.svg) ](https://bintray.com/vlingo/vlingo-platform-java/vlingo-symbio-jdbc/_latestVersion) [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/vlingo-platform-java/symbio)
+
+The vlingo/PLATFORM implementation of vlingo/symbio for JDBC.
 
 ### State Storage
 The `StateStore` is a simple object storage mechanism that can be run against a number of persistence engines.
