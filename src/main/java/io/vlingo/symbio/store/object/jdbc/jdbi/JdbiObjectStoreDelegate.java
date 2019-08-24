@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 
 import org.jdbi.v3.core.Handle;
 import org.jdbi.v3.core.Jdbi;
@@ -161,7 +162,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     final JdbiPersistMapper mapper = mappers.get(Entry.class).persistMapper();
     for (final Entry<?> entry : entries) {
       final Update statement = handle.createUpdate(mapper.insertStatement);
-      final ResultBearing resultBearing = mapper.binder.apply(statement, new PersistentEntry(entry)).executeAndReturnGeneratedKeys();
+      final ResultBearing resultBearing = bindAll(new PersistentEntry(entry), mapper, statement).executeAndReturnGeneratedKeys();
       final Object id = resultBearing.mapToMap().findOnly().get("e_id");
       ((BaseEntry<?>) entry).__internal__setId(id.toString());
     }
@@ -171,7 +172,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   public void persistDispatchable(final Dispatchable<Entry<?>, State<?>> dispatchable) throws StorageException {
     final JdbiPersistMapper mapper = mappers.get(dispatchable.getClass()).persistMapper();
     final Update statement = handle.createUpdate(mapper.insertStatement);
-    mapper.binder.apply(statement, new PersistentDispatchable(configuration.originatorId, dispatchable)).execute();
+    bindAll(new PersistentDispatchable(configuration.originatorId, dispatchable), mapper, statement).execute();
   }
 
   @Override
@@ -260,6 +261,13 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     this.close();
   }
 
+  private Update bindAll(final Object persistentObject, final JdbiPersistMapper mapper, final Update statement) {
+    for (final BiFunction<Update, Object, Update> binder : mapper.binders) {
+      binder.apply(statement, persistentObject);
+    }
+    return statement;
+  }
+
   private void initialize() {
     // It is strange to me, but the only way to support real atomic
     // transactions (vs each statement is a transaction) in Jdbi is
@@ -283,7 +291,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
 
       final Update statement = create ? handle.createUpdate(mapper.insertStatement) : handle.createUpdate(mapper.updateStatement);
 
-      return mapper.binder.apply(statement, persistentObject).execute();
+      return bindAll(persistentObject, mapper, statement).execute();
     }
 
     return 1;
