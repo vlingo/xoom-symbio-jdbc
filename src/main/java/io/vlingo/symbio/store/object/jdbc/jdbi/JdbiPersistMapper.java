@@ -17,28 +17,30 @@ import org.jdbi.v3.core.statement.Update;
 public class JdbiPersistMapper {
   public final String insertStatement;
   public final String updateStatement;
-  public final BiFunction<Update,Object,Update> binder;
+  public final BiFunction<Update,Object,Update>[] binders;
 
   /**
    * Answer a new {@code JdbiPersistMapper} with {@code insertStatement}, {@code updateStatement}, and {@code binder}.
    * @param insertStatement the String insert statement
    * @param updateStatement the String update statement
-   * @param binder the {@code BiFunction<Update,Object,Update>} used to bind parameters
+   * @param binders the {@code BiFunction<Update,Object,Update> ...} used to bind parameters
    * @return JdbiPersistMapper
    */
-  public static JdbiPersistMapper with(final String insertStatement, final String updateStatement, final BiFunction<Update,Object,Update> binder) {
-    return new JdbiPersistMapper(insertStatement, updateStatement, binder);
+  @SafeVarargs
+  public static JdbiPersistMapper with(final String insertStatement, final String updateStatement, final BiFunction<Update,Object,Update> ... binders) {
+    return new JdbiPersistMapper(insertStatement, updateStatement, binders);
   }
 
   /**
    * Construct my state with {@code insertStatement}, {@code updateStatement}, and {@code binder}.
    * @param insertStatement the String insert statement
    * @param updateStatement the String update statement
-   * @param binder the {@code BiFunction<Update,Object,Update>} used to bind parameters
+   * @param binders the {@code BiFunction<Update,Object,Update> ...} used to bind parameters
    */
-  public JdbiPersistMapper(final String insertStatement, final String updateStatement, final BiFunction<Update,Object,Update> binder) {
+  @SafeVarargs
+  public JdbiPersistMapper(final String insertStatement, final String updateStatement, final BiFunction<Update,Object,Update> ... binders) {
     this.insertStatement = insertStatement;
     this.updateStatement = updateStatement;
-    this.binder = binder;
+    this.binders = binders;
   }
 }
