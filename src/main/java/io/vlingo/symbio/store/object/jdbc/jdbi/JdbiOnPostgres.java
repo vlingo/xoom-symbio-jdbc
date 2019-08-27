@@ -8,6 +8,9 @@
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
 import java.text.MessageFormat;
+import java.util.function.BiFunction;
+
+import org.jdbi.v3.core.statement.Update;
 
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 
@@ -36,7 +39,7 @@ public class JdbiOnPostgres extends JdbiOnDatabase {
                     placeholders[0],
                     placeholders[1]),
             null,
-            null);
+            (BiFunction<Update,Object,Update>[]) null);
   }
 
   private JdbiOnPostgres(final Configuration configuration) {
