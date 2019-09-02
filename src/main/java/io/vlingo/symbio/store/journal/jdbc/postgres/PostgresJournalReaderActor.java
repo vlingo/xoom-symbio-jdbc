@@ -8,7 +8,6 @@
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -18,6 +17,7 @@ import com.google.gson.Gson;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
+import io.vlingo.common.Tuple2;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Metadata;
@@ -25,36 +25,11 @@ import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.journal.JournalReader;
 
 public class PostgresJournalReaderActor extends Actor implements JournalReader<TextEntry> {
-    private static final String QUERY_COUNT =
-            "SELECT COUNT(*) FROM vlingo_symbio_journal";
-
-    private static final String QUERY_CURRENT_OFFSET =
-            "SELECT reader_offset FROM vlingo_symbio_journal_offsets WHERE reader_name=?";
-
-    private static final String UPDATE_CURRENT_OFFSET =
-            "INSERT INTO vlingo_symbio_journal_offsets(reader_offset, reader_name) VALUES(?, ?) " +
-                    "ON CONFLICT (reader_name) DO UPDATE SET reader_offset=?";
-
-    private static final String QUERY_SINGLE =
-            "SELECT id, entry_data, entry_metadata, entry_type, entry_type_version, entry_timestamp FROM " +
-                    "vlingo_symbio_journal WHERE entry_timestamp >= ?";
-
-    private static final String QUERY_BATCH =
-            "SELECT id, entry_data, entry_metadata, entry_type, entry_type_version, entry_timestamp FROM " +
-                    "vlingo_symbio_journal WHERE entry_timestamp > ?";
-
-    private static final String QUERY_LAST_OFFSET =
-            "SELECT MAX(entry_timestamp) FROM vlingo_symbio_journal";
 
     private final Connection connection;
-    private final String name;
-    private final PreparedStatement queryCount;
-    private final PreparedStatement queryCurrentOffset;
-    private final PreparedStatement updateCurrentOffset;
-    private final PreparedStatement querySingleEvent;
-    private final PreparedStatement queryEventBatch;
-    private final PreparedStatement queryLastOffset;
     private final Gson gson;
+    private final String name;
+    private final PostgresQueries queries;
 
     private long offset;
 
@@ -62,12 +37,9 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
         this.connection = configuration.connection;
         this.name = name;
 
-        this.queryCount = this.connection.prepareStatement(QUERY_COUNT);
-        this.queryCurrentOffset = this.connection.prepareStatement(QUERY_CURRENT_OFFSET);
-        this.updateCurrentOffset = this.connection.prepareStatement(UPDATE_CURRENT_OFFSET);
-        this.querySingleEvent = this.connection.prepareStatement(QUERY_SINGLE);
-        this.queryEventBatch = this.connection.prepareStatement(QUERY_BATCH);
-        this.queryLastOffset = this.connection.prepareStatement(QUERY_LAST_OFFSET);
+        this.connection.setAutoCommit(false);
+
+        this.queries = PostgresQueries.queriesFor(this.connection);
 
         this.gson = new Gson();
         retrieveCurrentOffset();
@@ -90,12 +62,13 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
     @Override
     public Completes<TextEntry> readNext() {
         try {
-            querySingleEvent.setLong(1, offset);
-            final ResultSet resultSet = querySingleEvent.executeQuery();
+            final ResultSet resultSet = queries.prepareSelectEntryQuery(offset).executeQuery();
             if (resultSet.next()) {
-                offset = nextOffsetFromResultSet(resultSet);
+                final Tuple2<TextEntry,Long> entry = entryFromResultSet(resultSet);
+                offset = entry._2 + 1;
                 updateCurrentOffset();
-                return completes().with(entryFromResultSet(resultSet));
+                connection.commit();
+                return completes().with(entry._1);
             }
         } catch (Exception e) {
             logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
@@ -114,18 +87,15 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
     public Completes<List<TextEntry>> readNext(final int maximumEvents) {
         try {
             List<TextEntry> events = new ArrayList<>(maximumEvents);
-            queryEventBatch.setLong(1, offset);
-            queryEventBatch.setMaxRows(maximumEvents);
-
-            final ResultSet resultSet = queryEventBatch.executeQuery();
+            final ResultSet resultSet = queries.prepareSelectEntryBatchQuery(offset, maximumEvents).executeQuery();
             while (resultSet.next()) {
-                events.add(entryFromResultSet(resultSet));
-                if (resultSet.isLast()) {
-                    offset = nextOffsetFromResultSet(resultSet);
-                }
+                final Tuple2<TextEntry,Long> entry = entryFromResultSet(resultSet);
+                offset = entry._2 + 1;
+                events.add(entry._1);
             }
 
             updateCurrentOffset();
+            connection.commit();
             return completes().with(events);
 
         } catch (Exception e) {
@@ -155,7 +125,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
                 updateCurrentOffset();
                 break;
             case End:
-                this.offset = retrieveLatestOffset() + 1;
+                this.offset = retrieveLastOffset() + 1;
                 updateCurrentOffset();
                 break;
             case Query:
@@ -172,7 +142,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
     @Override
     public Completes<Long> size() {
         try {
-          final ResultSet resultSet = queryCount.executeQuery();
+          final ResultSet resultSet = queries.prepareSelectJournalCount().executeQuery();
           if (resultSet.next()) {
               final long count = resultSet.getLong(1);
               return completes().with(count);
@@ -185,25 +155,24 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
         return completes().with(-1L);
     }
 
-    private TextEntry entryFromResultSet(final ResultSet resultSet) throws SQLException, ClassNotFoundException {
-        final String id = resultSet.getString(1);
+    private Tuple2<TextEntry,Long> entryFromResultSet(final ResultSet resultSet) throws SQLException, ClassNotFoundException {
+        final long id = resultSet.getLong(1);
         final String entryData = resultSet.getString(2);
-        final String entryMetadata = resultSet.getString(3);
-        final String entryType = resultSet.getString(4);
-        final int eventTypeVersion = resultSet.getInt(5);
+        final String entryType = resultSet.getString(3);
+        final int eventTypeVersion = resultSet.getInt(4);
+        final String entryMetadata = resultSet.getString(5);
 
         final Class<?> classOfEvent = Class.forName(entryType);
 
         final Metadata eventMetadataDeserialized = gson.fromJson(entryMetadata, Metadata.class);
-        return new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, eventMetadataDeserialized);
+        return Tuple2.from(new BaseEntry.TextEntry(String.valueOf(id), classOfEvent, eventTypeVersion, entryData, eventMetadataDeserialized), id);
     }
 
     private void retrieveCurrentOffset() {
         this.offset = 1;
 
         try {
-            queryCurrentOffset.setString(1, name);
-            final ResultSet resultSet = queryCurrentOffset.executeQuery();
+            final ResultSet resultSet = queries.prepareSelectCurrentOffsetQuery(name).executeQuery();
             if (resultSet.next()) {
                 this.offset = resultSet.getLong(1);
             }
@@ -215,11 +184,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
 
     private void updateCurrentOffset() {
         try {
-            updateCurrentOffset.setLong(1, offset);
-            updateCurrentOffset.setString(2, name);
-            updateCurrentOffset.setLong(3, offset);
-
-            updateCurrentOffset.executeUpdate();
+            queries.prepareUpsertOffsetQuery(name, offset).executeUpdate();
             connection.commit();
         } catch (Exception e) {
             logger().error("vlingo/symbio-postgres: Could not persist the offset. Will retry on next read.");
@@ -227,9 +192,9 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
         }
     }
 
-    private long retrieveLatestOffset() {
+    private long retrieveLastOffset() {
         try {
-          final ResultSet resultSet = queryLastOffset.executeQuery();
+          final ResultSet resultSet = queries.prepareSelectLastOffsetQuery().executeQuery();
             if (resultSet.next()) {
                 return resultSet.getLong(1);
             }
@@ -238,9 +203,5 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
         }
 
         return offset;
-    }
-
-    private long nextOffsetFromResultSet(final ResultSet resultSet) throws SQLException {
-        return resultSet.getLong(6) + 1;
     }
 }
