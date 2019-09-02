@@ -26,17 +26,17 @@ public class PostgresStreamReaderActorTest extends BasePostgresJournalTest {
                         Definition.parameters(configuration))
         );
 
-        insertEvent(1);
-        insertEvent(2);
-        insertEvent(3);
-        insertEvent(4);
+        assert insertEvent(1) == 1;
+        assert insertEvent(2) == 2;
+        assert insertEvent(3) == 3;
+        assert insertEvent(4) == 4;
     }
 
     @Test
     public void testThatCanReadAllEventsFromJournal() throws Exception {
         Stream<String> stream = eventStreamReader.streamFor(streamName).await();
         assertEquals(TextState.Null, stream.snapshot);
-        assertEquals(5, stream.streamVersion);
+        assertEquals(4, stream.streamVersion);
         assertEquals(stream.streamName, streamName);
 
         AtomicInteger eventNumber = new AtomicInteger(1);
@@ -51,7 +51,7 @@ public class PostgresStreamReaderActorTest extends BasePostgresJournalTest {
         Stream<String> stream = eventStreamReader.streamFor(streamName, 1).await();
         assertEquals(2, stream.snapshot.dataVersion);
         assertEquals(snapshotState, gson.fromJson(stream.snapshot.data, TestEvent.class));
-        assertEquals(stream.streamVersion, 5);
+        assertEquals(4, stream.streamVersion);
         assertEquals(stream.streamName, streamName);
 
         Assert.assertEquals(3, stream.entries.size());
@@ -66,9 +66,10 @@ public class PostgresStreamReaderActorTest extends BasePostgresJournalTest {
         insertSnapshot(1, snapshotState);
 
         Stream<String> stream = eventStreamReader.streamFor(streamName, 4).await();
+
         assertEquals(TextState.Null, stream.snapshot);
-        assertEquals(stream.streamVersion, 5);
-        assertEquals(stream.streamName, streamName);
+        assertEquals(streamName, stream.streamName);
+        assertEquals(4, stream.streamVersion);
 
         Assert.assertEquals(1, stream.entries.size());
         Assert.assertEquals(4, parse(stream.entries.get(0)).number);
