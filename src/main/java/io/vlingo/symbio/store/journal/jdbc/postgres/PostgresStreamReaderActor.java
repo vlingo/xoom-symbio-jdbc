@@ -10,7 +10,6 @@ package io.vlingo.symbio.store.journal.jdbc.postgres;
 import static java.util.Collections.emptyList;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -29,25 +28,17 @@ import io.vlingo.symbio.store.journal.Stream;
 import io.vlingo.symbio.store.journal.StreamReader;
 
 public class PostgresStreamReaderActor extends Actor implements StreamReader<String> {
-    private static final String QUERY_EVENTS =
-            "SELECT id, entry_data, entry_metadata, entry_type, entry_type_version " +
-                    "FROM vlingo_symbio_journal " +
-                    "WHERE stream_name = ? AND stream_version >= ?";
-
-    private static final String QUERY_SNAPSHOT =
-            "SELECT snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata " +
-                    "FROM vlingo_symbio_journal_snapshots " +
-                    "WHERE stream_name = ?";
-
     private final Connection connection;
-    private final PreparedStatement queryEventsStatement;
-    private final PreparedStatement queryLatestSnapshotStatement;
     private final Gson gson;
+    private final PostgresQueries queries;
 
     public PostgresStreamReaderActor(final Configuration configuration) throws SQLException {
         this.connection = configuration.connection;
-        this.queryEventsStatement = this.connection.prepareStatement(QUERY_EVENTS);
-        this.queryLatestSnapshotStatement = this.connection.prepareStatement(QUERY_SNAPSHOT);
+
+        this.connection.setAutoCommit(false);
+
+        this.queries = PostgresQueries.queriesFor(this.connection);
+
         this.gson = new Gson();
     }
 
@@ -80,40 +71,41 @@ public class PostgresStreamReaderActor extends Actor implements StreamReader<Str
             }
         }
 
-        queryEventsStatement.setString(1, streamName);
-        queryEventsStatement.setInt(2, dataVersion);
-        final ResultSet resultSet = queryEventsStatement.executeQuery();
+        int fullStreamVersion = 0;
+
+        final ResultSet resultSet = queries.prepareSelectStreamQuery(streamName, dataVersion).executeQuery();
         while (resultSet.next()) {
             final String id = resultSet.getString(1);
-            final String eventData = resultSet.getString(2);
-            final String eventMetadata = resultSet.getString(3);
-            final String eventType = resultSet.getString(4);
+            final int streamVersion = resultSet.getInt(2);
+            fullStreamVersion = streamVersion;
+            final String entryData = resultSet.getString(3);
+            final String entryType = resultSet.getString(4);
             final int eventTypeVersion = resultSet.getInt(5);
+            final String entryMetadata = resultSet.getString(6);
 
-            final Class<?> classOfEvent = Class.forName(eventType);
-            final Metadata eventMetadataDeserialized = gson.fromJson(eventMetadata, Metadata.class);
+            final Class<?> classOfEvent = Class.forName(entryType);
+            final Metadata eventMetadataDeserialized = gson.fromJson(entryMetadata, Metadata.class);
 
-            events.add(new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, eventData, eventMetadataDeserialized));
+            events.add(new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, eventMetadataDeserialized));
         }
 
-        return new Stream<>(streamName, dataVersion + events.size(), events, referenceSnapshot);
+        return new Stream<>(streamName, fullStreamVersion, events, referenceSnapshot);
     }
 
     private State<String> latestSnapshotOf(final String streamName) throws Exception {
-        queryLatestSnapshotStatement.setString(1, streamName);
-        final ResultSet resultSet = queryLatestSnapshotStatement.executeQuery();
+        final ResultSet resultSet = queries.prepareSelectSnapshotQuery(streamName).executeQuery();
 
         if (resultSet.next()) {
-            final String snapshotDataType = resultSet.getString(1);
-            final int snapshotTypeVersion = resultSet.getInt(2);
-            final String snapshotData = resultSet.getString(3);
-            final int snapshotDataVersion = resultSet.getInt(4);
+            final String snapshotData = resultSet.getString(1);
+            final int snapshotDataVersion = resultSet.getInt(2);
+            final String snapshotDataType = resultSet.getString(3);
+            final int snapshotDataTypeVersion = resultSet.getInt(4);
             final String metadataJson = resultSet.getString(5);
 
-            final Class<?> classOfEvent = Class.forName(snapshotDataType);
+            final Class<?> snapshotDataTypeClass = Class.forName(snapshotDataType);
             final Metadata eventMetadataDeserialized = gson.fromJson(metadataJson, Metadata.class);
 
-            return new State.TextState(streamName, classOfEvent, snapshotTypeVersion, snapshotData, snapshotDataVersion, eventMetadataDeserialized);
+            return new State.TextState(streamName, snapshotDataTypeClass, snapshotDataTypeVersion, snapshotData, snapshotDataVersion, eventMetadataDeserialized);
         }
 
         return TextState.Null;
