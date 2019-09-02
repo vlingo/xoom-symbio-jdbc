@@ -35,8 +35,6 @@ public class PostgresStreamReaderActor extends Actor implements StreamReader<Str
     public PostgresStreamReaderActor(final Configuration configuration) throws SQLException {
         this.connection = configuration.connection;
 
-        this.connection.setAutoCommit(false);
-
         this.queries = PostgresQueries.queriesFor(this.connection);
 
         this.gson = new Gson();
@@ -50,11 +48,23 @@ public class PostgresStreamReaderActor extends Actor implements StreamReader<Str
     @Override
     public Completes<Stream<String>> streamFor(final String streamName, final int fromStreamVersion) {
         try {
-            return completes().with(eventsFromOffset(streamName, fromStreamVersion));
+            final Stream<String> steamStream = eventsFromOffset(streamName, fromStreamVersion);
+            connection.commit();
+            return completes().with(steamStream);
         } catch (Exception e) {
-            logger().error("vlingo/symbio-postgresql: " + e.getMessage(), e);
+            logger().error("vlingo-symbio-jdbc:journal-stream-reader-postrgres: " + e.getMessage(), e);
             return completes().with(new Stream<>(streamName, 1, emptyList(), TextState.Null));
         }
+    }
+
+    @Override
+    public void stop() {
+      try {
+        queries.close();
+      } catch (SQLException e) {
+        // ignore
+      }
+      super.stop();
     }
 
     private Stream<String> eventsFromOffset(final String streamName, final int offset) throws Exception {
