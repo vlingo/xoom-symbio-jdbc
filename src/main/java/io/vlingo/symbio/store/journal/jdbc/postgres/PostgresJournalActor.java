@@ -115,6 +115,13 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     if (dispatcherControl != null) {
       dispatcherControl.stop();
     }
+
+    try {
+      queries.close();
+    } catch (SQLException e) {
+      // ignore
+    }
+
     super.stop();
   }
 
@@ -224,8 +231,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
                       gson.toJson(entry.metadata()));
 
       if (insertEntry._1.executeUpdate() != 1) {
-        logger().error("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString());
-        throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert event");
+        logger().error("vlingo-symbio-jdbc:journal-postrgres: Could not insert event " + entry.toString());
+        throw new IllegalStateException("vlingo-symbio-jdbc:journal-postrgres: Could not insert event");
       }
 
       if (insertEntry._2.isPresent()) {
@@ -238,7 +245,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
       }
     } catch (final SQLException e) {
       whenFailed.accept(e);
-      logger().error("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString(), e);
+      logger().error("vlingo-symbio-jdbc:journal-postrgres: Could not insert event " + entry.toString(), e);
       throw new IllegalStateException(e);
     }
   }
@@ -256,12 +263,12 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
                       gson.toJson(snapshotState.metadata));
 
       if (insertSnapshot._1.executeUpdate() != 1) {
-        logger().error("vlingo/symbio-jdbc-postgres: Could not insert snapshot with id " + snapshotState.id);
-        throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert snapshot");
+        logger().error("vlingo-symbio-jdbc:journal-postrgres: Could not insert snapshot with id " + snapshotState.id);
+        throw new IllegalStateException("vlingo-symbio-jdbc:journal-postrgres: Could not insert snapshot");
       }
     } catch (final SQLException e) {
       whenFailed.accept(e);
-      logger().error("vlingo/symbio-jdbc-postgres: Could not insert event with id " + snapshotState.id, e);
+      logger().error("vlingo-symbio-jdbc:journal-postrgres: Could not insert event with id " + snapshotState.id, e);
       throw new IllegalStateException(e);
     }
   }
@@ -305,12 +312,12 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
       }
 
       if (insertDispatchable._1.executeUpdate() != 1) {
-        logger().error("vlingo/symbio-jdbc-postgres: Could not insert dispatchable with id " + dispatchable.id());
-        throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert snapshot");
+        logger().error("vlingo-symbio-jdbc:journal-postrgres: Could not insert dispatchable with id " + dispatchable.id());
+        throw new IllegalStateException("vlingo-symbio-jdbc:journal-postrgres: Could not insert snapshot");
       }
     } catch (final SQLException e) {
       whenFailed.accept(e);
-      logger().error("vlingo/symbio-jdbc-postgres: Could not insert dispatchable with id " + dispatchable.id(), e);
+      logger().error("vlingo-symbio-jdbc:journal-postrgres: Could not insert dispatchable with id " + dispatchable.id(), e);
       throw new IllegalStateException(e);
     }
   }
@@ -334,7 +341,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
       connection.commit();
     } catch (final SQLException e) {
       whenFailed.accept(e);
-      logger().error("vlingo/symbio-jdbc-postgres: Could not complete transaction", e);
+      logger().error("vlingo-symbio-jdbc:journal-postrgres: Could not complete transaction", e);
       throw new IllegalStateException(e);
     }
   }
@@ -352,7 +359,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
       return entryAdapterProvider.asEntry(source, metadata);
     } catch (final Exception e) {
       whenFailed.accept(e);
-      logger().error("vlingo/symbio-jdbc-postgres: Cannot adapt source to entry because: ", e);
+      logger().error("vlingo-symbio-jdbc:journal-postrgres: Cannot adapt source to entry because: ", e);
       throw new IllegalArgumentException(e);
     }
   }
