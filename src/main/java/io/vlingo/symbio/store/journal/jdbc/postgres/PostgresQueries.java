@@ -44,7 +44,8 @@ public class PostgresQueries {
 
   private static final String CREATE_JOURNAL_TABLE =
           "CREATE TABLE IF NOT EXISTS " + TABLE_VLINGO_SYMBIO_JOURNAL + " (\n" +
-                  "E_ID BIGINT GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1) PRIMARY KEY, \n" +
+//                  "E_ID BIGINT GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1) PRIMARY KEY, \n" +
+                  "E_ID BIGSERIAL PRIMARY KEY, \n" +
                   "E_STREAM_NAME VARCHAR(512) NOT NULL, \n" +
                   "E_STREAM_VERSION INTEGER NOT NULL, \n" +
                   "E_ENTRY_DATA TEXT NOT NULL, \n" +
