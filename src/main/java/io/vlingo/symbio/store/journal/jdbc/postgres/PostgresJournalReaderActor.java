@@ -37,8 +37,6 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
         this.connection = configuration.connection;
         this.name = name;
 
-        this.connection.setAutoCommit(false);
-
         this.queries = PostgresQueries.queriesFor(this.connection);
 
         this.gson = new Gson();
@@ -48,7 +46,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
     @Override
     public void close() {
       try {
-        connection.close();
+        queries.close();
       } catch (SQLException e) {
         // ignore
       }
@@ -67,11 +65,10 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
                 final Tuple2<TextEntry,Long> entry = entryFromResultSet(resultSet);
                 offset = entry._2 + 1;
                 updateCurrentOffset();
-                connection.commit();
                 return completes().with(entry._1);
             }
         } catch (Exception e) {
-            logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
+            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: " + e.getMessage(), e);
         }
 
         return completes().with(null);
@@ -95,11 +92,10 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
             }
 
             updateCurrentOffset();
-            connection.commit();
             return completes().with(events);
 
         } catch (Exception e) {
-            logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
+            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: " + e.getMessage(), e);
         }
 
         return completes().with(null);
@@ -145,11 +141,12 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
           final ResultSet resultSet = queries.prepareSelectJournalCount().executeQuery();
           if (resultSet.next()) {
               final long count = resultSet.getLong(1);
+              connection.commit();
               return completes().with(count);
           }
         } catch (Exception e) {
-          logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
-          logger().error("vlingo/symbio-postgres: Rewinding the offset");
+          logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: " + e.getMessage(), e);
+          logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: Rewinding the offset");
         }
 
         return completes().with(-1L);
@@ -175,10 +172,11 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
             final ResultSet resultSet = queries.prepareSelectCurrentOffsetQuery(name).executeQuery();
             if (resultSet.next()) {
                 this.offset = resultSet.getLong(1);
+                connection.commit();
             }
         } catch (Exception e) {
-            logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
-            logger().error("vlingo/symbio-postgres: Rewinding the offset");
+            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: " + e.getMessage(), e);
+            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: Rewinding the offset");
         }
     }
 
@@ -187,8 +185,8 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
             queries.prepareUpsertOffsetQuery(name, offset).executeUpdate();
             connection.commit();
         } catch (Exception e) {
-            logger().error("vlingo/symbio-postgres: Could not persist the offset. Will retry on next read.");
-            logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
+            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: Could not persist the offset. Will retry on next read.");
+            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: " + e.getMessage(), e);
         }
     }
 
@@ -196,10 +194,12 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
         try {
           final ResultSet resultSet = queries.prepareSelectLastOffsetQuery().executeQuery();
             if (resultSet.next()) {
-                return resultSet.getLong(1);
+                final long lastOffset = resultSet.getLong(1);
+                connection.commit();
+                return lastOffset;
             }
         } catch (Exception e) {
-            logger().error("vlingo/symbio-postgres: Could not retrieve latest offset, using current.");
+            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: Could not retrieve latest offset, using current.");
         }
 
         return offset;
