@@ -84,6 +84,7 @@ public abstract class BasePostgresJournalTest {
 
     protected final void insertOffset(final long offset, final String readerName) throws SQLException {
         queries.prepareUpsertOffsetQuery(readerName, offset).executeUpdate();
+        configuration.connection.commit();
     }
 
     protected final void insertSnapshot(final int dataVersion, final TestEvent state) throws SQLException {
@@ -97,6 +98,8 @@ public abstract class BasePostgresJournalTest {
               gson.toJson(Metadata.nullMetadata()))
               ._1
               .executeUpdate();
+
+      configuration.connection.commit();
     }
 
     protected final void assertOffsetIs(final String readerName, final long offset) throws SQLException {
