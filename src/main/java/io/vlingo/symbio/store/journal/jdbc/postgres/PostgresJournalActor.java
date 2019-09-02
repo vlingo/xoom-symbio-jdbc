@@ -10,7 +10,6 @@ package io.vlingo.symbio.store.journal.jdbc.postgres;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,7 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -53,36 +51,18 @@ import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.StreamReader;
 
 public class PostgresJournalActor extends Actor implements Journal<String> {
-  private static final String INSERT_EVENT =
-          "INSERT INTO vlingo_symbio_journal(entry_data, entry_metadata, entry_type, entry_type_version, stream_name, stream_version, id, entry_timestamp)"
-                  + " VALUES(?::JSONB, ?::JSONB, ?, ?, ?, ?, ?, ?)";
-
-  private static final String INSERT_SNAPSHOT =
-          "INSERT INTO vlingo_symbio_journal_snapshots(stream_name, snapshot_type, snapshot_type_version, snapshot_data, snapshot_data_version, snapshot_metadata)"
-                  + " VALUES(?, ?, ?, ?::JSONB, ?, ?::JSONB)";
-
-  private final static String INSERT_DISPATCHABLE = "INSERT INTO vlingo_symbio_journal_dispatch \n" +
-          "(d_id, d_created_at, d_originator_id, d_dispatch_id, \n" +
-          " d_state_id, d_state_type, d_state_type_version, \n" +
-          " d_state_data, d_state_data_version, \n" +
-          " d_state_metadata, d_entries) \n" +
-          "VALUES (?, ?, ?, ?, ?, ?, ?, ?::JSONB, ?, ?::JSONB, ?)";
-
-
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
   private final Configuration configuration;
   private final Connection connection;
-  private final PreparedStatement insertEvent;
-  private final PreparedStatement insertSnapshot;
-  private final PreparedStatement insertDispatchable;
   private final Gson gson;
   private final Map<String, JournalReader<TextEntry>> journalReaders;
   private final Map<String, StreamReader<String>> streamReaders;
-  private final IdentityGenerator identityGenerator;
   private final IdentityGenerator dispatchablesIdentityGenerator;
   private final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher;
   private final DispatcherControl dispatcherControl;
+
+  private final PostgresQueries queries;
 
   public PostgresJournalActor(final Configuration configuration) throws Exception {
     this(null, configuration, 0L, 0L);
@@ -97,9 +77,11 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     this.configuration = configuration;
     this.connection = configuration.connection;
 
-    this.insertEvent = connection.prepareStatement(INSERT_EVENT);
-    this.insertSnapshot = connection.prepareStatement(INSERT_SNAPSHOT);
-    this.insertDispatchable = connection.prepareStatement(INSERT_DISPATCHABLE);
+    this.connection.setAutoCommit(false);
+
+    this.queries = PostgresQueries.queriesFor(configuration.connection);
+
+    this.queries.createTables();
 
     this.gson = new Gson();
 
@@ -108,8 +90,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     this.journalReaders = new HashMap<>();
     this.streamReaders = new HashMap<>();
 
-    this.identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
     this.dispatchablesIdentityGenerator = new IdentityGenerator.RandomIdentityGenerator();
+
     if (dispatcher != null) {
       this.dispatcher = dispatcher;
       final PostgresDispatcherControlDelegate dispatcherControlDelegate =
@@ -157,7 +139,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     final Entry<String> entry = asEntry(source, metadata, whenFailed);
     insertEntry(streamName, streamVersion, entry, whenFailed);
     final Tuple2<Optional<ST>, Optional<TextState>> snapshotState = toState(streamName, snapshot, streamVersion);
-    snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
+    snapshotState._2.ifPresent(state -> insertSnapshot(streamName, streamVersion, state, whenFailed));
 
     final Dispatchable<Entry<String>, TextState> dispatchable = buildDispatchable(streamName, streamVersion,
             Collections.singletonList(entry), snapshotState._2.orElse(null));
@@ -197,7 +179,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
       insertEntry(streamName, version++, entry, whenFailed);
     }
     final Tuple2<Optional<ST>, Optional<TextState>> snapshotState = toState(streamName, snapshot, fromStreamVersion);
-    snapshotState._2.ifPresent(state -> insertSnapshot(streamName, state, whenFailed));
+    snapshotState._2.ifPresent(state -> insertSnapshot(streamName, fromStreamVersion, state, whenFailed));
 
     final Dispatchable<Entry<String>, TextState> dispatchable = buildDispatchable(streamName, fromStreamVersion, entries, snapshotState._2.orElse(null));
     insertDispatchable(dispatchable, whenFailed);
@@ -232,24 +214,28 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
   protected final void insertEntry(final String streamName, final int streamVersion, final Entry<String> entry, final Consumer<Exception> whenFailed) {
     try {
-      final UUID id = identityGenerator.generate();
-      final long timestamp = id.timestamp();
+      final Tuple2<PreparedStatement, Optional<String>> insertEntry =
+              queries.prepareInsertEntryQuery(
+                      streamName,
+                      streamVersion,
+                      entry.entryData(),
+                      entry.typeName(),
+                      entry.typeVersion(),
+                      gson.toJson(entry.metadata()));
 
-      insertEvent.setString(1, entry.entryData());
-      insertEvent.setString(2, gson.toJson(entry.metadata()));
-      insertEvent.setString(3, entry.typeName());
-      insertEvent.setInt(4, entry.typeVersion());
-      insertEvent.setString(5, streamName);
-      insertEvent.setInt(6, streamVersion);
-      insertEvent.setObject(7, id);
-      insertEvent.setLong(8, timestamp);
-
-      if (insertEvent.executeUpdate() != 1) {
+      if (insertEntry._1.executeUpdate() != 1) {
         logger().error("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString());
         throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert event");
       }
 
-      ((BaseEntry<String>) entry).__internal__setId(id.toString()); //questionable cast
+      if (insertEntry._2.isPresent()) {
+        ((BaseEntry<String>) entry).__internal__setId(String.valueOf(insertEntry._2.get()));
+      } else {
+        final long id = queries.generatedKeyFrom(insertEntry._1);
+        if (id > 0) {
+          ((BaseEntry<String>) entry).__internal__setId(String.valueOf(id));
+        }
+      }
     } catch (final SQLException e) {
       whenFailed.accept(e);
       logger().error("vlingo/symbio-jdbc-postgres: Could not insert event " + entry.toString(), e);
@@ -257,16 +243,19 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
     }
   }
 
-  protected final void insertSnapshot(final String eventStream, final TextState snapshotState, final Consumer<Exception> whenFailed) {
+  protected final void insertSnapshot(final String streamName, final int streamVersion, final TextState snapshotState, final Consumer<Exception> whenFailed) {
     try {
-      insertSnapshot.setString(1, eventStream);
-      insertSnapshot.setString(2, snapshotState.type);
-      insertSnapshot.setInt(3, snapshotState.typeVersion);
-      insertSnapshot.setString(4, snapshotState.data);
-      insertSnapshot.setInt(5, snapshotState.dataVersion);
-      insertSnapshot.setString(6, gson.toJson(snapshotState.metadata));
+      final Tuple2<PreparedStatement, Optional<String>> insertSnapshot =
+              queries.prepareInsertSnapshotQuery(
+                      streamName,
+                      streamVersion,
+                      snapshotState.data,
+                      snapshotState.dataVersion,
+                      snapshotState.type,
+                      snapshotState.typeVersion,
+                      gson.toJson(snapshotState.metadata));
 
-      if (insertSnapshot.executeUpdate() != 1) {
+      if (insertSnapshot._1.executeUpdate() != 1) {
         logger().error("vlingo/symbio-jdbc-postgres: Could not insert snapshot with id " + snapshotState.id);
         throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert snapshot");
       }
@@ -279,36 +268,43 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
   protected final void insertDispatchable(final Dispatchable<Entry<String>, TextState> dispatchable, final Consumer<Exception> whenFailed) {
     try {
-      final State<String> state = dispatchable.typedState();
-      final UUID id = identityGenerator.generate();
-      insertDispatchable.clearParameters();
-      insertDispatchable.setObject(1, id);
-      insertDispatchable.setObject(2, Timestamp.valueOf(LocalDateTime.now()));
-      insertDispatchable.setString(3, configuration.originatorId);
-      insertDispatchable.setString(4, dispatchable.id());
+      final String entries = dispatchable.hasEntries() ?
+              dispatchable.entries().stream().map(Entry::id).collect(Collectors.joining(PostgresDispatcherControlDelegate.DISPATCHEABLE_ENTRIES_DELIMITER)) :
+              "";
+
+      final Tuple2<PreparedStatement, Optional<String>> insertDispatchable;
+
+      final String dispatchableId = dispatchable.id();
+
       if (dispatchable.state().isPresent()) {
-        insertDispatchable.setString(5, state.id);
-        insertDispatchable.setString(6, state.type);
-        insertDispatchable.setInt(7, state.typeVersion);
-        insertDispatchable.setString(8, state.data);
-        insertDispatchable.setInt(9, state.dataVersion);
-        insertDispatchable.setString(10, gson.toJson(state.metadata));
+        final State<String> state = dispatchable.typedState();
+
+        insertDispatchable =
+              queries.prepareInsertDispatchableQuery(
+                      dispatchableId,
+                      configuration.originatorId,
+                      state.id,
+                      state.data,
+                      state.dataVersion,
+                      state.type,
+                      state.typeVersion,
+                      gson.toJson(state.metadata),
+                      entries);
       } else {
-        insertDispatchable.setString(5, null);
-        insertDispatchable.setString(6, null);
-        insertDispatchable.setInt(7, 0);
-        insertDispatchable.setString(8, null);
-        insertDispatchable.setInt(9, 0);
-        insertDispatchable.setString(10, null);
-      }
-      if (dispatchable.entries() != null && !dispatchable.entries().isEmpty()) {
-        insertDispatchable.setString(11,
-                dispatchable.entries().stream().map(Entry::id).collect(Collectors.joining(PostgresDispatcherControlDelegate.DISPATCHEABLE_ENTRIES_DELIMITER)));
-      } else {
-        insertDispatchable.setString(11, "");
+        insertDispatchable =
+                queries.prepareInsertDispatchableQuery(
+                        dispatchableId,
+                        configuration.originatorId,
+                        null,
+                        null,
+                        0,
+                        null,
+                        0,
+                        null,
+                        entries);
       }
 
-      if (insertDispatchable.executeUpdate() != 1) {
+      if (insertDispatchable._1.executeUpdate() != 1) {
         logger().error("vlingo/symbio-jdbc-postgres: Could not insert dispatchable with id " + dispatchable.id());
         throw new IllegalStateException("vlingo/symbio-jdbc-postgres: Could not insert snapshot");
       }
