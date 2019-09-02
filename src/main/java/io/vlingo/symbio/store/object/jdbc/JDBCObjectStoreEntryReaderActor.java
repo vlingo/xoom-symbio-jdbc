@@ -81,11 +81,12 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
     try {
       entryQuery.clearParameters();
       entryQuery.setLong(1, offset);
-      final ResultSet result = entryQuery.executeQuery();
-      final Entry<String> entry = mapQueriedEntryFrom(result);
-      ++offset;
-      updateCurrentOffset();
-      return completes().with(entry);
+      try (final ResultSet result = entryQuery.executeQuery()) {
+        final Entry<String> entry = mapQueriedEntryFrom(result);
+        ++offset;
+        updateCurrentOffset();
+        return completes().with(entry);
+      }
     } catch (Exception e) {
       logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
       return completes().with(null);
@@ -104,11 +105,12 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
       entriesQuery.clearParameters();
       entriesQuery.setLong(1, offset);
       entriesQuery.setLong(2, offset + maximumEntries - 1L);
-      final ResultSet result = entriesQuery.executeQuery();
-      final List<Entry<String>> entries = mapQueriedEntriesFrom(result);
-      offset += entries.size();
-      updateCurrentOffset();
-      return completes().with(entries);
+      try (final ResultSet result = entriesQuery.executeQuery()) {
+        final List<Entry<String>> entries = mapQueriedEntriesFrom(result);
+        offset += entries.size();
+        updateCurrentOffset();
+        return completes().with(entries);
+      }
     } catch (Exception e) {
       logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
       return completes().with(null);
@@ -151,8 +153,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
 
   @Override
   public Completes<Long> size() {
-    try {
-      final ResultSet result = querySize.executeQuery();
+    try (final ResultSet result = querySize.executeQuery()) {
       if (result.next()) {
         final long size = result.getLong(1);
         return completes().with(size);
@@ -199,8 +200,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
   }
 
   private long retrieveLatestOffset() {
-    try {
-      final ResultSet result = queryLastEntryId.executeQuery();
+    try (final ResultSet result = queryLastEntryId.executeQuery()) {
       if (result.next()) {
         final long latestId = result.getLong(1);
         return latestId > 0 ? latestId : 1L;

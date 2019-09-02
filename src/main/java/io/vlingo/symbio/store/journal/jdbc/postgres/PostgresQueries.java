@@ -274,11 +274,12 @@ public class PostgresQueries {
   }
 
   public long generatedKeyFrom(PreparedStatement insertStatement) throws SQLException {
-    final ResultSet result = insertStatement.getGeneratedKeys();
-    if (result.next()) {
-      return result.getLong(1);
+    try (final ResultSet result = insertStatement.getGeneratedKeys()) {
+      if (result.next()) {
+        return result.getLong(1);
+      }
+      return -1L;
     }
-    return -1L;
   }
 
   public Tuple2<PreparedStatement,Optional<String>> prepareInsertDispatchableQuery(

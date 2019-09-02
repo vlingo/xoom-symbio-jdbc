@@ -117,8 +117,7 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
 
   @Override
   public Completes<Long> size() {
-      try {
-        final ResultSet resultSet = queryCount.executeQuery();
+      try (final ResultSet resultSet = queryCount.executeQuery()) {
         if (resultSet.next()) {
             final long count = resultSet.getLong(1);
             return completes().with(count);
@@ -135,12 +134,13 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
     try {
       queryOne.clearParameters();
       queryOne.setLong(1, currentId);
-      final ResultSet result = queryOne.executeQuery();
-      if (result.first()) {
-        final long id = result.getLong(1);
-        final Entry<?> entry = entryFrom(result, id);
-        currentId = id + 1L;
-        return entry;
+      try (final ResultSet result = queryOne.executeQuery()) {
+        if (result.first()) {
+          final long id = result.getLong(1);
+          final Entry<?> entry = entryFrom(result, id);
+          currentId = id + 1L;
+          return entry;
+        }
       }
     } catch (Exception e) {
       logger().error("Unable to read next entry for " + name + " because: " + e.getMessage(), e);
@@ -153,15 +153,16 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
       queryBatch.clearParameters();
       queryBatch.setLong(1, currentId);
       queryBatch.setInt(2, maximumEntries);
-      final ResultSet result = queryBatch.executeQuery();
-      final List<Entry<?>> entries = new ArrayList<>(maximumEntries);
-      while (result.next()) {
-        final long id = result.getLong(1);
-        final Entry<?> entry = entryFrom(result, id);
-        currentId = id + 1L;
-        entries.add(entry);
+      try (final ResultSet result = queryBatch.executeQuery()) {
+        final List<Entry<?>> entries = new ArrayList<>(maximumEntries);
+        while (result.next()) {
+          final long id = result.getLong(1);
+          final Entry<?> entry = entryFrom(result, id);
+          currentId = id + 1L;
+          entries.add(entry);
+        }
+        return entries;
       }
-      return entries;
     } catch (Exception e) {
       logger().error("Unable to read next " + maximumEntries + " entries for " + name + " because: " + e.getMessage(),
               e);
@@ -203,9 +204,10 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
       try {
           queryBatch.clearParameters();
           queryLatestOffset.setString(1, name);
-          ResultSet resultSet = queryLatestOffset.executeQuery();
-          if (resultSet.next()) {
-              return resultSet.getLong(1);
+          try (ResultSet resultSet = queryLatestOffset.executeQuery()) {
+              if (resultSet.next()) {
+                  return resultSet.getLong(1);
+              }
           }
       } catch (Exception e) {
           logger().error("vlingo/symbio-postgres: Could not retrieve latest offset, using current.");

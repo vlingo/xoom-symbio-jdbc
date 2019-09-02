@@ -59,8 +59,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
 
     @Override
     public Completes<TextEntry> readNext() {
-        try {
-            final ResultSet resultSet = queries.prepareSelectEntryQuery(offset).executeQuery();
+        try (final ResultSet resultSet = queries.prepareSelectEntryQuery(offset).executeQuery()) {
             if (resultSet.next()) {
                 final Tuple2<TextEntry,Long> entry = entryFromResultSet(resultSet);
                 offset = entry._2 + 1;
@@ -82,9 +81,9 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
 
     @Override
     public Completes<List<TextEntry>> readNext(final int maximumEvents) {
-        try {
-            List<TextEntry> events = new ArrayList<>(maximumEvents);
-            final ResultSet resultSet = queries.prepareSelectEntryBatchQuery(offset, maximumEvents).executeQuery();
+        final List<TextEntry> events = new ArrayList<>(maximumEvents);
+
+        try (final ResultSet resultSet = queries.prepareSelectEntryBatchQuery(offset, maximumEvents).executeQuery()) {
             while (resultSet.next()) {
                 final Tuple2<TextEntry,Long> entry = entryFromResultSet(resultSet);
                 offset = entry._2 + 1;
@@ -137,8 +136,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
 
     @Override
     public Completes<Long> size() {
-        try {
-          final ResultSet resultSet = queries.prepareSelectJournalCount().executeQuery();
+        try (final ResultSet resultSet = queries.prepareSelectJournalCount().executeQuery()) {
           if (resultSet.next()) {
               final long count = resultSet.getLong(1);
               connection.commit();
@@ -168,8 +166,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
     private void retrieveCurrentOffset() {
         this.offset = 1;
 
-        try {
-            final ResultSet resultSet = queries.prepareSelectCurrentOffsetQuery(name).executeQuery();
+        try (final ResultSet resultSet = queries.prepareSelectCurrentOffsetQuery(name).executeQuery()) {
             if (resultSet.next()) {
                 this.offset = resultSet.getLong(1);
                 connection.commit();
@@ -191,8 +188,7 @@ public class PostgresJournalReaderActor extends Actor implements JournalReader<T
     }
 
     private long retrieveLastOffset() {
-        try {
-          final ResultSet resultSet = queries.prepareSelectLastOffsetQuery().executeQuery();
+        try (final ResultSet resultSet = queries.prepareSelectLastOffsetQuery().executeQuery()) {
             if (resultSet.next()) {
                 final long lastOffset = resultSet.getLong(1);
                 connection.commit();

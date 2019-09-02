@@ -206,10 +206,11 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
         final int count = appendStatement.executeUpdate();
         if (count == 1) {
           final PreparedStatement queryLastIdentityStatement = delegate.appendIdentityExpression();
-          final ResultSet result = queryLastIdentityStatement.executeQuery();
-          if (result.next()) {
-            id = result.getLong(1);
-            ((BaseEntry) entry).__internal__setId(Long.toString(id));
+          try (final ResultSet result = queryLastIdentityStatement.executeQuery()) {
+            if (result.next()) {
+              id = result.getLong(1);
+              ((BaseEntry) entry).__internal__setId(Long.toString(id));
+            }
           }
         }
         if (id == -1L) {

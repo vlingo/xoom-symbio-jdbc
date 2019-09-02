@@ -83,41 +83,41 @@ public class PostgresStreamReaderActor extends Actor implements StreamReader<Str
 
         int fullStreamVersion = 0;
 
-        final ResultSet resultSet = queries.prepareSelectStreamQuery(streamName, dataVersion).executeQuery();
-        while (resultSet.next()) {
-            final String id = resultSet.getString(1);
-            final int streamVersion = resultSet.getInt(2);
-            fullStreamVersion = streamVersion;
-            final String entryData = resultSet.getString(3);
-            final String entryType = resultSet.getString(4);
-            final int eventTypeVersion = resultSet.getInt(5);
-            final String entryMetadata = resultSet.getString(6);
+        try (final ResultSet resultSet = queries.prepareSelectStreamQuery(streamName, dataVersion).executeQuery()) {
+          while (resultSet.next()) {
+              final String id = resultSet.getString(1);
+              final int streamVersion = resultSet.getInt(2);
+              fullStreamVersion = streamVersion;
+              final String entryData = resultSet.getString(3);
+              final String entryType = resultSet.getString(4);
+              final int eventTypeVersion = resultSet.getInt(5);
+              final String entryMetadata = resultSet.getString(6);
 
-            final Class<?> classOfEvent = Class.forName(entryType);
-            final Metadata eventMetadataDeserialized = gson.fromJson(entryMetadata, Metadata.class);
+              final Class<?> classOfEvent = Class.forName(entryType);
+              final Metadata eventMetadataDeserialized = gson.fromJson(entryMetadata, Metadata.class);
 
-            events.add(new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, eventMetadataDeserialized));
+              events.add(new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, eventMetadataDeserialized));
+          }
         }
 
         return new Stream<>(streamName, fullStreamVersion, events, referenceSnapshot);
     }
 
     private State<String> latestSnapshotOf(final String streamName) throws Exception {
-        final ResultSet resultSet = queries.prepareSelectSnapshotQuery(streamName).executeQuery();
+        try (final ResultSet resultSet = queries.prepareSelectSnapshotQuery(streamName).executeQuery()) {
+          if (resultSet.next()) {
+              final String snapshotData = resultSet.getString(1);
+              final int snapshotDataVersion = resultSet.getInt(2);
+              final String snapshotDataType = resultSet.getString(3);
+              final int snapshotDataTypeVersion = resultSet.getInt(4);
+              final String metadataJson = resultSet.getString(5);
 
-        if (resultSet.next()) {
-            final String snapshotData = resultSet.getString(1);
-            final int snapshotDataVersion = resultSet.getInt(2);
-            final String snapshotDataType = resultSet.getString(3);
-            final int snapshotDataTypeVersion = resultSet.getInt(4);
-            final String metadataJson = resultSet.getString(5);
+              final Class<?> snapshotDataTypeClass = Class.forName(snapshotDataType);
+              final Metadata eventMetadataDeserialized = gson.fromJson(metadataJson, Metadata.class);
 
-            final Class<?> snapshotDataTypeClass = Class.forName(snapshotDataType);
-            final Metadata eventMetadataDeserialized = gson.fromJson(metadataJson, Metadata.class);
-
-            return new State.TextState(streamName, snapshotDataTypeClass, snapshotDataTypeVersion, snapshotData, snapshotDataVersion, eventMetadataDeserialized);
+              return new State.TextState(streamName, snapshotDataTypeClass, snapshotDataTypeVersion, snapshotData, snapshotDataVersion, eventMetadataDeserialized);
+          }
+          return TextState.Null;
         }
-
-        return TextState.Null;
     }
 }

@@ -105,13 +105,13 @@ public abstract class BasePostgresJournalTest {
     protected final void assertOffsetIs(final String readerName, final long offset) throws SQLException {
         final PreparedStatement select = queries.prepareSelectCurrentOffsetQuery(readerName);
 
-        ResultSet resultSet = select.executeQuery();
-
-        if (resultSet.next()) {
-            final long currentOffset = resultSet.getLong(1);
-            assertEquals(offset, currentOffset);
-        } else {
-          Assert.fail("Could not find offset for " + readerName);
+        try (ResultSet resultSet = select.executeQuery()) {
+          if (resultSet.next()) {
+              final long currentOffset = resultSet.getLong(1);
+              assertEquals(offset, currentOffset);
+          } else {
+            Assert.fail("Could not find offset for " + readerName);
+          }
         }
     }
 
