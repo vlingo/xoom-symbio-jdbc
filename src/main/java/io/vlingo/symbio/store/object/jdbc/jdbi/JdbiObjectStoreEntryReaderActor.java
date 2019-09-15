@@ -66,7 +66,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
   public Completes<Entry<String>> readNext() {
     try {
       final QueryExpression expression = jdbi.queryEntry(offset);
-      final Entry entry = jdbi.handle().createQuery(expression.query).mapTo(Entry.class).findOnly();
+      final Entry entry = jdbi.handle().createQuery(expression.query).mapTo(Entry.class).one();
       ++offset;
       updateCurrentOffset();
       return completes().with(entry);
@@ -134,7 +134,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
   @Override
   public Completes<Long> size() {
     try {
-      return completes().with(jdbi.handle().createQuery(querySize.query).mapTo(Long.class).findOnly());
+      return completes().with(jdbi.handle().createQuery(querySize.query).mapTo(Long.class).one());
     } catch (Exception e) {
       logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve size, using -1L.");
       return completes().with(-1L);
@@ -147,7 +147,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
 
   private long retrieveLatestOffset() {
     try {
-      return jdbi.handle().createQuery(queryLastEntryId.query).mapTo(Long.class).findOnly();
+      return jdbi.handle().createQuery(queryLastEntryId.query).mapTo(Long.class).one();
     } catch (Exception e) {
       logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve latest offset, using current.");
       return offset;
