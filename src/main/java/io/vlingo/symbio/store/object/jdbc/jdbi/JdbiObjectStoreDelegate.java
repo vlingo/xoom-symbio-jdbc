@@ -163,7 +163,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
     for (final Entry<?> entry : entries) {
       final Update statement = handle.createUpdate(mapper.insertStatement);
       final ResultBearing resultBearing = bindAll(new PersistentEntry(entry), mapper, statement).executeAndReturnGeneratedKeys();
-      final Object id = resultBearing.mapToMap().findOnly().get("e_id");
+      final Object id = resultBearing.mapToMap().one().get("e_id");
       ((BaseEntry<?>) entry).__internal__setId(id.toString());
     }
   }
@@ -289,9 +289,11 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
 
       final JdbiPersistMapper mapper = mappers.get(type).persistMapper();
 
-      final Update statement = create ? handle.createUpdate(mapper.insertStatement) : handle.createUpdate(mapper.updateStatement);
-
-      return bindAll(persistentObject, mapper, statement).execute();
+      try (final Update statement = create ? handle.createUpdate(mapper.insertStatement) : handle.createUpdate(mapper.updateStatement)) {
+        return bindAll(persistentObject, mapper, statement).executeAndReturnGeneratedKeys().mapTo(type).one() != null ? 1:0;
+      } catch (Exception e) {
+        return 0;
+      }
     }
 
     return 1;
