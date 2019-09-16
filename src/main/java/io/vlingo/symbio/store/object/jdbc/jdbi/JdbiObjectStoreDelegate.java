@@ -290,7 +290,8 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
       final JdbiPersistMapper mapper = mappers.get(type).persistMapper();
 
       try (final Update statement = create ? handle.createUpdate(mapper.insertStatement) : handle.createUpdate(mapper.updateStatement)) {
-        return bindAll(persistentObject, mapper, statement).executeAndReturnGeneratedKeys().mapTo(type).one() != null ? 1:0;
+        final long generatedId = bindAll(persistentObject, mapper, statement).executeAndReturnGeneratedKeys(mapper.idColumnName).mapTo(Long.class).one();
+        persistentObject.__internal__setPersistenceId(generatedId);
       } catch (Exception e) {
         return 0;
       }
