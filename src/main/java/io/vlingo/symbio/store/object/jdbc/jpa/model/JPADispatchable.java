@@ -56,7 +56,7 @@ public class JPADispatchable {
   @Id
   @GeneratedValue(strategy = GenerationType.SEQUENCE)
   @Column(name = "id", updatable = false, nullable = false)
-  private String id;
+  private long id;
 
   @Column(name="dispatch_id", updatable = false, nullable = false)
   private String dispatchId;
@@ -97,7 +97,7 @@ public class JPADispatchable {
   }
 
 
-  public JPADispatchable(final String id, final String dispatchId, final String originatorId,
+  public JPADispatchable(final long id, final String dispatchId, final String originatorId,
           final LocalDateTime createdOn, final String stateId, final String stateType,
           final Integer stateTypeVersion, final String stateData,
           final Integer stateDataVersion, final String stateMetadata,
@@ -115,7 +115,7 @@ public class JPADispatchable {
     this.entries = entries;
   }
 
-  public String getId() {
+  public long getId() {
     return id;
   }
 
@@ -194,7 +194,7 @@ public class JPADispatchable {
       }
 
       state = new State.TextState(
-              jpaDispatchable.id, stateType , jpaDispatchable.stateTypeVersion,
+              Long.toString(jpaDispatchable.id), stateType , jpaDispatchable.stateTypeVersion,
               jpaDispatchable.stateData, jpaDispatchable.stateDataVersion,
               JsonSerialization.deserialized(jpaDispatchable.stateMetadata, Metadata.class)
       );
