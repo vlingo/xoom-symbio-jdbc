@@ -13,7 +13,7 @@ import java.sql.Connection;
  *  Enumerated database types.
  */
 public enum DatabaseType {
-  HSQLDB, MariaDB, MySQL, Oracle, Postgres, SQLServer, Vitess, YugaByte;
+  HSQLDB, MySQL, MariaDB, Oracle, Postgres, SQLServer, Vitess, YugaByte;
 
   /**
    * Answer the {@code DatabaseType} given a {@code Connection}.

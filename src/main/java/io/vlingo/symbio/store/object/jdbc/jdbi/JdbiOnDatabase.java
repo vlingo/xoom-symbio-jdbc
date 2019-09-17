@@ -48,10 +48,11 @@ public abstract class JdbiOnDatabase {
     switch (databaseType) {
     case HSQLDB:
       return JdbiOnHSQLDB.openUsing(configuration);
+    case MySQL:
+    case MariaDB:
+      return JdbiOnMySQL.openUsing(configuration);
     case SQLServer:
       break;
-    case MariaDB:
-    case MySQL:
     case Vitess:
       break;
     case Oracle:

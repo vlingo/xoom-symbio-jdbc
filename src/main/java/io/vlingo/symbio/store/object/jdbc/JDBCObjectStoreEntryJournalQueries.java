@@ -18,9 +18,9 @@ import io.vlingo.symbio.store.common.jdbc.DatabaseType;
  * Query definitions for JDBC implementations.
  */
 public abstract class JDBCObjectStoreEntryJournalQueries {
-  public static final String DispatchablesTableName = "TBL_VLINGO_OBJECTSTORE_DISPATCHABLES";
-  public static final String EntryJournalTableName = "TBL_VLINGO_OBJECTSTORE_ENTRY_JOURNAL";
-  public static final String EntryReaderOffsetsTableName = "TBL_VLINGO_OBJECTSTORE_ENTRYREADER_OFFSETS";
+  public static final String DispatchablesTableName = "tbl_vlingo_objectstore_dispatchables";
+  public static final String EntryJournalTableName = "tbl_vlingo_objectstore_entry_journal";
+  public static final String EntryReaderOffsetsTableName = "tbl_vlingo_objectstore_entryreader_offsets";
 
   public static final String ENTRY_DATATYPE_LONGVARCHAR = "LONGVARCHAR(65535)";
   public static final String ENTRY_DATATYPE_TEXT = "TEXT";
@@ -57,10 +57,11 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
     switch (databaseType) {
     case HSQLDB:
       return new HSQLDBObjectStoreEntryJournalQueries(connection);
+    case MySQL:
+    case MariaDB:
+      return  new MySQLObjectStoreEntryJournalQueries(connection);
     case SQLServer:
       break;
-    case MariaDB:
-    case MySQL:
     case Vitess:
       break;
     case Oracle:

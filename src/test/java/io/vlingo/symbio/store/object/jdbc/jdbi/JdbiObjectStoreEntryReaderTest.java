@@ -16,6 +16,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import org.jdbi.v3.core.statement.SqlStatement;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -140,7 +141,7 @@ public abstract class JdbiObjectStoreEntryReaderTest {
                     JdbiPersistMapper.with(
                             "INSERT INTO PERSON(id, name, age) VALUES (:id, :name, :age)",
                             "UPDATE PERSON SET name = :name, age = :age WHERE id = :id",
-                            (update,object) -> update.bindFields(object)),
+                            SqlStatement::bindFields),
                     new PersonMapper());
 
     objectStore = jdbi.objectStore(world, dispatcher, Collections.singletonList(personMapper));

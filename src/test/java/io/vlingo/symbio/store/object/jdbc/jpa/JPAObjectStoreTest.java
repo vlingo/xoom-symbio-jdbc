@@ -6,14 +6,6 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.After;
-import org.junit.Before;
-
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.common.Outcome;
@@ -38,6 +30,13 @@ import io.vlingo.symbio.store.object.jdbc.jpa.PersonEntryAdapters.PersonAddedAda
 import io.vlingo.symbio.store.object.jdbc.jpa.PersonEntryAdapters.PersonRenamedAdapter;
 import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonAdded;
 import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonRenamed;
+import org.junit.After;
+import org.junit.Before;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class JPAObjectStoreTest {
   protected Configuration adminConfiguration;
@@ -59,17 +58,27 @@ public abstract class JPAObjectStoreTest {
     EntryAdapterProvider.instance(world).registerAdapter(PersonRenamed.class, new PersonRenamedAdapter());
     final StateAdapterProvider stateAdapterProvider = StateAdapterProvider.instance(world);
     dispatcher = new MockDispatcher<>();
+
     adminConfiguration = PostgresConfigurationProvider.testConfiguration(DataFormat.Text);
+    // adminConfiguration = MySQLConfigurationProvider.testConfiguration(DataFormat.Text);
+
     testDatabaseName = testDatabaseName();
     dropTestDatabase();
     createTestDatabase();
     final Map<String,Object> properties = testDatabaseProperties(testDatabaseName);
+
     delegate = new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_POSTGRES_PERSISTENCE_UNIT, properties, "TEST", stateAdapterProvider, world.defaultLogger());
-//    delegate = new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_HSQLDB_PERSISTENCE_UNIT, "TEST", stateAdapterProvider, world.defaultLogger());
+    // delegate = new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_MYSQL_PERSISTENCE_UNIT, properties, "TEST", stateAdapterProvider, world.defaultLogger());
+    // delegate = new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_HSQLDB_PERSISTENCE_UNIT, "TEST", stateAdapterProvider, world.defaultLogger());
+
     connectionProvider = new ConnectionProvider("org.postgresql.Driver", "jdbc:postgresql://localhost/", testDatabaseName, "vlingo_test", "vlingo123", false);
-//    connectionProvider = new ConnectionProvider("org.hsqldb.jdbc.JDBCDriver", "jdbc:hsqldb:mem", "test", "SA", "", false);
+    // connectionProvider = new ConnectionProvider("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost/", testDatabaseName, "root", "vlingo123", false);
+    // connectionProvider = new ConnectionProvider("org.hsqldb.jdbc.JDBCDriver", "jdbc:hsqldb:mem", "test", "SA", "", false);
+
     queries = new PostgresObjectStoreEntryJournalQueries(connectionProvider.connection());
-//    queries = new HSQLDBObjectStoreEntryJournalQueries(connectionProvider.connection());
+    // queries = new MySQLObjectStoreEntryJournalQueries(connectionProvider.connection());
+    // queries = new HSQLDBObjectStoreEntryJournalQueries(connectionProvider.connection());
+
     objectStore = world.actorFor(JPAObjectStore.class, JPAObjectStoreActor.class, delegate, connectionProvider, dispatcher);
   }
 
@@ -85,10 +94,12 @@ public abstract class JPAObjectStoreTest {
 
   private void createTestDatabase() throws Exception {
     PostgresConfigurationProvider.interest.createDatabase(adminConfiguration.connection, testDatabaseName);
+    // MySQLConfigurationProvider.interest.createDatabase(adminConfiguration.connection, testDatabaseName);
   }
 
   private void dropTestDatabase() throws Exception {
     PostgresConfigurationProvider.interest.dropDatabase(adminConfiguration.connection, testDatabaseName);
+    // MySQLConfigurationProvider.interest.dropDatabase(adminConfiguration.connection, testDatabaseName);
   }
 
   private static final AtomicInteger databaseNamePostfix = new AtomicInteger(Short.MAX_VALUE);
@@ -105,6 +116,12 @@ public abstract class JPAObjectStoreTest {
     properties.put("javax.persistence.jdbc.url", "jdbc:postgresql://localhost/" + databaseNamePostfix);
     properties.put("javax.persistence.jdbc.user", "vlingo_test");
     properties.put("javax.persistence.jdbc.password", "vlingo123");
+
+    // properties.put("javax.persistence.jdbc.driver", "com.mysql.cj.jdbc.Driver");
+    // properties.put("javax.persistence.jdbc.url", "jdbc:mysql://localhost/" + databaseNamePostfix);
+    // properties.put("javax.persistence.jdbc.user", "root");
+    // properties.put("javax.persistence.jdbc.password", "vlingo123");
+
     properties.put("javax.persistence.LockModeType", "OPTIMISTIC_FORCE_INCREMENT");
     properties.put("javax.persistence.schema-generation.database.action", "drop-and-create");
     properties.put("javax.persistence.schema-generation.create-database-schemas", "drop-and-create");
