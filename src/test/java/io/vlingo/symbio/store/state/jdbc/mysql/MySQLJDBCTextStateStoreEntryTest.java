@@ -16,14 +16,14 @@ import io.vlingo.symbio.store.state.jdbc.JDBCTextStateStoreEntryTest;
 
 public class MySQLJDBCTextStateStoreEntryTest extends JDBCTextStateStoreEntryTest {
 
-	@Override
-	protected StateStore.StorageDelegate storageDelegate(Configuration.TestConfiguration configuration, Logger logger) {
-		return new MySQLStorageDelegate(configuration, logger);
-	}
+    @Override
+    protected StateStore.StorageDelegate storageDelegate(Configuration.TestConfiguration configuration, Logger logger) {
+        return new MySQLStorageDelegate(configuration, logger);
+    }
 
-	@Override
-	protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-		System.out.println("Starting: MySQLJDBCTextStateStoreEntryActorTest: testConfiguration()");
-		return MySQLConfigurationProvider.testConfiguration(format);
-	}
+    @Override
+    protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
+        System.out.println("Starting: MySQLJDBCTextStateStoreEntryActorTest: testConfiguration()");
+        return MySQLConfigurationProvider.testConfiguration(format);
+    }
 }
