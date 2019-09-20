@@ -17,7 +17,7 @@ import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
-import org.postgresql.util.PGobject;
+import io.vlingo.symbio.store.state.jdbc.DbStateStoreEntryReaderActor;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -53,7 +53,7 @@ public class MySQLStorageDelegate extends JDBCStorageDelegate<Object> implements
 		try {
 			return new EntryReader.Advice(
 					Configuration.cloneOf(configuration),
-					MySQLStateStoreEntryReaderActor.class,
+					DbStateStoreEntryReaderActor.class,
 					namedEntry(SQL_QUERY_ENTRY_BATCH),
 					namedEntry(SQL_QUERY_ENTRY),
 					namedEntry(QUERY_COUNT),
@@ -148,8 +148,8 @@ public class MySQLStorageDelegate extends JDBCStorageDelegate<Object> implements
 	}
 
 	@Override
-	protected String stateStoreTableCreateExpression(final String storeName) {
-		return MessageFormat.format(SQL_CREATE_STATE_STORE, storeName,
+	protected String stateStoreTableCreateExpression(final String tableName) {
+		return MessageFormat.format(SQL_CREATE_STATE_STORE, tableName,
 				format.isBinary() ? SQL_FORMAT_BINARY : SQL_FORMAT_TEXT1); // TODO: SQL_FORMAT_TEXT2
 	}
 

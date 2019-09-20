@@ -61,7 +61,7 @@ public interface HSQLDBQueries {
           "ON {0} (D_ORIGINATOR_ID);";
 
   final static String SQL_CREATE_STATE_STORE =
-          "CREATE TABLE TBL_{0} (\n" +
+          "CREATE TABLE {0} (\n" +
           "   S_ID VARCHAR(128) NOT NULL,\n" +
           "   S_TYPE VARCHAR(256) NOT NULL,\n" +
           "   S_TYPE_VERSION INT NOT NULL,\n" +

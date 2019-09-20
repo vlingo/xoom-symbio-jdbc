@@ -174,7 +174,7 @@ public abstract class JDBCStateStoreActorTest {
   public void setUp() throws Exception {
     world = World.startWithDefaults("test-store");
 
-    entity1StoreName = Entity1.class.getSimpleName().toLowerCase();
+    entity1StoreName = Entity1.class.getSimpleName();
     StateTypeStateStoreMap.stateTypeToStoreName(Entity1.class, entity1StoreName);
 
     configuration = testConfiguration(DataFormat.Text);

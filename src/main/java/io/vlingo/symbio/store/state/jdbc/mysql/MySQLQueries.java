@@ -29,7 +29,7 @@ public interface MySQLQueries {
 	final static String SQL_FORMAT_TEXT_CAST = "?";
 
 	final static String SQL_CREATE_STATE_STORE =
-			"CREATE TABLE tbl_{0} (\n" +
+			"CREATE TABLE {0} (\n" +
 					"   s_id VARCHAR(128) NOT NULL,\n" +
 					"   s_type VARCHAR(256) NOT NULL,\n" +
 					"   s_type_version INT NOT NULL,\n" +
