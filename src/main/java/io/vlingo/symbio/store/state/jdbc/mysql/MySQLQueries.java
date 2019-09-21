@@ -9,7 +9,7 @@ package io.vlingo.symbio.store.state.jdbc.mysql;
 
 public interface MySQLQueries {
     final static String SQL_STATE_READ =
-            "SELECT tbl_{0}.S_TYPE, TBL_{0}.S_TYPE_VERSION, TBL_{0}.S_DATA, TBL_{0}.S_DATA_VERSION, TBL_{0}.S_METADATA_VALUE, TBL_{0}.S_METADATA_OP " +
+            "SELECT tbl_{0}.S_TYPE, tbl_{0}.S_TYPE_VERSION, tbl_{0}.S_DATA, tbl_{0}.S_DATA_VERSION, tbl_{0}.S_METADATA_VALUE, tbl_{0}.S_METADATA_OP " +
                     "FROM tbl_{0} " +
                     "WHERE tbl_{0}.S_ID = ?";
 
@@ -40,7 +40,7 @@ public interface MySQLQueries {
                     "   PRIMARY KEY (s_id) \n" +
                     ");";
 
-    final static String SQL_FORMAT_BINARY = "bytea";
+    final static String SQL_FORMAT_BINARY = "VARBINARY(4096)";
     final static String SQL_FORMAT_TEXT1 = "json";
     // private final static String SQL_FORMAT_TEXT2 = "jsonb";
 
@@ -48,9 +48,9 @@ public interface MySQLQueries {
 
     final static String SQL_CREATE_DISPATCHABLES_STORE =
             "CREATE TABLE {0} (\n" +
-                    "   d_id SERIAL PRIMARY KEY," +
-                    "   d_created_at TIMESTAMP NOT NULL," +
-                    "   d_originator_id VARCHAR(32) NOT NULL," +
+                    "   d_id SERIAL PRIMARY KEY,\n" +
+                    "   d_created_at TIMESTAMP NOT NULL,\n" +
+                    "   d_originator_id VARCHAR(32) NOT NULL,\n" +
                     "   d_dispatch_id VARCHAR(128) NOT NULL,\n" +
                     "   d_state_id VARCHAR(128) NOT NULL, \n" +
                     "   d_state_type VARCHAR(256) NOT NULL,\n" +
