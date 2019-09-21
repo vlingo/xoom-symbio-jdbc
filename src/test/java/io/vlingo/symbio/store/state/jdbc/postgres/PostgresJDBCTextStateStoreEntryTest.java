@@ -16,14 +16,14 @@ import io.vlingo.symbio.store.state.jdbc.JDBCTextStateStoreEntryTest;
 
 public class PostgresJDBCTextStateStoreEntryTest extends JDBCTextStateStoreEntryTest {
 
-  @Override
-  protected StateStore.StorageDelegate storageDelegate(Configuration.TestConfiguration configuration, Logger logger) {
-    return new PostgresStorageDelegate(configuration, logger);
-  }
+    @Override
+    protected StateStore.StorageDelegate storageDelegate(Configuration.TestConfiguration configuration, Logger logger) {
+        return new PostgresStorageDelegate(configuration, logger);
+    }
 
-  @Override
-  protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-    System.out.println("Starting: PostgresJDBCTextStateStoreEntryActorTest: testConfiguration()");
-    return PostgresConfigurationProvider.testConfiguration(format);
-  }
+    @Override
+    protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
+        System.out.println("Starting: PostgresJDBCTextStateStoreEntryActorTest: testConfiguration()");
+        return PostgresConfigurationProvider.testConfiguration(format);
+    }
 }
