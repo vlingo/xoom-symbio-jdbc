@@ -53,7 +53,7 @@ public class ConnectionProvider {
       connection.setAutoCommit(false);
       return connection;
     }  catch (Exception e) {
-      throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because database unavilable or wrong credentials.");
+      throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because database unavailable or wrong credentials.");
     }
   }
 
