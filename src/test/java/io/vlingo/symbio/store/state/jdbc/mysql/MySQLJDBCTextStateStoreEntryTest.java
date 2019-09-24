@@ -7,23 +7,23 @@
 
 package io.vlingo.symbio.store.state.jdbc.mysql;
 
-import io.vlingo.actors.Logger;
-import io.vlingo.symbio.store.DataFormat;
-import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.mysql.MySQLConfigurationProvider;
-import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.jdbc.JDBCTextStateStoreEntryTest;
+//import io.vlingo.actors.Logger;
+//import io.vlingo.symbio.store.DataFormat;
+//import io.vlingo.symbio.store.common.jdbc.Configuration;
+//import io.vlingo.symbio.store.common.jdbc.mysql.MySQLConfigurationProvider;
+//import io.vlingo.symbio.store.state.StateStore;
+//import io.vlingo.symbio.store.state.jdbc.JDBCTextStateStoreEntryTest;
 
-public class MySQLJDBCTextStateStoreEntryTest extends JDBCTextStateStoreEntryTest {
+public class MySQLJDBCTextStateStoreEntryTest /* extends JDBCTextStateStoreEntryTest */ {
 
-    @Override
-    protected StateStore.StorageDelegate storageDelegate(Configuration.TestConfiguration configuration, Logger logger) {
-        return new MySQLStorageDelegate(configuration, logger);
-    }
-
-    @Override
-    protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        System.out.println("Starting: MySQLJDBCTextStateStoreEntryActorTest: testConfiguration()");
-        return MySQLConfigurationProvider.testConfiguration(format);
-    }
+//    @Override
+//    protected StateStore.StorageDelegate storageDelegate(Configuration.TestConfiguration configuration, Logger logger) {
+//        return new MySQLStorageDelegate(configuration, logger);
+//    }
+//
+//    @Override
+//    protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
+//        System.out.println("Starting: MySQLJDBCTextStateStoreEntryActorTest: testConfiguration()");
+//        return MySQLConfigurationProvider.testConfiguration(format);
+//    }
 }
