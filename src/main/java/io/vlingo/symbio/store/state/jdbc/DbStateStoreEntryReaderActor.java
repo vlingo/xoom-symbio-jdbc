@@ -5,7 +5,7 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.state.jdbc.postgres;
+package io.vlingo.symbio.store.state.jdbc;
 
 import java.sql.Blob;
 import java.sql.PreparedStatement;
@@ -24,7 +24,7 @@ import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 
-public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
+public class DbStateStoreEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
   private final Advice advice;
   private final Configuration configuration;
   private long currentId;
@@ -35,7 +35,7 @@ public class PostgresStateStoreEntryReaderActor<T extends Entry<?>> extends Acto
   private final PreparedStatement queryOne;
   private final PreparedStatement updateCurrentOffset;
 
-  public PostgresStateStoreEntryReaderActor(final EntryReader.Advice advice, final String name) throws Exception {
+  public DbStateStoreEntryReaderActor(final EntryReader.Advice advice, final String name) throws Exception {
     this.advice = advice;
     this.name = name;
     this.configuration = advice.specificConfiguration();
