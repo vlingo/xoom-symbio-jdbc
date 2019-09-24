@@ -11,6 +11,7 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.text.MessageFormat;
 
+import io.vlingo.symbio.store.state.jdbc.DbStateStoreEntryReaderActor;
 import org.postgresql.util.PGobject;
 
 import io.vlingo.actors.Logger;
@@ -55,7 +56,7 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
     try {
       return new EntryReader.Advice(
               Configuration.cloneOf(configuration),
-              PostgresStateStoreEntryReaderActor.class,
+              DbStateStoreEntryReaderActor.class,
               namedEntry(SQL_QUERY_ENTRY_BATCH),
               namedEntry(SQL_QUERY_ENTRY),
               namedEntry(QUERY_COUNT),
@@ -156,8 +157,8 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
   }
 
   @Override
-  protected String stateStoreTableCreateExpression(final String storeName) {
-    return MessageFormat.format(SQL_CREATE_STATE_STORE, storeName,
+  protected String stateStoreTableCreateExpression(final String stateName) {
+    return MessageFormat.format(SQL_CREATE_STATE_STORE, stateName,
             format.isBinary() ? SQL_FORMAT_BINARY : SQL_FORMAT_TEXT1); // TODO: SQL_FORMAT_TEXT2
   }
 

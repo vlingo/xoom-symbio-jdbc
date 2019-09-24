@@ -369,7 +369,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   protected abstract <E> void setBinaryObject(final CachedStatement<T> cached, int columnIndex, final Entry<E> entry) throws Exception;
   protected abstract <S> void setTextObject(final CachedStatement<T> cached, int columnIndex, final State<S> state) throws Exception;
   protected abstract <E> void setTextObject(final CachedStatement<T> cached, int columnIndex, final Entry<E> entry) throws Exception;
-  protected abstract String stateStoreTableCreateExpression(final String storeName);
+  protected abstract String stateStoreTableCreateExpression(final String tableName);
   protected abstract String tableNameFor(final String storeName);
   protected abstract String textDataFrom(final ResultSet resultSet, final int columnIndex) throws Exception;
   protected abstract String writeExpression(final String storeName);
@@ -412,8 +412,8 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     }
   }
 
-  private void createStateStoreTable(final String storeName) throws Exception {
-    final String sql = stateStoreTableCreateExpression(storeName);
+  private void createStateStoreTable(final String tableName) throws Exception {
+    final String sql = stateStoreTableCreateExpression(tableName);
     try (final Statement statement = connection.createStatement()) {
       statement.executeUpdate(sql);
       connection.commit();
@@ -446,7 +446,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
       final String tableName = tableNameFor(storeName);
       try {
         if (!tableExists(tableName)) {
-          createStateStoreTable(storeName);
+          createStateStoreTable(tableName);
         }
       } catch (final Exception e) {
         // assume table exists; could look at metadata

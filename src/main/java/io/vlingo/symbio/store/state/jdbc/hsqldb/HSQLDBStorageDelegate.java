@@ -156,8 +156,8 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
   }
 
   @Override
-  protected String stateStoreTableCreateExpression(final String storeName) {
-    return MessageFormat.format(SQL_CREATE_STATE_STORE, storeName,
+  protected String stateStoreTableCreateExpression(final String tableName) {
+    return MessageFormat.format(SQL_CREATE_STATE_STORE, tableName,
             format.isBinary() ? SQL_FORMAT_BINARY : SQL_FORMAT_TEXT);
   }
 
