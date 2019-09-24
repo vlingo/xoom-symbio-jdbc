@@ -170,7 +170,6 @@
       <version>8.0.17</version>
     </dependency>
   </dependencies>
-
   <distributionManagement>
     <repository>
       <id>bintray-vlingo-vlingo-platform-java</id>
