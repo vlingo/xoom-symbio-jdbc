@@ -13,12 +13,18 @@ before_install:
 - cd ${TRAVIS_BUILD_DIR}
 services:
 - postgresql
+- mysql
 addons:
   postgresql: '9.6'
 before_script:
 - psql -c "CREATE DATABASE vlingo_test;" -U postgres
 - psql -c "CREATE USER vlingo_test WITH PASSWORD 'vlingo123' LOGIN NOSUPERUSER INHERIT
   CREATEDB NOCREATEROLE NOREPLICATION;" -U postgres
+
+- mysql -e "CREATE DATABASE vlingo_test;"
+- mysql -e "CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED BY 'vlingo123';"
+- mysql -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('vlingo123');"
+
 script:
 - mvn install
 deploy:
