@@ -7,6 +7,16 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
+import static org.junit.Assert.assertEquals;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
 import io.vlingo.actors.World;
@@ -18,18 +28,11 @@ import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.TestEvents;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider;
-import io.vlingo.symbio.store.state.*;
-import io.vlingo.symbio.store.state.jdbc.postgres.PostgresStorageDelegate;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
+import io.vlingo.symbio.store.state.Entity1;
+import io.vlingo.symbio.store.state.MockResultInterest;
+import io.vlingo.symbio.store.state.MockTextDispatcher;
+import io.vlingo.symbio.store.state.StateStore;
+import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 
 public abstract class JDBCTextStateStoreEntryTest {
     private Configuration.TestConfiguration configuration;
