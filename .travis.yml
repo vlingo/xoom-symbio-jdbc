@@ -24,7 +24,7 @@ before_script:
 - mysql -e "CREATE DATABASE vlingo_test;"
 - mysql -e "GRANT ALL ON vlingo_test.* TO 'root'@'localhost' IDENTIFIED BY 'vlingo123';"
 # - mysql -e "CREATE USER IF NOT EXISTS 'root'@'localhost' IDENTIFIED BY 'vlingo123';"
-- mysql -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('vlingo123');"
+# - mysql -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('vlingo123');"
 
 script:
 - mvn install
