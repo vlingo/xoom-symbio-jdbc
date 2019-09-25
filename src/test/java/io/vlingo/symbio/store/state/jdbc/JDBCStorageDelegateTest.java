@@ -7,6 +7,17 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 import io.vlingo.actors.Logger;
 import io.vlingo.actors.World;
 import io.vlingo.symbio.Metadata;
@@ -15,15 +26,6 @@ import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.Entity1;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 
 public abstract class JDBCStorageDelegateTest {
     private Configuration.TestConfiguration configuration;
@@ -135,8 +137,10 @@ public abstract class JDBCStorageDelegateTest {
 
     @After
     public void tearDown() throws Exception {
-        configuration.cleanUp();
         delegate.close();
+        Thread.sleep(1000);
+        configuration.cleanUp();
+        Thread.sleep(1000);
         world.terminate();
     }
 

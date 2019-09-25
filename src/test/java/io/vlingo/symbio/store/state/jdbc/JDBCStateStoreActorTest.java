@@ -50,7 +50,7 @@ public abstract class JDBCStateStoreActorTest {
   @Test
   public void testThatStateStoreDispatches() throws Exception {
     final AccessSafely accessInterest1 = interest.afterCompleting(6);
-    final AccessSafely accessDispatcher1 = dispatcher.afterCompleting(3);
+    final AccessSafely accessDispatcher1 = dispatcher.afterCompleting(6);
 
     final Entity1 entity1 = new Entity1("123", 1);
     store.write(entity1.id, entity1, 1, interest);
@@ -69,17 +69,14 @@ public abstract class JDBCStateStoreActorTest {
     assertEquals("345", state345.id);
 
     final AccessSafely accessInterest2 = interest.afterCompleting(4);
-    final AccessSafely accessDispatcher2 = dispatcher.afterCompleting(4);
+    final AccessSafely accessDispatcher2 = dispatcher.afterCompleting(2);
 
-    accessDispatcher2.writeUsing("processDispatch", false);
     final Entity1 entity4 = new Entity1("456", 4);
     store.write(entity4.id, entity4, 1, interest);
     final Entity1 entity5 = new Entity1("567", 5);
     store.write(entity5.id, entity5, 1, interest);
 
-    accessDispatcher2.writeUsing("processDispatch", true);
-
-    assertEquals(5, (int) accessDispatcher2.readFrom("dispatchedStateCount"));
+    assertEquals(4, (int) accessDispatcher2.readFrom("dispatchedStateCount"));
     assertEquals(5, (int) accessInterest2.readFrom("confirmDispatchedResultedIn"));
     final State<?> state456 = accessDispatcher2.readFrom("dispatchedState", dispatchId("456"));
     assertEquals("456", state456.id);
@@ -136,10 +133,8 @@ public abstract class JDBCStateStoreActorTest {
 
   @Test
   public void testRedispatch() {
-    interest.afterCompleting(3);
-    final AccessSafely accessDispatcher = dispatcher.afterCompleting(5);
-
-    accessDispatcher.writeUsing("processDispatch", false);
+    final AccessSafely accessInterest = interest.afterCompleting(6);
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(6);
 
     final Entity1 entity1 = new Entity1(UUID.randomUUID().toString(), 1);
     final TestEvent testEvent1 = new TestEvent(UUID.randomUUID().toString(), 30);
@@ -154,20 +149,17 @@ public abstract class JDBCStateStoreActorTest {
     final TestEvent testEvent3 = new TestEvent(UUID.randomUUID().toString(), 12);
     store.write(entity3.id, entity3, 1, Arrays.asList(testEvent1, testEvent2, testEvent3), interest);
 
-    try {
-      Thread.sleep(3000);
-    }
-    catch (InterruptedException ex) {
-      //ignored
-    }
+    final int confirmDispatchedResultedIn = accessInterest.readFrom("confirmDispatchedResultedIn");
+    assertEquals("confirmDispatchedResultedIn", 3, confirmDispatchedResultedIn);
 
-    accessDispatcher.writeUsing("processDispatch", true);
+    final int writeTextResultedIn = accessInterest.readFrom("writeTextResultedIn");
+    assertEquals("writeTextResultedIn", 3, writeTextResultedIn);
 
     final int dispatchedStateCount = accessDispatcher.readFrom("dispatchedStateCount");
     assertEquals("dispatchedStateCount", 3, dispatchedStateCount);
 
     final int dispatchAttemptCount = accessDispatcher.readFrom("dispatchAttemptCount");
-    assertTrue("dispatchAttemptCount", dispatchAttemptCount > 3);
+    assertEquals("dispatchAttemptCount", 3, dispatchAttemptCount);
   }
 
   @Before
