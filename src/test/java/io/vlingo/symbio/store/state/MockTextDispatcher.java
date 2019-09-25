@@ -43,12 +43,10 @@ public class MockTextDispatcher implements Dispatcher<Dispatchable<Entry<?>, Sta
 
   @Override
   public void dispatch(Dispatchable<Entry<?>, State.TextState> dispatchable) {
-    dispatchAttemptCount.getAndIncrement();
-    if (processDispatch.get()) {
-      final String id = dispatchable.id();
-      access.writeUsing("dispatched", id, new Dispatch<>(dispatchable.typedState(), dispatchable.entries()));
-      control.confirmDispatched(id, confirmDispatchedResultInterest);
-    }
+    access.writeUsing("dispatchAttemptCount", 1);
+    final String id = dispatchable.id();
+    access.writeUsing("dispatched", id, new Dispatch<>(dispatchable.typedState(), dispatchable.entries()));
+    control.confirmDispatched(id, confirmDispatchedResultInterest);
   }
 
   @SuppressWarnings({ "rawtypes", "unchecked" })
@@ -57,14 +55,16 @@ public class MockTextDispatcher implements Dispatcher<Dispatchable<Entry<?>, Sta
       .afterCompleting(times)
       .writingWith("dispatched", (String id, Dispatch dispatch) -> { dispatched.put(id, dispatch.state); dispatchedEntries.addAll(dispatch.entries); })
 
+      .writingWith("dispatchAttemptCount", (ignore) -> { dispatchAttemptCount.incrementAndGet(); })
+
       .readingWith("dispatchedState", (String id) -> dispatched.get(id))
       .readingWith("dispatchedStateCount", () -> dispatched.size())
 
       .readingWith("dispatchedEntries", () ->  dispatchedEntries)
       .readingWith("dispatchedEntriesCount", () -> dispatchedEntries.size())
 
-      .writingWith("processDispatch", (Boolean flag) -> processDispatch.set(flag))
-      .readingWith("processDispatch", () -> processDispatch.get())
+//      .writingWith("processDispatch", (Boolean flag) -> processDispatch.set(flag))
+//      .readingWith("processDispatch", () -> processDispatch.get())
 
       .readingWith("dispatchAttemptCount", () -> dispatchAttemptCount.get())
 
