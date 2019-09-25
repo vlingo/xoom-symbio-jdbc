@@ -7,17 +7,18 @@
 
 package io.vlingo.symbio.store.common.jdbc.mysql;
 
-import io.vlingo.symbio.store.DataFormat;
-import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.DatabaseType;
-
 import java.sql.Connection;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.common.jdbc.DatabaseType;
+
 public class MySQLConfigurationProvider {
     public static final Configuration.ConfigurationInterest interest = new Configuration.ConfigurationInterest() {
+        @SuppressWarnings("unused")
         private Configuration configuration;
 
         @Override
@@ -85,7 +86,7 @@ public class MySQLConfigurationProvider {
                 format,
                 "jdbc:mysql://localhost/",
                 "vlingo_test",  // database name
-                "root",  // username
+                "root",         // username
                 "vlingo123",    // password
                 false,          // useSSL
                 "TEST",         // originatorId
