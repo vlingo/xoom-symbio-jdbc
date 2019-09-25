@@ -86,7 +86,7 @@ public class MySQLConfigurationProvider {
                 format,
                 "jdbc:mysql://localhost/",
                 "vlingo_test",  // database name
-                "root",         // username
+                "vlingo_test",  // username
                 "vlingo123",    // password
                 false,          // useSSL
                 "TEST",         // originatorId
