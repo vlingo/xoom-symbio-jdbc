@@ -5,7 +5,7 @@
              http://xmlns.jcp.org/xml/ns/persistence/persistence_2_1.xsd"
              version="2.1">
   
-    <persistence-unit name="JpaMySqlService"  transaction-type="RESOURCE_LOCAL">
+    <persistence-unit name="JpaMySqlService" transaction-type="RESOURCE_LOCAL">
       <description>
       	Example persistence unit for MySQL where Hibernate is the JPA provider. 
       </description>
@@ -13,9 +13,9 @@
       <mapping-file>META-INF/orm.xml</mapping-file>
       <properties>
        	<property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
-       	<property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost/test"/>
-       	<property name="javax.persistence.jdbc.user" value="test"/>
-       	<property name="javax.persistence.jdbc.password" value="test"/>
+       	<property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost/vlingo_test"/>
+       	<property name="javax.persistence.jdbc.user" value="vlingo_test"/>
+       	<property name="javax.persistence.jdbc.password" value="vlingo123"/>
         <property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
        	<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/> 
         <!--Hibernate properties-->

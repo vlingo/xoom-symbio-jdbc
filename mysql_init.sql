@@ -1,4 +1,2 @@
-CREATE DATABASE vlingo_test;
-CREATE USER 'vlingo_test'@'localhost' IDENTIFIED BY 'vlingo123';
-GRANT ALL ON *.* TO 'vlingo_test'@'localhost';
+GRANT ALL ON *.* TO 'vlingo_test'@'%';
 FLUSH PRIVILEGES;
