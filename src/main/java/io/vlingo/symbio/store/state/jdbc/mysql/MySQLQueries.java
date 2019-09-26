@@ -41,7 +41,7 @@ public interface MySQLQueries {
                     ");";
 
     final static String SQL_FORMAT_BINARY = "VARBINARY(4096)";
-    final static String SQL_FORMAT_TEXT1 = "json";
+    final static String SQL_FORMAT_TEXT1 = "TEXT";
     // private final static String SQL_FORMAT_TEXT2 = "jsonb";
 
     final static String TBL_VLINGO_SYMBIO_DISPATCHABLES = "tbl_vlingo_symbio_dispatchables";
