@@ -4,6 +4,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import io.vlingo.symbio.store.journal.jdbc.JDBCStreamReaderActor;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -22,7 +23,7 @@ public class PostgresStreamReaderActorTest extends BasePostgresJournalTest {
     public void setUp() throws Exception {
         eventStreamReader = world.actorFor(
                 StreamReader.class,
-                Definition.has(PostgresStreamReaderActor.class,
+                Definition.has(JDBCStreamReaderActor.class,
                         Definition.parameters(configuration))
         );
 

@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActor;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -56,7 +57,7 @@ public class PostgresJournalActorTest extends BasePostgresJournalTest {
 
         dispatcher = new MockDispatcher<>();
 
-        journal =  world.stage().actorFor(Journal.class, PostgresJournalActor.class, dispatcher, configuration);
+        journal =  world.stage().actorFor(Journal.class, JDBCJournalActor.class, dispatcher, configuration);
         EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
         StateAdapterProvider.instance(world).registerAdapter(Entity1.class, entity1Adapter);
 

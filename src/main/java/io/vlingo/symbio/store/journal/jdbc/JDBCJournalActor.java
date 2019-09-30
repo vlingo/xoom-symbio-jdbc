@@ -5,7 +5,7 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.journal.jdbc.postgres;
+package io.vlingo.symbio.store.journal.jdbc;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -50,7 +50,7 @@ import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.StreamReader;
 
-public class PostgresJournalActor extends Actor implements Journal<String> {
+public class JDBCJournalActor extends Actor implements Journal<String> {
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
   private final Configuration configuration;
@@ -62,24 +62,24 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
   private final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher;
   private final DispatcherControl dispatcherControl;
 
-  private final PostgresQueries queries;
+  private final JDBCQueries queries;
 
-  public PostgresJournalActor(final Configuration configuration) throws Exception {
+  public JDBCJournalActor(final Configuration configuration) throws Exception {
     this(null, configuration, 0L, 0L);
   }
 
-  public PostgresJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration) throws Exception {
+  public JDBCJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration) throws Exception {
     this(dispatcher, configuration, 1000L, 1000L);
   }
 
-  public PostgresJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration,
-          final long checkConfirmationExpirationInterval, final long confirmationExpiration) throws Exception {
+  public JDBCJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration,
+                          final long checkConfirmationExpirationInterval, final long confirmationExpiration) throws Exception {
     this.configuration = configuration;
     this.connection = configuration.connection;
 
     this.connection.setAutoCommit(false);
 
-    this.queries = PostgresQueries.queriesFor(configuration.connection);
+    this.queries = JDBCQueries.queriesFor(configuration.connection);
 
     this.queries.createTables();
 
@@ -94,8 +94,8 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
 
     if (dispatcher != null) {
       this.dispatcher = dispatcher;
-      final PostgresDispatcherControlDelegate dispatcherControlDelegate =
-              new PostgresDispatcherControlDelegate(Configuration.cloneOf(configuration), stage().world().defaultLogger());
+      final JDBCDispatcherControlDelegate dispatcherControlDelegate =
+              new JDBCDispatcherControlDelegate(Configuration.cloneOf(configuration), stage().world().defaultLogger());
       this.dispatcherControl = stage().actorFor(DispatcherControl.class,
               Definition.has(DispatcherControlActor.class,
                   Definition.parameters(dispatcher,
@@ -202,7 +202,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
   public Completes<JournalReader<? extends Entry<?>>> journalReader(final String name) {
     final JournalReader<TextEntry> reader = journalReaders.computeIfAbsent(name, (key) -> {
       final Address address = stage().world().addressFactory().uniquePrefixedWith("eventJournalReader-" + name);
-      return stage().actorFor(JournalReader.class, Definition.has(PostgresJournalReaderActor.class, Definition.parameters(configuration, name)), address);
+      return stage().actorFor(JournalReader.class, Definition.has(JDBCJournalReaderActor.class, Definition.parameters(configuration, name)), address);
     });
 
     return completes().with(reader);
@@ -213,7 +213,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
   public Completes<StreamReader<String>> streamReader(final String name) {
     final StreamReader<String> reader = streamReaders.computeIfAbsent(name, (key) -> {
       final Address address = stage().world().addressFactory().uniquePrefixedWith("eventStreamReader-" + key);
-      return stage().actorFor(StreamReader.class, Definition.has(PostgresStreamReaderActor.class, Definition.parameters(configuration)), address);
+      return stage().actorFor(StreamReader.class, Definition.has(JDBCStreamReaderActor.class, Definition.parameters(configuration)), address);
     });
 
     return completes().with(reader);
@@ -276,7 +276,7 @@ public class PostgresJournalActor extends Actor implements Journal<String> {
   protected final void insertDispatchable(final Dispatchable<Entry<String>, TextState> dispatchable, final Consumer<Exception> whenFailed) {
     try {
       final String entries = dispatchable.hasEntries() ?
-              dispatchable.entries().stream().map(Entry::id).collect(Collectors.joining(PostgresDispatcherControlDelegate.DISPATCHEABLE_ENTRIES_DELIMITER)) :
+              dispatchable.entries().stream().map(Entry::id).collect(Collectors.joining(JDBCDispatcherControlDelegate.DISPATCHEABLE_ENTRIES_DELIMITER)) :
               "";
 
       final Tuple2<PreparedStatement, Optional<String>> insertDispatchable;

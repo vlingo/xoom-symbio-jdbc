@@ -5,7 +5,7 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.journal.jdbc.postgres;
+package io.vlingo.symbio.store.journal.jdbc;
 
 import static java.util.Collections.emptyList;
 
@@ -26,17 +26,16 @@ import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.journal.Stream;
 import io.vlingo.symbio.store.journal.StreamReader;
+import io.vlingo.symbio.store.journal.jdbc.JDBCQueries;
 
-public class PostgresStreamReaderActor extends Actor implements StreamReader<String> {
+public class JDBCStreamReaderActor extends Actor implements StreamReader<String> {
     private final Connection connection;
     private final Gson gson;
-    private final PostgresQueries queries;
+    private final JDBCQueries queries;
 
-    public PostgresStreamReaderActor(final Configuration configuration) throws SQLException {
+    public JDBCStreamReaderActor(final Configuration configuration) throws SQLException {
         this.connection = configuration.connection;
-
-        this.queries = PostgresQueries.queriesFor(this.connection);
-
+        this.queries = JDBCQueries.queriesFor(this.connection);
         this.gson = new Gson();
     }
 

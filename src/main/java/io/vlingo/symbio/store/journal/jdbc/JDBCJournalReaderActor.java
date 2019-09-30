@@ -5,7 +5,7 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.journal.jdbc.postgres;
+package io.vlingo.symbio.store.journal.jdbc;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -23,21 +23,22 @@ import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.journal.JournalReader;
+import io.vlingo.symbio.store.journal.jdbc.JDBCQueries;
 
-public class PostgresJournalReaderActor extends Actor implements JournalReader<TextEntry> {
+public class JDBCJournalReaderActor extends Actor implements JournalReader<TextEntry> {
 
     private final Connection connection;
     private final Gson gson;
     private final String name;
-    private final PostgresQueries queries;
+    private final JDBCQueries queries;
 
     private long offset;
 
-    public PostgresJournalReaderActor(final Configuration configuration, final String name) throws SQLException {
+    public JDBCJournalReaderActor(final Configuration configuration, final String name) throws SQLException {
         this.connection = configuration.connection;
         this.name = name;
 
-        this.queries = PostgresQueries.queriesFor(this.connection);
+        this.queries = JDBCQueries.queriesFor(this.connection);
 
         this.gson = new Gson();
         retrieveCurrentOffset();

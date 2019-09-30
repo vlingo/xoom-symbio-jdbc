@@ -16,6 +16,7 @@ import java.sql.SQLException;
 import java.util.Optional;
 import java.util.UUID;
 
+import io.vlingo.symbio.store.journal.jdbc.JDBCQueries;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -38,7 +39,7 @@ public abstract class BasePostgresJournalTest {
     protected Gson gson;
     protected String streamName;
     protected IdentityGenerator identityGenerator;
-    protected PostgresQueries queries;
+    protected JDBCQueries queries;
 
     @Before
     public void setUpDatabase() throws Exception {
@@ -49,7 +50,7 @@ public abstract class BasePostgresJournalTest {
         gson = new Gson();
         identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
 
-        queries = PostgresQueries.queriesFor(configuration.connection);
+        queries = JDBCQueries.queriesFor(configuration.connection);
         dropDatabase();
         queries.createTables();
     }
