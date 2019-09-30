@@ -5,17 +5,16 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.journal.jdbc.postgres;
+package io.vlingo.symbio.store.journal.jdbc.mysql;
 
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider;
-import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActorTest;
+import io.vlingo.symbio.store.common.jdbc.mysql.MySQLConfigurationProvider;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalReaderActorTest;
 
-public class PostgresJournalActorTest extends JDBCJournalActorTest {
-
+public class MySQLJournalReaderActorTest extends JDBCJournalReaderActorTest {
     @Override
     protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        return PostgresConfigurationProvider.testConfiguration(format);
+        return MySQLConfigurationProvider.testConfiguration(format);
     }
 }
