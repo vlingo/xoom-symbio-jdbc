@@ -12,6 +12,9 @@ import java.sql.Statement;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.jdbc.hsqldb.HSQLDBConfigurationProvider;
+import io.vlingo.symbio.store.common.jdbc.mysql.MySQLConfigurationProvider;
+import io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider;
 
 /**
  * A standard configuration for JDBC connections used by
@@ -55,6 +58,27 @@ public class Configuration {
     } catch (Exception e) {
       throw new IllegalArgumentException("Cannot clone the configuration for " + other.connectionProvider.url + " because: " + e.getMessage(), e);
     }
+  }
+
+  public static ConfigurationInterest interestOf(final DatabaseType databaseType) {
+    switch (databaseType) {
+    case HSQLDB:
+      return HSQLDBConfigurationProvider.interest;
+    case MySQL:
+    case MariaDB:
+      return MySQLConfigurationProvider.interest;
+    case SQLServer:
+      break;
+    case Vitess:
+      break;
+    case Oracle:
+      break;
+    case Postgres:
+    case YugaByte:
+      return PostgresConfigurationProvider.interest;
+    }
+
+    throw new IllegalArgumentException("Database currently not supported: " + databaseType.name());
   }
 
   public Configuration(

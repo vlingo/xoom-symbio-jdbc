@@ -24,6 +24,20 @@ public enum DatabaseType {
     String url = "uninitialized-database-url";
     try {
       url = connection.getMetaData().getURL().toLowerCase();
+      return databaseType(url);
+    } catch (Exception e) {
+      // fall through
+    }
+    throw new IllegalStateException("Unknown database type for: " + url);
+  }
+
+  /**
+   * Answer the {@code DatabaseType} given a {@code url}.
+   * @param url the String URL of the database connection
+   * @return DatabaseType
+   */
+  public static DatabaseType databaseType(final String url) {
+    try {
       for (final DatabaseType type : DatabaseType.values()) {
         if (url.contains(type.name().toLowerCase())) {
           return type;
