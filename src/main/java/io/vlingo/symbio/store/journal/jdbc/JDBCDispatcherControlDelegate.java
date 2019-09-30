@@ -14,9 +14,9 @@ import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
-import io.vlingo.symbio.store.journal.jdbc.JDBCQueries;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -33,12 +33,14 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
     static final String DISPATCHEABLE_ENTRIES_DELIMITER = "|";
 
     private final Connection connection;
+    private final DatabaseType databaseType;
     private final Logger logger;
     private final PreparedStatement selectDispatchables;
     private final JDBCQueries queries;
 
     public JDBCDispatcherControlDelegate(final Configuration configuration, final Logger logger) throws SQLException {
         this.connection = configuration.connection;
+        this.databaseType = configuration.databaseType;
         this.logger = logger;
         this.queries = JDBCQueries.queriesFor(configuration.connection);
 
@@ -66,7 +68,7 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
             queries.prepareDeleteDispatchableQuery(dispatchId).executeUpdate();
             doCommit();
         } catch (final Exception e) {
-            logger.error("vlingo/symbio-jdbc-postgres: Failed to confirm dispatch with id" + dispatchId, e);
+            logger.error("vlingo/symbio-jdbc-" + databaseType + ": Failed to confirm dispatch with id" + dispatchId, e);
             fail();
         }
     }
@@ -84,7 +86,7 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
         try {
             connection.commit();
         } catch (final SQLException e) {
-            logger.error("vlingo/symbio-jdbc-postgres: Could not complete transaction", e);
+            logger.error("vlingo/symbio-jdbc-" + databaseType + ": Could not complete transaction", e);
             throw new IllegalStateException(e);
         }
     }

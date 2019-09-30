@@ -9,10 +9,14 @@ package io.vlingo.symbio.store.journal.jdbc;
 
 import io.vlingo.common.Tuple2;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
+import io.vlingo.symbio.store.journal.jdbc.mysql.MySQLQueries;
 import io.vlingo.symbio.store.journal.jdbc.postgres.PostgresQueries;
 import io.vlingo.symbio.store.journal.jdbc.postgres.yugabyte.YugaByteQueries;
 
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Optional;
 
 public abstract class JDBCQueries {
@@ -74,6 +78,8 @@ public abstract class JDBCQueries {
                 return new PostgresQueries(connection);
             case YugaByte:
                 return new YugaByteQueries(connection);
+            case MySQL:
+                return new MySQLQueries(connection);
             default:
                 throw new IllegalArgumentException("Database type not supported: " + databaseType);
         }

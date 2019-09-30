@@ -22,12 +22,13 @@ import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.jdbc.JDBCQueries;
 
 public class JDBCJournalReaderActor extends Actor implements JournalReader<TextEntry> {
-
     private final Connection connection;
+    private final DatabaseType databaseType;
     private final Gson gson;
     private final String name;
     private final JDBCQueries queries;
@@ -36,6 +37,7 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
 
     public JDBCJournalReaderActor(final Configuration configuration, final String name) throws SQLException {
         this.connection = configuration.connection;
+        this.databaseType = configuration.databaseType;
         this.name = name;
 
         this.queries = JDBCQueries.queriesFor(this.connection);
@@ -68,7 +70,7 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
                 return completes().with(entry._1);
             }
         } catch (Exception e) {
-            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: " + e.getMessage(), e);
+            logger().error("vlingo-symbio-jdbc:journal-reader-" + databaseType + ": " + e.getMessage(), e);
         }
 
         return completes().with(null);
@@ -95,7 +97,7 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
             return completes().with(events);
 
         } catch (Exception e) {
-            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: " + e.getMessage(), e);
+            logger().error("vlingo-symbio-jdbc:journal-reader-" + databaseType + ": " + e.getMessage(), e);
         }
 
         return completes().with(null);
@@ -144,8 +146,8 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
               return completes().with(count);
           }
         } catch (Exception e) {
-          logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: " + e.getMessage(), e);
-          logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: Rewinding the offset");
+          logger().error("vlingo-symbio-jdbc:journal-reader-" + databaseType + ": " + e.getMessage(), e);
+          logger().error("vlingo-symbio-jdbc:journal-reader-" + databaseType + ": Rewinding the offset");
         }
 
         return completes().with(-1L);
@@ -173,8 +175,8 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
                 connection.commit();
             }
         } catch (Exception e) {
-            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: " + e.getMessage(), e);
-            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: Rewinding the offset");
+            logger().error("vlingo-symbio-jdbc:journal-reader-" + databaseType + ": " + e.getMessage(), e);
+            logger().error("vlingo-symbio-jdbc:journal-reader-" + databaseType + ": Rewinding the offset");
         }
     }
 
@@ -183,8 +185,8 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
             queries.prepareUpsertOffsetQuery(name, offset).executeUpdate();
             connection.commit();
         } catch (Exception e) {
-            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: Could not persist the offset. Will retry on next read.");
-            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: " + e.getMessage(), e);
+            logger().error("vlingo-symbio-jdbc:journal-reader-" + databaseType + ": Could not persist the offset. Will retry on next read.");
+            logger().error("vlingo-symbio-jdbc:journal-reader-" + databaseType + ": " + e.getMessage(), e);
         }
     }
 
@@ -196,7 +198,7 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
                 return lastOffset;
             }
         } catch (Exception e) {
-            logger().error("vlingo-symbio-jdbc:journal-reader-postrgres: Could not retrieve latest offset, using current.");
+            logger().error("vlingo-symbio-jdbc:journal-reader-" + databaseType + ": Could not retrieve latest offset, using current.");
         }
 
         return offset;
