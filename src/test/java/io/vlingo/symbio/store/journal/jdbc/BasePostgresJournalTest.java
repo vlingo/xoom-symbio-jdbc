@@ -5,9 +5,8 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.journal.jdbc.postgres;
+package io.vlingo.symbio.store.journal.jdbc;
 
-import static io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider.testConfiguration;
 import static org.junit.Assert.assertEquals;
 
 import java.sql.PreparedStatement;
@@ -38,7 +37,7 @@ public abstract class BasePostgresJournalTest {
     protected Gson gson;
     protected String streamName;
     protected IdentityGenerator identityGenerator;
-    protected PostgresQueries queries;
+    protected JDBCQueries queries;
 
     @Before
     public void setUpDatabase() throws Exception {
@@ -49,7 +48,7 @@ public abstract class BasePostgresJournalTest {
         gson = new Gson();
         identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
 
-        queries = PostgresQueries.queriesFor(configuration.connection);
+        queries = JDBCQueries.queriesFor(configuration.connection);
         dropDatabase();
         queries.createTables();
     }
@@ -118,4 +117,6 @@ public abstract class BasePostgresJournalTest {
     protected final TestEvent parse(Entry<String> event) {
         return gson.fromJson(event.entryData(), TestEvent.class);
     }
+
+    protected abstract Configuration.TestConfiguration testConfiguration(final DataFormat format) throws Exception;
 }

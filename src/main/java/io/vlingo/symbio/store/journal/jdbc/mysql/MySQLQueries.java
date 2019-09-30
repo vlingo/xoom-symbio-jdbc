@@ -5,29 +5,19 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.journal.jdbc.postgres;
+package io.vlingo.symbio.store.journal.jdbc.mysql;
+
+import io.vlingo.symbio.store.journal.jdbc.JDBCQueries;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Optional;
 
-import io.vlingo.common.Tuple2;
-import io.vlingo.symbio.store.common.jdbc.DatabaseType;
-import io.vlingo.symbio.store.journal.jdbc.JDBCQueries;
-import io.vlingo.symbio.store.journal.jdbc.postgres.yugabyte.YugaByteQueries;
-
-/**
- * Standard queries for the Postgres `Journal` and may be extended
- * by others implementations, such as YugaByte.
- */
-public class PostgresQueries extends JDBCQueries {
-    public static final String TABLE_VLINGO_SYMBIO_JOURNAL_DISPATCHABLES = "VLINGO_SYMBIO_JOURNAL_DISPATCHABLES";
-    public static final String TABLE_VLINGO_SYMBIO_JOURNAL = "VLINGO_SYMBIO_JOURNAL";
-    public static final String TABLE_VLINGO_SYMBIO_JOURNAL_OFFSETS = "VLINGO_SYMBIO_JOURNAL_OFFSETS";
-    public static final String TABLE_VLINGO_SYMBIO_JOURNAL_SNAPSHOTS = "VLINGO_SYMBIO_JOURNAL_SNAPSHOTS";
+public class MySQLQueries extends JDBCQueries {
+    public static final String TABLE_VLINGO_SYMBIO_JOURNAL_DISPATCHABLES = "vlingo_symbio_journal_dispatchables";
+    public static final String TABLE_VLINGO_SYMBIO_JOURNAL = "vlingo_symbio_journal";
+    public static final String TABLE_VLINGO_SYMBIO_JOURNAL_OFFSETS = "vlingo_symbio_journal_offsets";
+    public static final String TABLE_VLINGO_SYMBIO_JOURNAL_SNAPSHOTS = "vlingo_symbio_journal_snapshots";
 
     private static final String CREATE_DISPATCHABLE_TABLE =
             "CREATE TABLE IF NOT EXISTS " + TABLE_VLINGO_SYMBIO_JOURNAL_DISPATCHABLES + " (\n" +
@@ -46,7 +36,7 @@ public class PostgresQueries extends JDBCQueries {
     private static final String CREATE_JOURNAL_TABLE =
             "CREATE TABLE IF NOT EXISTS " + TABLE_VLINGO_SYMBIO_JOURNAL + " (\n" +
 //                  "E_ID BIGINT GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1) PRIMARY KEY, \n" +
-                    "E_ID BIGSERIAL PRIMARY KEY, \n" +
+                    "E_ID SERIAL PRIMARY KEY, \n" +
                     "E_STREAM_NAME VARCHAR(512) NOT NULL, \n" +
                     "E_STREAM_VERSION INTEGER NOT NULL, \n" +
                     "E_ENTRY_DATA TEXT NOT NULL, \n" +
@@ -112,7 +102,7 @@ public class PostgresQueries extends JDBCQueries {
 
     private static final String UPSERT_OFFSET =
             "INSERT INTO " + TABLE_VLINGO_SYMBIO_JOURNAL_OFFSETS + "(O_READER_NAME, O_READER_OFFSET) VALUES(?, ?) " +
-                    "ON CONFLICT (O_READER_NAME) DO UPDATE SET O_READER_OFFSET=?";
+                    "ON DUPLICATE KEY UPDATE O_READER_OFFSET = ?";
 
     private static final String INSERT_SNAPSHOT =
             "INSERT INTO " + TABLE_VLINGO_SYMBIO_JOURNAL_SNAPSHOTS + "\n" +
@@ -158,7 +148,7 @@ public class PostgresQueries extends JDBCQueries {
                     "FROM " + TABLE_VLINGO_SYMBIO_JOURNAL + " " +
                     "WHERE E_STREAM_NAME = ? AND E_STREAM_VERSION >= ? ORDER BY E_STREAM_VERSION";
 
-    public PostgresQueries(Connection connection) throws SQLException {
+    public MySQLQueries(Connection connection) throws SQLException {
         super(connection);
     }
 
