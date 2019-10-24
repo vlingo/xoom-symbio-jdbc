@@ -15,7 +15,7 @@ import org.jdbi.v3.core.statement.Update;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 
 /**
- * A {@code JdbiOnDatabase} for HSQLDB.
+ * A {@code JdbiOnDatabase} for PostgreSQL.
  */
 public class JdbiOnPostgres extends JdbiOnDatabase {
   /**

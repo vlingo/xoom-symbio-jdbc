@@ -27,6 +27,7 @@
        	<property name="javax.persistence.schema-generation.drop-script-source" value="./dropDDL.jdbc"/>
       </properties>
     </persistence-unit>
+
     <persistence-unit name="JpaHsqldbService" transaction-type="RESOURCE_LOCAL">
       <description>
       	Example persistence unit for HSQLDB where EclipseLink is the JPA provider. 
@@ -50,6 +51,7 @@
        	<property name="javax.persistence.schema-generation.drop-script-source" value="./dropDDL.jdbc"/>
       </properties>
     </persistence-unit>
+
     <persistence-unit name="JpaPostgresService" transaction-type="RESOURCE_LOCAL">
       <description>
       	Example persistence unit for Postgresql where EclipseLink is the JPA provider. 
@@ -73,4 +75,28 @@
        	<property name="javax.persistence.schema-generation.drop-script-source" value="./dropDDL.jdbc"/>
       </properties>
     </persistence-unit>
+
+	<persistence-unit name="JpaYugaByteService" transaction-type="RESOURCE_LOCAL">
+		<description>
+			Example persistence unit for Postgresql where EclipseLink is the JPA provider.
+		</description>
+		<provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
+		<mapping-file>META-INF/orm.xml</mapping-file>
+		<properties>
+			<property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver"/>
+			<property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost:5433/vlingo_test"/>
+			<property name="javax.persistence.jdbc.user" value="postgres"/>
+			<property name="javax.persistence.jdbc.password" value="postgres"/>
+			<property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
+			<property name="javax.persistence.schema-generation.database.action" value="drop-and-create"/>
+			<property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
+			<property name="javax.persistence.schema-generation.scripts.action" value="drop-and-create"/>
+			<property name="javax.persistence.schema-generation.scripts.create-target" value="./createDDL.jdbc"/>
+			<property name="javax.persistence.schema-generation.scripts.drop-target" value="./dropDDL.jdbc"/>
+			<property name="javax.persistence.schema-generation.create-source" value="metadata"/>
+			<property name="javax.persistence.schema-generation.drop-source" value="metadata"/>
+			<property name="javax.persistence.schema-generation.create-script-source" value="./createDDL.jdbc"/>
+			<property name="javax.persistence.schema-generation.drop-script-source" value="./dropDDL.jdbc"/>
+		</properties>
+	</persistence-unit>
 </persistence>

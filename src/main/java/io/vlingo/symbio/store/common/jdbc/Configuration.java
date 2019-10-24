@@ -15,6 +15,7 @@ import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.hsqldb.HSQLDBConfigurationProvider;
 import io.vlingo.symbio.store.common.jdbc.mysql.MySQLConfigurationProvider;
 import io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider;
+import io.vlingo.symbio.store.common.jdbc.yugabyte.YugaByteConfigurationProvider;
 
 /**
  * A standard configuration for JDBC connections used by
@@ -74,8 +75,9 @@ public class Configuration {
     case Oracle:
       break;
     case Postgres:
-    case YugaByte:
       return PostgresConfigurationProvider.interest;
+    case YugaByte:
+      return YugaByteConfigurationProvider.interest;
     }
 
     throw new IllegalArgumentException("Database currently not supported: " + databaseType.name());
