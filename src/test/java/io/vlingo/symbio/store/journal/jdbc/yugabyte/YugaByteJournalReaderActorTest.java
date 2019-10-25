@@ -5,16 +5,16 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.journal.jdbc.postgres;
+package io.vlingo.symbio.store.journal.jdbc.yugabyte;
 
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider;
-import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActorTest;
+import io.vlingo.symbio.store.common.jdbc.yugabyte.YugaByteConfigurationProvider;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalReaderActorTest;
 
-public class PostgresJournalActorTest extends JDBCJournalActorTest {
+public class YugaByteJournalReaderActorTest extends JDBCJournalReaderActorTest {
     @Override
     protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        return PostgresConfigurationProvider.testConfiguration(format);
+        return YugaByteConfigurationProvider.testConfiguration(format);
     }
 }
