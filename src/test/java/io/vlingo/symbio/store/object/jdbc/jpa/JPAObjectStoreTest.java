@@ -74,8 +74,8 @@ public abstract class JPAObjectStoreTest {
         // delegate = new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_MYSQL_PERSISTENCE_UNIT, properties, "TEST", stateAdapterProvider, world.defaultLogger());
         // delegate = new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_HSQLDB_PERSISTENCE_UNIT, "TEST", stateAdapterProvider, world.defaultLogger());
 
-        // connectionProvider = new ConnectionProvider("org.postgresql.Driver", "jdbc:postgresql//localhost/", testDatabaseName, "vlingo_test", "vlingo123", false);
-        connectionProvider = new ConnectionProvider("org.postgresql.Driver", "jdbc:postgresql//localhost:5433/", testDatabaseName, "postgres", "postgres", false);
+        // connectionProvider = new ConnectionProvider("org.postgresql.Driver", "jdbc:postgresql://localhost/", testDatabaseName, "vlingo_test", "vlingo123", false);
+        connectionProvider = new ConnectionProvider("org.postgresql.Driver", "jdbc:postgresql://localhost:5433/", testDatabaseName, "postgres", "postgres", false);
         // connectionProvider = new ConnectionProvider("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost/", testDatabaseName, "root", "vlingo123", false);
         // connectionProvider = new ConnectionProvider("org.hsqldb.jdbc.JDBCDriver", "jdbc:hsqldb:mem", "test", "SA", "", false);
 
