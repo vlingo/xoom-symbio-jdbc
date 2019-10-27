@@ -35,7 +35,8 @@ public class MySQLJDBCObjectStoreEntryReaderTest extends JDBCObjectStoreEntryRea
 
     @Override
     protected ConnectionProvider createConnectionProvider() {
-        return new ConnectionProvider("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost/", testDatabaseName, "root", "vlingo123", false);
+        return new ConnectionProvider("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost/", testDatabaseName,
+                "vlingo_test", "vlingo123", false);
     }
 
     @Override
@@ -59,7 +60,7 @@ public class MySQLJDBCObjectStoreEntryReaderTest extends JDBCObjectStoreEntryRea
 
         properties.put("javax.persistence.jdbc.driver", "com.mysql.cj.jdbc.Driver");
         properties.put("javax.persistence.jdbc.url", "jdbc:mysql://localhost/" + databaseNamePostfix);
-        properties.put("javax.persistence.jdbc.user", "root");
+        properties.put("javax.persistence.jdbc.user", "vlingo_test");
         properties.put("javax.persistence.jdbc.password", "vlingo123");
 
         return properties;

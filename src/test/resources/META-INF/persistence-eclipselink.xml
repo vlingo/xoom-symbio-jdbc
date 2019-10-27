@@ -78,7 +78,7 @@
 
 	<persistence-unit name="JpaYugaByteService" transaction-type="RESOURCE_LOCAL">
 		<description>
-			Example persistence unit for Postgresql where EclipseLink is the JPA provider.
+			Example persistence unit for YugaByte where EclipseLink is the JPA provider.
 		</description>
 		<provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
 		<mapping-file>META-INF/orm.xml</mapping-file>
