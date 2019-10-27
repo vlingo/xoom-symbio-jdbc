@@ -14,33 +14,32 @@ import java.text.MessageFormat;
  * A {@code JDBCObjectStoreEntryJournalQueries} for Postgres.
  */
 public class PostgresObjectStoreEntryJournalQueries extends JDBCObjectStoreEntryJournalQueries {
+    /**
+     * Construct my state.
+     * @param connection the Connection
+     */
+    public PostgresObjectStoreEntryJournalQueries(final Connection connection) {
+        super(connection);
+    }
 
-  /**
-   * Construct my state.
-   * @param connection the Connection
-   */
-  public PostgresObjectStoreEntryJournalQueries(final Connection connection) {
-    super(connection);
-  }
+    /*
+     * @see io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries#upsertCurrentEntryOffsetQuery(java.lang.String[])
+     */
+    @Override
+    public String upsertCurrentEntryOffsetQuery(final String[] placeholders) {
+        return MessageFormat.format(
+                "INSERT INTO {0}(O_READER_NAME, O_READER_OFFSET) VALUES({1}, {2}) " +
+                        "ON CONFLICT (O_READER_NAME) DO UPDATE SET O_READER_OFFSET={2}",
+                EntryReaderOffsetsTableName,
+                placeholders[0],
+                placeholders[1]);
+    }
 
-  /*
-   * @see io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries#upsertCurrentEntryOffsetQuery(java.lang.String[])
-   */
-  @Override
-  public String upsertCurrentEntryOffsetQuery(final String[] placeholders) {
-    return MessageFormat.format(
-            "INSERT INTO {0}(O_READER_NAME, O_READER_OFFSET) VALUES({1}, {2}) " +
-            "ON CONFLICT (O_READER_NAME) DO UPDATE SET O_READER_OFFSET={2}",
-            EntryReaderOffsetsTableName,
-            placeholders[0],
-            placeholders[1]);
-  }
-
-  /*
-   * @see io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries#wideTextDataType()
-   */
-  @Override
-  public String wideTextDataType() {
-    return "TEXT";
-  }
+    /*
+     * @see io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries#wideTextDataType()
+     */
+    @Override
+    public String wideTextDataType() {
+        return "TEXT";
+    }
 }
