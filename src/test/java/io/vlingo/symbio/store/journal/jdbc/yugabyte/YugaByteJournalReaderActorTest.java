@@ -11,7 +11,9 @@ import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.yugabyte.YugaByteConfigurationProvider;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalReaderActorTest;
+import org.junit.Ignore;
 
+@Ignore
 public class YugaByteJournalReaderActorTest extends JDBCJournalReaderActorTest {
     @Override
     protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {

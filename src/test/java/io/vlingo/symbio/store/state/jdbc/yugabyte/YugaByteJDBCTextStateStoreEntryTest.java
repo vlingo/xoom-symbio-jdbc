@@ -13,7 +13,9 @@ import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.yugabyte.YugaByteConfigurationProvider;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.jdbc.JDBCTextStateStoreEntryTest;
+import org.junit.Ignore;
 
+@Ignore
 public class YugaByteJDBCTextStateStoreEntryTest extends JDBCTextStateStoreEntryTest {
     @Override
     protected StateStore.StorageDelegate storageDelegate(Configuration.TestConfiguration configuration, Logger logger) {

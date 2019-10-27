@@ -13,7 +13,9 @@ import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.yugabyte.YugaByteConfigurationProvider;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegateTest;
+import org.junit.Ignore;
 
+@Ignore
 public class YugaByteStorageDelegateTest extends JDBCStorageDelegateTest {
     @Override
     protected JDBCStorageDelegate<Object> storageDelegate(Configuration.TestConfiguration configuration, Logger logger) {

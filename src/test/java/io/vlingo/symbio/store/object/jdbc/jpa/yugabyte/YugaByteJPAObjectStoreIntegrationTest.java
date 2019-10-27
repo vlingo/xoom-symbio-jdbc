@@ -17,11 +17,13 @@ import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries;
 import io.vlingo.symbio.store.object.jdbc.YugaByteObjectStoreEntryJournalQueries;
 import io.vlingo.symbio.store.object.jdbc.jpa.JDBCObjectStoreEntryReaderTest;
 import io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStoreDelegate;
+import org.junit.Ignore;
 
 import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Map;
 
+@Ignore
 public class YugaByteJPAObjectStoreIntegrationTest extends JDBCObjectStoreEntryReaderTest {
     @Override
     protected Configuration createAdminConfiguration() throws Exception {
