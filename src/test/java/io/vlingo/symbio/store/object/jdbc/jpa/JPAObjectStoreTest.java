@@ -59,10 +59,6 @@ public abstract class JPAObjectStoreTest {
         EntryAdapterProvider.instance(world).registerAdapter(PersonRenamed.class, new PersonRenamedAdapter());
         final StateAdapterProvider stateAdapterProvider = StateAdapterProvider.instance(world);
         dispatcher = new MockDispatcher<>();
-
-        // adminConfiguration = PostgresConfigurationProvider.testConfiguration(DataFormat.Text);
-        // adminConfiguration = YugaByteConfigurationProvider.testConfiguration(DataFormat.Text);
-        // adminConfiguration = MySQLConfigurationProvider.testConfiguration(DataFormat.Text);
         adminConfiguration = createAdminConfiguration();
 
         testDatabaseName = testDatabaseName();
@@ -70,20 +66,12 @@ public abstract class JPAObjectStoreTest {
         createTestDatabase();
         final Map<String,Object> properties = testDatabaseProperties(testDatabaseName);
 
-        // delegate = new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_POSTGRES_PERSISTENCE_UNIT, properties, "TEST", stateAdapterProvider, world.defaultLogger());
-        // delegate = new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_YUGABYTE_PERSISTENCE_UNIT, properties, "TEST", stateAdapterProvider, world.defaultLogger());
-        // delegate = new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_MYSQL_PERSISTENCE_UNIT, properties, "TEST", stateAdapterProvider, world.defaultLogger());
         // delegate = new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_HSQLDB_PERSISTENCE_UNIT, "TEST", stateAdapterProvider, world.defaultLogger());
         delegate = createDelegate(properties, "TEST", stateAdapterProvider, world.defaultLogger());
 
-        // connectionProvider = new ConnectionProvider("org.postgresql.Driver", "jdbc:postgresql://localhost/", testDatabaseName, "vlingo_test", "vlingo123", false);
-        // connectionProvider = new ConnectionProvider("org.postgresql.Driver", "jdbc:postgresql://localhost:5433/", testDatabaseName, "postgres", "postgres", false);
-        // connectionProvider = new ConnectionProvider("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost/", testDatabaseName, "root", "vlingo123", false);
         // connectionProvider = new ConnectionProvider("org.hsqldb.jdbc.JDBCDriver", "jdbc:hsqldb:mem", "test", "SA", "", false);
         connectionProvider = createConnectionProvider();
 
-        // queries = new PostgresObjectStoreEntryJournalQueries(connectionProvider.connection());
-        // queries = new MySQLObjectStoreEntryJournalQueries(connectionProvider.connection());
         // queries = new HSQLDBObjectStoreEntryJournalQueries(connectionProvider.connection());
         queries = createQueries(connectionProvider.connection());
 
@@ -100,18 +88,6 @@ public abstract class JPAObjectStoreTest {
         dropTestDatabase();
     }
 
-//    private void createTestDatabase() throws Exception {
-//        // PostgresConfigurationProvider.interest.createDatabase(adminConfiguration.connection, testDatabaseName);
-//        // YugaByteConfigurationProvider.interest.createDatabase(adminConfiguration.connection, testDatabaseName);
-//        // MySQLConfigurationProvider.interest.createDatabase(adminConfiguration.connection, testDatabaseName);
-//    }
-
-//    private void dropTestDatabase() throws Exception {
-//        // PostgresConfigurationProvider.interest.dropDatabase(adminConfiguration.connection, testDatabaseName);
-//        // YugaByteConfigurationProvider.interest.dropDatabase(adminConfiguration.connection, testDatabaseName);
-//        // MySQLConfigurationProvider.interest.dropDatabase(adminConfiguration.connection, testDatabaseName);
-//    }
-
     protected String testDatabaseName() {
         final int postfix = databaseNamePostfix.incrementAndGet();
         return "vlingo_test_" + Math.abs(postfix);
@@ -121,23 +97,7 @@ public abstract class JPAObjectStoreTest {
         final Map<String, Object> properties = new HashMap<>();
         Map<String, Object> specificProperties = getDatabaseSpecificProperties(databaseNamePostfix);
 
-        // properties.put("javax.persistence.jdbc.driver", "org.postgresql.Driver");
-        // properties.put("javax.persistence.jdbc.url", "jdbc:postgresql://localhost/" + databaseNamePostfix);
-        // properties.put("javax.persistence.jdbc.user", "vlingo_test");
-        // properties.put("javax.persistence.jdbc.password", "vlingo123");
-
-        // properties.put("javax.persistence.jdbc.driver", "org.postgresql.Driver");
-        // properties.put("javax.persistence.jdbc.url", "jdbc:postgresql://localhost:5433/" + databaseNamePostfix);
-        // properties.put("javax.persistence.jdbc.user", "postgres");
-        // properties.put("javax.persistence.jdbc.password", "postgres");
-
-        // properties.put("javax.persistence.jdbc.driver", "com.mysql.cj.jdbc.Driver");
-        // properties.put("javax.persistence.jdbc.url", "jdbc:mysql://localhost/" + databaseNamePostfix);
-        // properties.put("javax.persistence.jdbc.user", "root");
-        // properties.put("javax.persistence.jdbc.password", "vlingo123");
-
         properties.putAll(specificProperties);
-
         properties.put("javax.persistence.LockModeType", "OPTIMISTIC_FORCE_INCREMENT");
         properties.put("javax.persistence.schema-generation.database.action", "drop-and-create");
         properties.put("javax.persistence.schema-generation.create-database-schemas", "drop-and-create");
