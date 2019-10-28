@@ -8,16 +8,10 @@
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.Optional;
 
-import io.vlingo.common.Tuple2;
-import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.journal.jdbc.JDBCQueries;
-import io.vlingo.symbio.store.journal.jdbc.postgres.yugabyte.YugaByteQueries;
 
 /**
  * Standard queries for the Postgres `Journal` and may be extended
