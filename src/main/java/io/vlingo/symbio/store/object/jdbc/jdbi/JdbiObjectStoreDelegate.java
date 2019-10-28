@@ -143,9 +143,10 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
 
   @Override
   public <T extends StateObject> State<?> persist(final T persistentObject, final long updateId, final Metadata metadata) throws StorageException {
-    final boolean create = ObjectStoreReader.isNoId(updateId);
-    final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
     final State<?> state = getRawState(metadata, persistentObject);
+    final boolean createLikely = state.dataVersion <= 1;
+    final boolean create = createLikely ? ObjectStoreReader.isNoId(updateId) : false;
+    final UnitOfWork unitOfWork = unitOfWorkRegistry.getOrDefault(updateId, AlwaysModified);
 
     persistEach(handle, unitOfWork, persistentObject, create);
 
@@ -154,7 +155,11 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   }
 
   private <T extends StateObject> State<?> getRawState(final Metadata metadata, final T detachedEntity) {
-    return this.stateAdapterProvider.asRaw(String.valueOf(detachedEntity.persistenceId()), detachedEntity, 1, metadata);
+    int stateVersion = (int) detachedEntity.version();
+    if (stateVersion < 1) {
+      stateVersion = 1;
+    }
+    return this.stateAdapterProvider.asRaw(String.valueOf(detachedEntity.persistenceId()), detachedEntity, stateVersion, metadata);
   }
 
   @Override
@@ -290,7 +295,8 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
       final JdbiPersistMapper mapper = mappers.get(type).persistMapper();
 
       try (final Update statement = create ? handle.createUpdate(mapper.insertStatement) : handle.createUpdate(mapper.updateStatement)) {
-        final long generatedId = bindAll(persistentObject, mapper, statement).executeAndReturnGeneratedKeys(mapper.idColumnName).mapTo(Long.class).one();
+        final Update update = bindAll(persistentObject, mapper, statement);
+        final long generatedId = update.executeAndReturnGeneratedKeys(mapper.idColumnName).mapTo(Long.class).one();
         persistentObject.__internal__setPersistenceId(generatedId);
       } catch (Exception e) {
         return 0;
