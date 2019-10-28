@@ -15,15 +15,15 @@ import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
 
 public class PostgresJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
 
-  @Override
-  protected StorageDelegate delegate() throws Exception {
-    System.out.println("Starting: PostgresJDBCTextStateStoreActorTest: delegate()");
-    return new PostgresStorageDelegate(configuration, world.defaultLogger());
-  }
+    @Override
+    protected StorageDelegate delegate() throws Exception {
+        System.out.println("Starting: PostgresJDBCTextStateStoreActorTest: delegate()");
+        return new PostgresStorageDelegate(configuration, world.defaultLogger());
+    }
 
-  @Override
-  protected TestConfiguration testConfiguration(DataFormat format) throws Exception {
-    System.out.println("Starting: PostgresJDBCTextStateStoreActorTest: testConfiguration()");
-    return PostgresConfigurationProvider.testConfiguration(DataFormat.Text);
-  }
+    @Override
+    protected TestConfiguration testConfiguration(DataFormat format) throws Exception {
+        System.out.println("Starting: PostgresJDBCTextStateStoreActorTest: testConfiguration()");
+        return PostgresConfigurationProvider.testConfiguration(DataFormat.Text);
+    }
 }

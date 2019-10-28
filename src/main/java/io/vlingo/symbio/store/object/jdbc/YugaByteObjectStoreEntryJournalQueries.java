@@ -11,14 +11,14 @@ import java.sql.Connection;
 import java.text.MessageFormat;
 
 /**
- * A {@code JDBCObjectStoreEntryJournalQueries} for Postgres.
+ * A {@code JDBCObjectStoreEntryJournalQueries} for YugaByte.
  */
-public class PostgresObjectStoreEntryJournalQueries extends JDBCObjectStoreEntryJournalQueries {
+public class YugaByteObjectStoreEntryJournalQueries extends JDBCObjectStoreEntryJournalQueries {
     /**
      * Construct my state.
      * @param connection the Connection
      */
-    public PostgresObjectStoreEntryJournalQueries(final Connection connection) {
+    public YugaByteObjectStoreEntryJournalQueries(final Connection connection) {
         super(connection);
     }
 

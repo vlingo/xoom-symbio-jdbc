@@ -5,21 +5,19 @@
 // was not distributed with this file, You can obtain
 // one at https://mozilla.org/MPL/2.0/.
 
-package io.vlingo.symbio.store.common.jdbc.postgres;
+package io.vlingo.symbio.store.common.jdbc.yugabyte;
+
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 
 import java.sql.Connection;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 
-import io.vlingo.symbio.store.DataFormat;
-import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.Configuration.ConfigurationInterest;
-import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
-import io.vlingo.symbio.store.common.jdbc.DatabaseType;
-
-public class PostgresConfigurationProvider {
-    public static final ConfigurationInterest interest = new ConfigurationInterest() {
+public class YugaByteConfigurationProvider {
+    public static final Configuration.ConfigurationInterest interest = new Configuration.ConfigurationInterest() {
         private Configuration configuration;
 
         @Override public void afterConnect(final Connection connection) { }
@@ -37,7 +35,7 @@ public class PostgresConfigurationProvider {
             } catch (Exception e) {
                 final List<String> message = Arrays.asList(e.getMessage().split(" "));
                 if (message.contains("database") && message.contains("already") && message.contains("exists")) return;
-                System.out.println("Postgres database " + databaseName + " could not be created because: " + e.getMessage());
+                System.out.println("YugaByte database " + databaseName + " could not be created because: " + e.getMessage());
 
                 throw e;
             }
@@ -50,7 +48,7 @@ public class PostgresConfigurationProvider {
                 statement.executeUpdate("DROP DATABASE " + databaseName);
                 connection.setAutoCommit(false);
             } catch (Exception e) {
-                System.out.println("Postgres database " + databaseName + " could not be dropped because: " + e.getMessage());
+                System.out.println("YugaByte database " + databaseName + " could not be dropped because: " + e.getMessage());
             }
         }
     };
@@ -77,16 +75,16 @@ public class PostgresConfigurationProvider {
                 createTables);
     }
 
-    public static TestConfiguration testConfiguration(final DataFormat format) throws Exception {
-        return new TestConfiguration(
+    public static Configuration.TestConfiguration testConfiguration(final DataFormat format) throws Exception {
+        return new Configuration.TestConfiguration(
                 DatabaseType.Postgres,
                 interest,
                 "org.postgresql.Driver",
                 format,
-                "jdbc:postgresql://localhost/",
+                "jdbc:postgresql://localhost:5433/",
                 "vlingo_test",  // database name
-                "vlingo_test",  // username
-                "vlingo123",    // password
+                "postgres",  // username
+                "postgres",    // password
                 false,          // useSSL
                 "TEST",         // originatorId
                 true);          // create tables

@@ -9,6 +9,7 @@ services:
     ports:
       - '5432:5432'
     environment:
+      POSTGRES_DB: vlingo_test
       POSTGRES_USER: vlingo_test
       POSTGRES_PASSWORD: vlingo123
   mysql:
