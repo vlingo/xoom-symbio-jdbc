@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 
+import io.vlingo.symbio.store.object.StateSources;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -37,7 +38,7 @@ public class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest {
     final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person = new Person(nextPersonId(), 21, "Jody Jones");
     final PersonAdded event = new PersonAdded(person);
-    objectStore.persist(person, Arrays.asList(event), -1L, persistInterest);
+    objectStore.persist(StateSources.of(person, event), -1L, persistInterest);
     final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
     assertEquals(Result.Success, outcome.andThen(success -> success).get());
 
@@ -57,7 +58,7 @@ public class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest {
       final PersonAdded event = new PersonAdded(person);
       events.add(event);
     }
-    objectStore.persist(person, events, -1L, persistInterest);
+    objectStore.persist(StateSources.of(person, events), -1L, persistInterest);
     final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
     assertEquals(Result.Success, outcome.andThen(success -> success).get());
 
@@ -82,7 +83,7 @@ public class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest {
       final PersonAdded event = new PersonAdded(person);
       events.add(event);
     }
-    objectStore.persist(person, events, -1L, persistInterest);
+    objectStore.persist(StateSources.of(person, events), -1L, persistInterest);
     final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
     assertEquals(Result.Success, outcome.andThen(success -> success).get());
 
@@ -104,7 +105,7 @@ public class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest {
       final PersonAdded event = new PersonAdded(person);
       events.add(event);
     }
-    objectStore.persist(person, events, -1L, persistInterest);
+    objectStore.persist(StateSources.of(person, events), -1L, persistInterest);
     final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
     assertEquals(Result.Success, outcome.andThen(success -> success).get());
 

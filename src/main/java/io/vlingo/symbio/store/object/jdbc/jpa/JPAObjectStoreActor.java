@@ -6,14 +6,6 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
-import java.sql.Connection;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
@@ -21,11 +13,7 @@ import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.common.identity.IdentityGenerator;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.EntryAdapterProvider;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.Source;
-import io.vlingo.symbio.State;
+import io.vlingo.symbio.*;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -38,7 +26,12 @@ import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.StateObject;
+import io.vlingo.symbio.store.object.StateSources;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryReaderActor;
+
+import java.sql.Connection;
+import java.time.LocalDateTime;
+import java.util.*;
 
 /**
  * JPAObjectStoreActor
@@ -129,25 +122,26 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   }
 
   @Override
-  public <T extends StateObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
-          final PersistResultInterest interest, final Object object) {
-
+  public <T extends StateObject, E> void persist(StateSources<T, E> stateSources, Metadata metadata, long updateId, PersistResultInterest interest, Object object) {
+    final List<Source<E>> sources = stateSources.sources();
+    final T persistentObject = stateSources.stateObject();
     try {
-      final List<Entry<String>> entries = entryAdapterProvider.asEntries(sources, metadata);
 
       delegate.beginTransaction();
-      final State<?> raw = delegate.persist(persistentObject, updateId, metadata);
+
+      final State<?> state = delegate.persist(persistentObject, updateId, metadata);
+
+      final List<Entry<String>> entries = entryAdapterProvider.asEntries(sources, metadata);
       delegate.persistEntries(entries);
 
-      final Dispatchable<Entry<String>, State<?>> dispatchable = buildDispatchable(raw, entries);
-
+      final Dispatchable<Entry<String>, State<?>> dispatchable = buildDispatchable(state, entries);
       delegate.persistDispatchable(dispatchable);
 
       delegate.completeTransaction();
 
       dispatcher.dispatch(dispatchable);
-
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, 1, object);
+
     } catch (final StorageException e) {
       logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
       delegate.failTransaction();
@@ -161,40 +155,41 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   }
 
   @Override
-  public <T extends StateObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final Metadata metadata,
-          final long updateId, final PersistResultInterest interest, final Object object) {
-
+  public <T extends StateObject, E> void persistAll(Collection<StateSources<T, E>> allStateSources, Metadata metadata, long updateId, PersistResultInterest interest, Object object) {
+    final Collection<T> allPersistentObjects = new ArrayList<>();
+    final List<Dispatchable<Entry<String>, State<?>>> allDispatchables = new ArrayList<>();
     try {
-      final List<Entry<String>> entries = entryAdapterProvider.asEntries(sources, metadata);
-      final List<Dispatchable<Entry<String>, State<?>>> dispatchables = new ArrayList<>(persistentObjects.size());
-
       delegate.beginTransaction();
+      for (StateSources<T,E> stateSources : allStateSources) {
+        final T persistentObject = stateSources.stateObject();
+        final List<Source<E>> sources = stateSources.sources();
 
-      final Collection<State<?>> states = delegate.persistAll(persistentObjects, updateId, metadata);
-      states.forEach(state-> {
-        dispatchables.add(buildDispatchable(state, entries));
-      });
+        final List<Entry<String>> entries = entryAdapterProvider.asEntries(sources, metadata);
+        delegate.persistEntries(entries);
 
-      delegate.persistEntries(entries);
-      dispatchables.forEach(delegate::persistDispatchable);
+        final State<?> state = delegate.persist(persistentObject, updateId, metadata);
+        allPersistentObjects.add(persistentObject);
 
+        final Dispatchable<Entry<String>, State<?>> dispatchable = buildDispatchable(state, entries);
+        delegate.persistDispatchable(dispatchable);
+        allDispatchables.add(dispatchable);
+      }
       delegate.completeTransaction();
 
-      //Dispatch after commit
-      dispatchables.forEach(dispatcher::dispatch);
+      allDispatchables.forEach(dispatcher::dispatch);
+      interest.persistResultedIn(Success.of(Result.Success), allPersistentObjects, allPersistentObjects.size(), allPersistentObjects.size(), object);
 
-      interest.persistResultedIn(Success.of(Result.Success), persistentObjects, persistentObjects.size(), persistentObjects.size(), object);
     } catch (final StorageException e) {
-      logger.error("Persist all of: " + persistentObjects + " failed because: " + e.getMessage(), e);
+      logger.error("Persist all of: " + allPersistentObjects + " failed because: " + e.getMessage(), e);
       delegate.failTransaction();
-      interest.persistResultedIn(Failure.of(e), persistentObjects, persistentObjects.size(), 0, object);
+      interest.persistResultedIn(Failure.of(e), allPersistentObjects, allPersistentObjects.size(), 0, object);
     } catch (final Exception e) {
-      logger.error("Persist all of: " + persistentObjects + " failed because: " + e.getMessage(), e);
+      logger.error("Persist all of: " + allPersistentObjects + " failed because: " + e.getMessage(), e);
       delegate.failTransaction();
 
       interest.persistResultedIn(
-              Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
-              persistentObjects, persistentObjects.size(), 0, object);
+        Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
+        allPersistentObjects, allPersistentObjects.size(), 0, object);
     }
   }
 

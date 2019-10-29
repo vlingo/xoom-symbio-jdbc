@@ -37,10 +37,7 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
-import io.vlingo.symbio.store.object.ObjectStore;
-import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
-import io.vlingo.symbio.store.object.QueryExpression;
-import io.vlingo.symbio.store.object.StateObject;
+import io.vlingo.symbio.store.object.*;
 import io.vlingo.symbio.store.object.jdbc.jdbi.JdbiObjectStoreEntryReaderActor;
 import io.vlingo.symbio.store.object.jdbc.jdbi.JdbiOnDatabase;
 
@@ -132,24 +129,25 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   }
 
   @Override
-  public <T extends StateObject, E> void persist(final T persistentObject, final List<Source<E>> sources, final Metadata metadata, final long updateId,
-          final PersistResultInterest interest, final Object object) {
+  public <T extends StateObject, E> void persist(StateSources<T, E> stateSources, Metadata metadata, long updateId, PersistResultInterest interest, Object object) {
+    final List<Source<E>> sources = stateSources.sources();
+    final T persistentObject = stateSources.stateObject();
     try {
-      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
-
       delegate.beginTransaction();
-      final State<?> raw = delegate.persist(persistentObject, updateId, metadata);
+
+      final State<?> state = delegate.persist(persistentObject, updateId, metadata);
+
+      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
       delegate.persistEntries(entries);
 
-      final Dispatchable<Entry<?>, State<?>> dispatchable = buildDispatchable(raw, entries);
-
+      final Dispatchable<Entry<?>, State<?>> dispatchable = buildDispatchable(state, entries);
       delegate.persistDispatchable(dispatchable);
 
       delegate.completeTransaction();
 
       dispatcher.dispatch(dispatchable);
-
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, 1, object);
+
     } catch (final StorageException e) {
       logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
       delegate.failTransaction();
@@ -158,44 +156,47 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
       logger.error("Persist of: " + persistentObject + " failed because: " + e.getMessage(), e);
       delegate.failTransaction();
       interest.persistResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), persistentObject,
-              1, 0, object);
+        1, 0, object);
     }
   }
 
   @Override
-  public <T extends StateObject, E> void persistAll(final Collection<T> persistentObjects, final List<Source<E>> sources, final Metadata metadata,
-          final long updateId, final PersistResultInterest interest, final Object object) {
+  public <T extends StateObject, E> void persistAll(Collection<StateSources<T, E>> allStateSources, Metadata metadata, long updateId, PersistResultInterest interest, Object object) {
+    final Collection<T> allPersistentObjects = new ArrayList<>();
+    final List<Dispatchable<Entry<?>, State<?>>> allDispatchables = new ArrayList<>();
     try {
-      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
-      final List<Dispatchable<Entry<?>, State<?>>> dispatchables = new ArrayList<>(persistentObjects.size());
-
       delegate.beginTransaction();
+      for (StateSources<T,E> stateSources : allStateSources) {
+        final T persistentObject = stateSources.stateObject();
+        final List<Source<E>> sources = stateSources.sources();
 
-      final Collection<State<?>> states = delegate.persistAll(persistentObjects, updateId, metadata);
-      states.forEach(state-> {
-        dispatchables.add(buildDispatchable(state, entries));
-      });
+        final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
+        delegate.persistEntries(entries);
 
-      delegate.persistEntries(entries);
-      dispatchables.forEach(delegate::persistDispatchable);
+        final State<?> state = delegate.persist(persistentObject, updateId, metadata);
+        allPersistentObjects.add(persistentObject);
 
+        final Dispatchable<Entry<?>, State<?>> dispatchable = buildDispatchable(state, entries);
+        delegate.persistDispatchable(dispatchable);
+        allDispatchables.add(dispatchable);
+      }
       delegate.completeTransaction();
 
       //Dispatch after commit
-      dispatchables.forEach(dispatcher::dispatch);
+      allDispatchables.forEach(dispatcher::dispatch);
+      interest.persistResultedIn(Success.of(Result.Success), allPersistentObjects, allPersistentObjects.size(), allPersistentObjects.size(), object);
 
-      interest.persistResultedIn(Success.of(Result.Success), persistentObjects, persistentObjects.size(), persistentObjects.size(), object);
     } catch (final StorageException e) {
-      logger.error("Persist all of: " + persistentObjects + " failed because: " + e.getMessage(), e);
+      logger.error("Persist all of: " + allPersistentObjects + " failed because: " + e.getMessage(), e);
       delegate.failTransaction();
-      interest.persistResultedIn(Failure.of(e), persistentObjects, persistentObjects.size(), 0, object);
+      interest.persistResultedIn(Failure.of(e), allPersistentObjects, allPersistentObjects.size(), 0, object);
     } catch (final Exception e) {
-      logger.error("Persist all of: " + persistentObjects + " failed because: " + e.getMessage(), e);
+      logger.error("Persist all of: " + allPersistentObjects + " failed because: " + e.getMessage(), e);
       delegate.failTransaction();
 
       interest.persistResultedIn(
-              Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
-              persistentObjects, persistentObjects.size(), 0, object);
+        Failure.of(new StorageException(Result.Failure, e.getMessage(), e)),
+        allPersistentObjects, allPersistentObjects.size(), 0, object);
     }
   }
 
