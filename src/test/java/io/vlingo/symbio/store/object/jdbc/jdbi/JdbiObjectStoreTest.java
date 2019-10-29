@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import io.vlingo.symbio.store.object.*;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,10 +43,17 @@ import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.common.jdbc.hsqldb.HSQLDBConfigurationProvider;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.object.ListQueryExpression;
+import io.vlingo.symbio.store.object.MapQueryExpression;
+import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMode;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryMultiResults;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest;
 import io.vlingo.symbio.store.object.ObjectStoreReader.QuerySingleResult;
+import io.vlingo.symbio.store.object.PersistentEntry;
+import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateObjectMapper;
+import io.vlingo.symbio.store.object.StateSources;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries;
 
 public class JdbiObjectStoreTest {
@@ -306,7 +312,7 @@ public class JdbiObjectStoreTest {
       Assert.assertNotNull(dispatchable.createdOn());
       Assert.assertNotNull(dispatchable.id());
       final Collection<BaseEntry.TextEntry> dispatchedEntries = dispatchable.entries();
-      Assert.assertEquals(2, dispatchedEntries.size());
+      Assert.assertEquals(2, dispatched.size());
       for (final BaseEntry.TextEntry dispatchedEntry : dispatchedEntries) {
         Assert.assertTrue(dispatchedEntry.id() != null && !dispatchedEntry.id().isEmpty());
         Assert.assertEquals(event1.getClass(), dispatchedEntry.typed());
