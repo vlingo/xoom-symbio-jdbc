@@ -312,7 +312,7 @@ public class JdbiObjectStoreTest {
       Assert.assertNotNull(dispatchable.createdOn());
       Assert.assertNotNull(dispatchable.id());
       final Collection<BaseEntry.TextEntry> dispatchedEntries = dispatchable.entries();
-      Assert.assertEquals(2, dispatched.size());
+      Assert.assertEquals(3, dispatched.size());
       for (final BaseEntry.TextEntry dispatchedEntry : dispatchedEntries) {
         Assert.assertTrue(dispatchedEntry.id() != null && !dispatchedEntry.id().isEmpty());
         Assert.assertEquals(event1.getClass(), dispatchedEntry.typed());
