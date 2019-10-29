@@ -15,7 +15,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import io.vlingo.symbio.store.object.StateSources;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -43,10 +45,10 @@ public abstract class JPAObjectStoreIntegrationTest extends JPAObjectStoreTest {
         AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
         Person person = new Person(1L, 21, "Jody Jones");
 
-        objectStore.persist(person,
-                Collections.singletonList(new PersonAdded(person)),
-                person.persistenceId(),
-                persistInterest);
+        objectStore.persist(
+          StateSources.of(person,new PersonAdded(person)),
+            person.persistenceId(),
+            persistInterest);
         assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
         final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
@@ -87,9 +89,12 @@ public abstract class JPAObjectStoreIntegrationTest extends JPAObjectStoreTest {
         Person person2 = new Person(2L, 21, "Joey Jones");
         Person person3 = new Person(3L, 25, "Mira Jones");
         objectStore.persistAll(
-                Arrays.asList(person1, person2, person3),
-                Arrays.asList(new PersonAdded(person1), new PersonAdded(person2), new PersonAdded(person3)),
-                persistInterest);
+            Arrays.asList(
+              StateSources.of(person1, new PersonAdded(person1)),
+              StateSources.of(person2, new PersonAdded(person2)),
+              StateSources.of(person3, new PersonAdded(person3))
+            ),
+            persistInterest);
         assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
         final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
@@ -124,13 +129,13 @@ public abstract class JPAObjectStoreIntegrationTest extends JPAObjectStoreTest {
         final AccessSafely persistInterestAccess = persistInterest.afterCompleting(1);
         Person person1 = new Person(1L, 21, "Jody Jones");
 
-        objectStore.persist(person1, Arrays.asList(new PersonAdded(person1)), person1.persistenceId(), persistInterest);
+        objectStore.persist(StateSources.of(person1, new PersonAdded(person1)), person1.persistenceId(), persistInterest);
         assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
         final TestPersistResultInterest updateInterest = new TestPersistResultInterest();
         final AccessSafely updateInterestAccess = updateInterest.afterCompleting(1);
         person1 = person1.newPersonWithName( person1.name + " " + person1.persistenceId() );
-        objectStore.persist(person1, Arrays.asList(new PersonRenamed(person1)), person1.persistenceId(), updateInterest);
+        objectStore.persist(StateSources.of(person1, new PersonRenamed(person1)), person1.persistenceId(), updateInterest);
         assertEquals(Result.Success, updateInterestAccess.readFrom("result"));
 
         final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
@@ -164,9 +169,12 @@ public abstract class JPAObjectStoreIntegrationTest extends JPAObjectStoreTest {
         Person person3 = new Person(3L, 25, "Mira Jones");
 
         objectStore.persistAll(
-                Arrays.asList(person1, person2, person3),
-                Arrays.asList(new PersonAdded(person1), new PersonAdded(person2), new PersonAdded(person3)),
-                persistInterest);
+            Arrays.asList(
+              StateSources.of(person1, new PersonAdded(person1)),
+              StateSources.of(person2, new PersonAdded(person2)),
+              StateSources.of(person3, new PersonAdded(person3))
+            ),
+            persistInterest);
         assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
         final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
@@ -190,9 +198,8 @@ public abstract class JPAObjectStoreIntegrationTest extends JPAObjectStoreTest {
         final TestPersistResultInterest updateInterest = new TestPersistResultInterest();
         final AccessSafely updateInterestAccess = updateInterest.afterCompleting(1);
         objectStore.persistAll(
-                modifiedPersons,
-                Arrays.asList(new PersonRenamed(person1), new PersonRenamed(person2), new PersonRenamed(person3)),
-                updateInterest);
+            modifiedPersons.stream().map(p -> StateSources.of(p, new PersonRenamed(p))).collect(Collectors.toList()),
+            updateInterest);
         assertEquals(Result.Success, updateInterestAccess.readFrom("result"));
 
         final TestQueryResultInterest queryInterest2 = new TestQueryResultInterest();
@@ -232,9 +239,12 @@ public abstract class JPAObjectStoreIntegrationTest extends JPAObjectStoreTest {
         Person person3 = new Person(3L, 25, "Mira Jones");
 
         objectStore.persistAll(
-                Arrays.asList(person1, person2, person3),
-                Arrays.asList(new PersonAdded(person1), new PersonAdded(person2), new PersonAdded(person3)),
-                persistInterest);
+            Arrays.asList(
+              StateSources.of(person1, new PersonAdded(person1)),
+              StateSources.of(person2, new PersonAdded(person2)),
+              StateSources.of(person3, new PersonAdded(person3))
+            ),
+            persistInterest);
         assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
         final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
@@ -267,9 +277,12 @@ public abstract class JPAObjectStoreIntegrationTest extends JPAObjectStoreTest {
         Person person3 = new Person(3L, 25, "Mira Jones");
 
         objectStore.persistAll(
-                Arrays.asList(person1, person2, person3),
-                Arrays.asList(new PersonAdded(person1), new PersonAdded(person2), new PersonAdded(person3)),
-                persistInterest);
+            Arrays.asList(
+              StateSources.of(person1, new PersonAdded(person1)),
+              StateSources.of(person2, new PersonAdded(person2)),
+              StateSources.of(person3, new PersonAdded(person3))
+            ),
+            persistInterest);
         assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
         final TestQueryResultInterest queryInterest = new TestQueryResultInterest();
@@ -307,9 +320,12 @@ public abstract class JPAObjectStoreIntegrationTest extends JPAObjectStoreTest {
         final Person person3 = new Person(3L, 25, "Mira Jones");
 
         objectStore.persistAll(
-                Arrays.asList(person1, person2, person3),
-                Arrays.asList(new PersonAdded(person1), new PersonAdded(person2), new PersonAdded(person3)),
-                persistInterest);
+            Arrays.asList(
+              StateSources.of(person1, new PersonAdded(person1)),
+              StateSources.of(person2, new PersonAdded(person2)),
+              StateSources.of(person3, new PersonAdded(person3))
+            ),
+            persistInterest);
         assertEquals(Result.Success, persistInterestAccess.readFrom("result"));
 
         try {
