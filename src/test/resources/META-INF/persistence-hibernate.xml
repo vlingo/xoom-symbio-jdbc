@@ -25,6 +25,7 @@
         <property name="hibernate.dialect" value="org.hibernate.dialect.MySQL8Dialect"/>
       </properties>
     </persistence-unit>
+
     <persistence-unit name="JpaHsqldbService" transaction-type="RESOURCE_LOCAL">
       <description>
       	Example persistence unit for HSQLDB where Hibernate is the JPA provider. 
@@ -45,6 +46,7 @@
         <property name="hibernate.dialect" value="org.hibernate.dialect.HSQLDialect"/>
       </properties>
     </persistence-unit>
+
     <persistence-unit name="JpaPostgresService" transaction-type="RESOURCE_LOCAL">
       <description>
       	Example persistence unit for Postgresql where Hibernate is the JPA provider. 
@@ -64,5 +66,26 @@
         <property name="hibernate.hbm2ddl.auto" value="create"/>
         <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQL82Dialect"/>
       </properties>
+    </persistence-unit>
+
+    <persistence-unit name="JpaYugaByteService" transaction-type="RESOURCE_LOCAL">
+        <description>
+            Example persistence unit for YugaByte where Hibernate is the JPA provider.
+        </description>
+        <provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+        <mapping-file>META-INF/orm.xml</mapping-file>
+        <properties>
+            <property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver"/>
+            <property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost:5433/vlingo_test"/>
+            <property name="javax.persistence.jdbc.user" value="postgres"/>
+            <property name="javax.persistence.jdbc.password" value="postgres"/>
+            <property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
+            <property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
+            <!--Hibernate properties-->
+            <property name="hibernate.show_sql" value="false"/>
+            <property name="hibernate.format_sql" value="false"/>
+            <property name="hibernate.hbm2ddl.auto" value="create"/>
+            <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQL82Dialect"/>
+        </properties>
     </persistence-unit>
 </persistence>

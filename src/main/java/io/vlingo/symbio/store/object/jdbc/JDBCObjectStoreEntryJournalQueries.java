@@ -67,8 +67,9 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
     case Oracle:
       break;
     case Postgres:
-    case YugaByte:
       return new PostgresObjectStoreEntryJournalQueries(connection);
+    case YugaByte:
+      return new YugaByteObjectStoreEntryJournalQueries(connection);
     }
 
     throw new IllegalArgumentException("Database currently not supported: " + databaseType.name());

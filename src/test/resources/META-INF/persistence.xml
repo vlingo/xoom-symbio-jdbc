@@ -133,4 +133,46 @@
              -->
         </properties>
     </persistence-unit>
+
+    <persistence-unit name="JpaYugaByteService" transaction-type="RESOURCE_LOCAL">
+        <description>
+            Example persistence unit for YugaByte where EclipseLink is the JPA provider.
+        </description>
+        <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
+
+
+        <mapping-file>META-INF/orm.xml</mapping-file>
+
+        <!-- Annotated entities, converters, etc. contained in the persistence unit -->
+        <class>io.vlingo.symbio.store.object.PersistentObject</class>
+        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter</class>
+        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateTimeConverter</class>
+        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter</class>
+        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.JPAEntry</class>
+        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.JPADispatchable</class>
+        <class>io.vlingo.symbio.store.object.jdbc.jpa.Person</class>
+
+        <exclude-unlisted-classes>false</exclude-unlisted-classes>
+
+        <properties>
+            <property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver"/>
+            <property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost:5433/vlingo_test"/>
+            <property name="javax.persistence.jdbc.user" value="postgres"/>
+            <property name="javax.persistence.jdbc.password" value="postgres"/>
+            <property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
+            <property name="javax.persistence.schema-generation.database.action" value="drop-and-create"/>
+            <property name="javax.persistence.schema-generation.create-database-schemas" value="drop-and-create"/>
+            <property name="javax.persistence.schema-generation.scripts.action" value="drop-and-create"/>
+            <property name="javax.persistence.schema-generation.scripts.create-target" value="./target/createDDL.jdbc"/>
+            <property name="javax.persistence.schema-generation.scripts.drop-target" value="./target/dropDDL.jdbc"/>
+            <property name="javax.persistence.schema-generation.create-source" value="metadata"/>
+            <property name="javax.persistence.schema-generation.drop-source" value="metadata"/>
+            <property name="javax.persistence.schema-generation.create-script-source" value="./target/createDDL.jdbc"/>
+            <property name="javax.persistence.schema-generation.drop-script-source" value="./target/dropDDL.jdbc"/>
+            <!--
+               <property name="eclipselink.logging.level.sql" value="FINE"/>
+            <property name="eclipselink.logging.parameters" value="true"/>
+             -->
+        </properties>
+    </persistence-unit>
 </persistence>
