@@ -294,12 +294,6 @@ public class JdbiObjectStoreTest {
     final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
     assertEquals(Result.Success, outcome.andThen(success -> success).get());
 
-    try {
-      Thread.sleep(3000);
-    } catch (InterruptedException ex) {
-      //ignored
-    }
-
     accessDispatcher.writeUsing("processDispatch", true);
 
     final Map<String, Dispatchable<BaseEntry.TextEntry, State.TextState>> dispatched = dispatcher.getDispatched();
