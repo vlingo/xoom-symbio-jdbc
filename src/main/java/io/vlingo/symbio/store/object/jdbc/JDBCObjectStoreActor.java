@@ -37,7 +37,11 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
-import io.vlingo.symbio.store.object.*;
+import io.vlingo.symbio.store.object.ObjectStore;
+import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
+import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateObject;
+import io.vlingo.symbio.store.object.StateSources;
 import io.vlingo.symbio.store.object.jdbc.jdbi.JdbiObjectStoreEntryReaderActor;
 import io.vlingo.symbio.store.object.jdbc.jdbi.JdbiOnDatabase;
 
@@ -137,7 +141,8 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
 
       final State<?> state = delegate.persist(persistentObject, updateId, metadata);
 
-      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
+      final int entryVersion = (int) stateSources.stateObject().version();
+      final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, entryVersion, metadata);
       delegate.persistEntries(entries);
 
       final Dispatchable<Entry<?>, State<?>> dispatchable = buildDispatchable(state, entries);
@@ -170,7 +175,8 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
         final T persistentObject = stateSources.stateObject();
         final List<Source<E>> sources = stateSources.sources();
 
-        final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, metadata);
+        final int entryVersion = (int) stateSources.stateObject().version();
+        final List<Entry<?>> entries = entryAdapterProvider.asEntries(sources, entryVersion, metadata);
         delegate.persistEntries(entries);
 
         final State<?> state = delegate.persist(persistentObject, updateId, metadata);

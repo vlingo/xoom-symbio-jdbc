@@ -170,7 +170,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
           final PreparedStatement writeStatement = delegate.writeExpressionFor(storeName, raw);
           writeStatement.execute();
           final String dispatchId = storeName + ":" + id;
-          final List<Entry<?>> entries = appendEntries(sources, metadata);
+          final List<Entry<?>> entries = appendEntries(sources, stateVersion, metadata);
 
           final Dispatchable<Entry<?>, State<String>> dispatchable = buildDispatchable(dispatchId, raw, entries);
           final PreparedStatement dispatchableStatement = delegate.dispatchableWriteExpressionFor(dispatchable);
@@ -196,10 +196,10 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   }
 
   @SuppressWarnings("rawtypes")
-  private <C> List<Entry<?>> appendEntries(final List<Source<C>> sources, final Metadata metadata) {
+  private <C> List<Entry<?>> appendEntries(final List<Source<C>> sources, final int stateVersion, final Metadata metadata) {
     if (sources.isEmpty()) return Collections.emptyList();
     try {
-      final List<Entry<?>> adapted = entryAdapterProvider.asEntries(sources, metadata);
+      final List<Entry<?>> adapted = entryAdapterProvider.asEntries(sources, stateVersion, metadata);
       for (final Entry<?> entry : adapted) {
         long id = -1L;
         final PreparedStatement appendStatement = delegate.appendExpressionFor(entry);

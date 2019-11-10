@@ -6,6 +6,14 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
+import java.sql.Connection;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
@@ -13,7 +21,11 @@ import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
 import io.vlingo.common.identity.IdentityGenerator;
-import io.vlingo.symbio.*;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.Source;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
@@ -28,10 +40,6 @@ import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.StateSources;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryReaderActor;
-
-import java.sql.Connection;
-import java.time.LocalDateTime;
-import java.util.*;
 
 /**
  * JPAObjectStoreActor
@@ -131,7 +139,8 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
 
       final State<?> state = delegate.persist(persistentObject, updateId, metadata);
 
-      final List<Entry<String>> entries = entryAdapterProvider.asEntries(sources, metadata);
+      final int entryVersion = (int) stateSources.stateObject().version();
+      final List<Entry<String>> entries = entryAdapterProvider.asEntries(sources, entryVersion, metadata);
       delegate.persistEntries(entries);
 
       final Dispatchable<Entry<String>, State<?>> dispatchable = buildDispatchable(state, entries);
@@ -164,7 +173,8 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
         final T persistentObject = stateSources.stateObject();
         final List<Source<E>> sources = stateSources.sources();
 
-        final List<Entry<String>> entries = entryAdapterProvider.asEntries(sources, metadata);
+        final int entryVersion = (int) stateSources.stateObject().version();
+        final List<Entry<String>> entries = entryAdapterProvider.asEntries(sources, entryVersion, metadata);
         delegate.persistEntries(entries);
 
         final State<?> state = delegate.persist(persistentObject, updateId, metadata);

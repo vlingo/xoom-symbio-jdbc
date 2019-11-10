@@ -1,7 +1,6 @@
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
 import java.util.Collection;
-import java.util.List;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.DeadLetter;
@@ -12,7 +11,6 @@ import io.vlingo.common.BasicCompletes;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.StateObject;
