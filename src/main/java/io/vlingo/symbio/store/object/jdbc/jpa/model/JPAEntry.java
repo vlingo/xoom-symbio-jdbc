@@ -37,6 +37,9 @@ public class JPAEntry implements Entry<String> {
   @Column(name="e_data", updatable = false, nullable = false)
   private String entryData;
 
+  @Column(name="e_entry_version", updatable = false, nullable = false)
+  private int entryVersion;
+
   @Column(name="e_metadata_value", updatable = false, nullable = false)
   private String metadataValue;
 
@@ -59,6 +62,7 @@ public class JPAEntry implements Entry<String> {
 
   public JPAEntry(final Entry<String> entry) {
     this.entryData = entry.entryData();
+    this.entryVersion = entry.entryVersion();
     this.metadataValue = entry.metadata().value;
     this.metadataOp = entry.metadata().operation;
     this.type = entry.typeName();
@@ -67,12 +71,17 @@ public class JPAEntry implements Entry<String> {
   }
 
   public JPAEntry(final Class<?> type, final int typeVersion, final String entryData, final Metadata metadata) {
+    this(type, typeVersion, entryData, Entry.DefaultVersion, metadata);
+  }
+
+  public JPAEntry(final Class<?> type, final int typeVersion, final String entryData, final int entryVersion, final Metadata metadata) {
     if (type == null) throw new IllegalArgumentException("Entry type must not be null.");
     this.type = type.getName();
     if (typeVersion <= 0) throw new IllegalArgumentException("Entry typeVersion must be greater than 0.");
     this.typeVersion = typeVersion;
     if (entryData == null) throw new IllegalArgumentException("Entry entryData must not be null.");
     this.entryData = entryData;
+    this.entryVersion = entryVersion;
     if (metadata == null) throw new IllegalArgumentException("Entry metadata must not be null.");
     this.metadataValue = metadata().value;
     this.metadataOp = metadata().operation;
@@ -80,6 +89,10 @@ public class JPAEntry implements Entry<String> {
   }
 
   public JPAEntry(final String id, final Class<?> type, final int typeVersion, final String entryData, final Metadata metadata) {
+    this(id, type, typeVersion, entryData, Entry.DefaultVersion, metadata);
+  }
+
+  public JPAEntry(final String id, final Class<?> type, final int typeVersion, final String entryData, final int entryVersion, final Metadata metadata) {
     if (id == null) throw new IllegalArgumentException("Entry id must not be null.");
     this.id = Long.parseLong(id);
     if (type == null) throw new IllegalArgumentException("Entry type must not be null.");
@@ -88,6 +101,7 @@ public class JPAEntry implements Entry<String> {
     this.typeVersion = typeVersion;
     if (entryData == null) throw new IllegalArgumentException("Entry entryData must not be null.");
     this.entryData = entryData;
+    this.entryVersion = entryVersion;
     if (metadata == null) throw new IllegalArgumentException("Entry metadata must not be null.");
     this.metadataValue = metadata().value;
     this.metadataOp = metadata().operation;

@@ -42,8 +42,13 @@ public final class PersonEntryAdapters {
     public JPAEntry toEntry(final PersonAdded source, final String id, final Metadata metadata) {
       return new JPAEntry(PersonAdded.class, 1, JsonSerialization.serialized(source), metadata);
     }
+
+    @Override
+    public JPAEntry toEntry(final PersonAdded source, final int version, final String id, final Metadata metadata) {
+      return new JPAEntry(PersonAdded.class, 1, JsonSerialization.serialized(source), version, metadata);
+    }
   }
-  
+
   /**
    * PersonRenamedAdapter is responsible for adapting between {@link PersonRenamed}
    * domain events and {@link JPAEntry} typed journal entries.
@@ -66,6 +71,11 @@ public final class PersonEntryAdapters {
     @Override
     public JPAEntry toEntry(final PersonRenamed source, final String id, final Metadata metadata) {
       return new JPAEntry(PersonRenamed.class, 1, JsonSerialization.serialized(source), metadata);
+    }
+
+    @Override
+    public JPAEntry toEntry(final PersonRenamed source, final int version, final String id, final Metadata metadata) {
+      return new JPAEntry(PersonRenamed.class, 1, JsonSerialization.serialized(source), version, metadata);
     }
   }
 }
