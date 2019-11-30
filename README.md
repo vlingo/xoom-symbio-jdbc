@@ -42,13 +42,13 @@ Run the server using the following, which both stops the current instance and th
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>0.9.2-RC3</version>
+      <version>0.9.3-RC4</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio-jdbc</artifactId>
-      <version>0.9.2-RC3</version>
+      <version>0.9.3-RC4</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -56,8 +56,8 @@ Run the server using the following, which both stops the current instance and th
 
 ```gradle
 dependencies {
-    compile 'io.vlingo:vlingo-symbio:0.9.2-RC3'
-    compile 'io.vlingo:vlingo-symbio-jdbc:0.9.2-RC3'
+    compile 'io.vlingo:vlingo-symbio:0.9.3-RC4'
+    compile 'io.vlingo:vlingo-symbio-jdbc:0.9.3-RC4'
 }
 
 repositories {
