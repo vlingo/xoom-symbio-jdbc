@@ -11,12 +11,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicLong;
 
-import io.vlingo.symbio.store.object.StateSources;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -27,6 +25,7 @@ import io.vlingo.symbio.Source;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
+import io.vlingo.symbio.store.object.StateSources;
 import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonAdded;
 
 public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest {

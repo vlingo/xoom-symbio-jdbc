@@ -11,12 +11,10 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
-import io.vlingo.symbio.store.object.StateSources;
 import org.jdbi.v3.core.statement.SqlStatement;
 import org.junit.After;
 import org.junit.Before;
@@ -35,6 +33,7 @@ import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.MockDispatcher;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.StateObjectMapper;
+import io.vlingo.symbio.store.object.StateSources;
 
 public abstract class JdbiObjectStoreEntryReaderTest {
   protected MockDispatcher<BaseEntry.TextEntry, State.TextState> dispatcher;
