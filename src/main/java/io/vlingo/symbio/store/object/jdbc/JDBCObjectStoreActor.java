@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Address;
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
@@ -36,13 +37,16 @@ import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.DispatcherControl.DispatcherControlInstantiator;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.StateSources;
+import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryReaderActor.JDBCObjectStoreEntryReaderInstantiator;
 import io.vlingo.symbio.store.object.jdbc.jdbi.JdbiObjectStoreEntryReaderActor;
+import io.vlingo.symbio.store.object.jdbc.jdbi.JdbiObjectStoreEntryReaderActor.JdbiObjectStoreEntryReaderInstantiator;
 import io.vlingo.symbio.store.object.jdbc.jdbi.JdbiOnDatabase;
 
 /**
@@ -63,7 +67,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
      this(delegate, dispatcher, 1000L, 1000L);
   }
 
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher,
           final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.delegate = delegate;
@@ -81,7 +85,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
             DispatcherControl.class,
             Definition.has(
                     DispatcherControlActor.class,
-                    Definition.parameters(
+                    new DispatcherControlInstantiator(
                             //Get a copy of storage delegate to use other connection
                             dispatcher, delegate.copy(),
                             checkConfirmationExpirationInterval,
@@ -110,23 +114,23 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
       final Configuration clonedConfiguration = Configuration.cloneOf(delegate.configuration);
       final Address address = stage().world().addressFactory().uniquePrefixedWith("objectStoreEntryReader-" + name);
       final Class<? extends Actor> actorType;
-      List<Object> parameters = null;
+      ActorInstantiator<?> instantiator = null;
 
       switch (delegate.type()) {
       case Jdbi:
         actorType = JdbiObjectStoreEntryReaderActor.class;
-        parameters = Definition.parameters(JdbiOnDatabase.openUsing(clonedConfiguration), delegate.registeredMappers(), name);
+        instantiator = new JdbiObjectStoreEntryReaderInstantiator(JdbiOnDatabase.openUsing(clonedConfiguration), delegate.registeredMappers(), name);
         break;
       case JDBC:
       case JPA:
         actorType = JDBCObjectStoreEntryReaderActor.class;
-        parameters = Definition.parameters(DatabaseType.databaseType(clonedConfiguration.connection), clonedConfiguration.connection, name);
+        instantiator = new JDBCObjectStoreEntryReaderInstantiator(DatabaseType.databaseType(clonedConfiguration.connection), clonedConfiguration.connection, name);
         break;
       default:
         throw new IllegalStateException(getClass().getSimpleName() + ": Cannot create entry reader '" + name + "' due to unknown type: " + delegate.type());
       }
 
-      entryReader = stage().actorFor(ObjectStoreEntryReader.class, Definition.has(actorType, parameters), address);
+      entryReader = stage().actorFor(ObjectStoreEntryReader.class, Definition.has(actorType, instantiator), address);
     }
 
     return completes().with(entryReader);

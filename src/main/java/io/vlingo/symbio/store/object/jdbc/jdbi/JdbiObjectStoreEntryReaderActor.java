@@ -14,6 +14,7 @@ import java.util.List;
 import org.jdbi.v3.core.mapper.RowMapper;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
@@ -156,5 +157,27 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
 
   private void updateCurrentOffset() {
     jdbi.handle().createUpdate(currentEntryOffsetMapper.insertStatement).bind("name", name).bind("offset", offset).execute();
+  }
+
+  public static class JdbiObjectStoreEntryReaderInstantiator implements ActorInstantiator<JdbiObjectStoreEntryReaderActor> {
+    private final JdbiOnDatabase jdbi;
+    final Collection<StateObjectMapper> mappers;
+    final String name;
+
+    public JdbiObjectStoreEntryReaderInstantiator(final JdbiOnDatabase jdbi, final Collection<StateObjectMapper> mappers, final String name) {
+      this.jdbi = jdbi;
+      this.mappers = mappers;
+      this.name = name;
+    }
+
+    @Override
+    public JdbiObjectStoreEntryReaderActor instantiate() {
+      return new JdbiObjectStoreEntryReaderActor(jdbi, mappers, name);
+    }
+
+    @Override
+    public Class<JdbiObjectStoreEntryReaderActor> type() {
+      return JdbiObjectStoreEntryReaderActor.class;
+    }
   }
 }

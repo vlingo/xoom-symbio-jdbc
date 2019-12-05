@@ -46,10 +46,13 @@ import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.DispatcherControl.DispatcherControlInstantiator;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.StreamReader;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalReaderActor.JDBCJournalReaderInstantiator;
+import io.vlingo.symbio.store.journal.jdbc.JDBCStreamReaderActor.JDBCStreamReaderInstantiator;
 
 public class JDBCJournalActor extends Actor implements Journal<String> {
     private final EntryAdapterProvider entryAdapterProvider;
@@ -74,6 +77,7 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
         this(dispatcher, configuration, 1000L, 1000L);
     }
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     public JDBCJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration,
                             final long checkConfirmationExpirationInterval, final long confirmationExpiration) throws Exception {
         this.configuration = configuration;
@@ -96,7 +100,7 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
                     new JDBCDispatcherControlDelegate(Configuration.cloneOf(configuration), stage().world().defaultLogger());
             this.dispatcherControl = stage().actorFor(DispatcherControl.class,
                     Definition.has(DispatcherControlActor.class,
-                            Definition.parameters(dispatcher,
+                            new DispatcherControlInstantiator(dispatcher,
                                     dispatcherControlDelegate,
                                     checkConfirmationExpirationInterval,
                                     confirmationExpiration)
@@ -200,7 +204,7 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     public Completes<JournalReader<? extends Entry<?>>> journalReader(final String name) {
         final JournalReader<TextEntry> reader = journalReaders.computeIfAbsent(name, (key) -> {
             final Address address = stage().world().addressFactory().uniquePrefixedWith("eventJournalReader-" + name);
-            return stage().actorFor(JournalReader.class, Definition.has(JDBCJournalReaderActor.class, Definition.parameters(configuration, name)), address);
+            return stage().actorFor(JournalReader.class, Definition.has(JDBCJournalReaderActor.class, new JDBCJournalReaderInstantiator(configuration, name)), address);
         });
 
         return completes().with(reader);
@@ -211,7 +215,7 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     public Completes<StreamReader<String>> streamReader(final String name) {
         final StreamReader<String> reader = streamReaders.computeIfAbsent(name, (key) -> {
             final Address address = stage().world().addressFactory().uniquePrefixedWith("eventStreamReader-" + key);
-            return stage().actorFor(StreamReader.class, Definition.has(JDBCStreamReaderActor.class, Definition.parameters(configuration)), address);
+            return stage().actorFor(StreamReader.class, Definition.has(JDBCStreamReaderActor.class, new JDBCStreamReaderInstantiator(configuration)), address);
         });
 
         return completes().with(reader);

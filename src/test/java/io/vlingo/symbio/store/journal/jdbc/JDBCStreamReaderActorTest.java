@@ -1,17 +1,19 @@
 package io.vlingo.symbio.store.journal.jdbc;
 
+import static org.junit.Assert.assertEquals;
+
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
 import io.vlingo.actors.Definition;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.journal.Stream;
 import io.vlingo.symbio.store.journal.StreamReader;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.concurrent.atomic.AtomicInteger;
-
-import static org.junit.Assert.assertEquals;
+import io.vlingo.symbio.store.journal.jdbc.JDBCStreamReaderActor.JDBCStreamReaderInstantiator;
 
 public abstract class JDBCStreamReaderActorTest extends BasePostgresJournalTest {
     private StreamReader<String> eventStreamReader;
@@ -22,7 +24,7 @@ public abstract class JDBCStreamReaderActorTest extends BasePostgresJournalTest 
         eventStreamReader = world.actorFor(
                 StreamReader.class,
                 Definition.has(JDBCStreamReaderActor.class,
-                        Definition.parameters(configuration))
+                        new JDBCStreamReaderInstantiator(configuration))
         );
 
         assert insertEvent(1) == 1;

@@ -15,8 +15,6 @@ import static org.junit.Assert.assertNotEquals;
 import java.util.List;
 import java.util.UUID;
 
-import io.vlingo.symbio.store.journal.jdbc.BasePostgresJournalTest;
-import io.vlingo.symbio.store.journal.jdbc.JDBCJournalReaderActor;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -24,6 +22,7 @@ import io.vlingo.actors.Definition;
 import io.vlingo.actors.testkit.TestUntil;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.store.journal.JournalReader;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalReaderActor.JDBCJournalReaderInstantiator;
 
 public abstract class JDBCJournalReaderActorTest extends BasePostgresJournalTest {
     private String readerName;
@@ -129,7 +128,7 @@ public abstract class JDBCJournalReaderActorTest extends BasePostgresJournalTest
         return world.actorFor(
                 JournalReader.class,
                 Definition.has(JDBCJournalReaderActor.class,
-                        Definition.parameters(configuration, readerName))
+                        new JDBCJournalReaderInstantiator(configuration, readerName))
         );
     }
 }

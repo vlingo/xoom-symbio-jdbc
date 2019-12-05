@@ -18,6 +18,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
@@ -39,6 +40,7 @@ import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor;
+import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor.JDBCStateStoreInstantiator;
 
 public class HSQLDBJDBCTextStateStoreEntryTest {
   private final String databaseName = UUID.randomUUID().toString();
@@ -110,9 +112,13 @@ public class HSQLDBJDBCTextStateStoreEntryTest {
     stateAdapterProvider.registerAdapter(Entity1.class, new Entity1StateAdapter());
     // NOTE: No adapter registered for Entity2.class because it will use the default
 
+    final ActorInstantiator<?> instantiator = new JDBCStateStoreInstantiator();
+    instantiator.set("dispatcher", dispatcher);
+    instantiator.set("delegate", delegate);
+
     store = world.actorFor(
             StateStore.class,
-            Definition.has(JDBCStateStoreActor.class, Definition.parameters(dispatcher, delegate)));
+            Definition.has(JDBCStateStoreActor.class, instantiator));
   }
 
   @After

@@ -18,6 +18,7 @@ import java.util.List;
 import com.google.gson.Gson;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Metadata;
@@ -26,7 +27,6 @@ import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.journal.Stream;
 import io.vlingo.symbio.store.journal.StreamReader;
-import io.vlingo.symbio.store.journal.jdbc.JDBCQueries;
 
 public class JDBCStreamReaderActor extends Actor implements StreamReader<String> {
     private final Connection connection;
@@ -118,5 +118,27 @@ public class JDBCStreamReaderActor extends Actor implements StreamReader<String>
           }
           return TextState.Null;
         }
+    }
+
+    public static class JDBCStreamReaderInstantiator implements ActorInstantiator<JDBCStreamReaderActor> {
+      private final Configuration configuration;
+
+      public JDBCStreamReaderInstantiator(final Configuration configuration) {
+        this.configuration = configuration;
+      }
+
+      @Override
+      public JDBCStreamReaderActor instantiate() {
+        try {
+          return new JDBCStreamReaderActor(configuration);
+        } catch (SQLException e) {
+          throw new IllegalArgumentException("Failed instantiator of " + getClass() + " because: " + e.getMessage(), e);
+        }
+      }
+
+      @Override
+      public Class<JDBCStreamReaderActor> type() {
+        return JDBCStreamReaderActor.class;
+      }
     }
 }

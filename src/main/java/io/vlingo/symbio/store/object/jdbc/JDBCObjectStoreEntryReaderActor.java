@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
@@ -223,6 +224,32 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
       upsertCurrentEntryOffset.executeUpdate();
     } catch (SQLException e) {
       logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not upsert current offset because: " + e.getMessage(), e);
+    }
+  }
+
+  public static class JDBCObjectStoreEntryReaderInstantiator implements ActorInstantiator<JDBCObjectStoreEntryReaderActor> {
+    private final Connection connection;
+    private final DatabaseType databaseType;
+    private final String name;
+
+    public JDBCObjectStoreEntryReaderInstantiator(final DatabaseType databaseType, final Connection connection, final String name) {
+      this.databaseType = databaseType;
+      this.connection = connection;
+      this.name = name;
+    }
+
+    @Override
+    public JDBCObjectStoreEntryReaderActor instantiate() {
+      try {
+        return new JDBCObjectStoreEntryReaderActor(databaseType, connection, name);
+      } catch (SQLException e) {
+        throw new IllegalArgumentException("Failed instantiator of " + getClass() + " because: " + e.getMessage(), e);
+      }
+    }
+
+    @Override
+    public Class<JDBCObjectStoreEntryReaderActor> type() {
+      return JDBCObjectStoreEntryReaderActor.class;
     }
   }
 }

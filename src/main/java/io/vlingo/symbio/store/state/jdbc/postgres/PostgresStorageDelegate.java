@@ -11,9 +11,10 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.text.MessageFormat;
 
-import io.vlingo.symbio.store.state.jdbc.DbStateStoreEntryReaderActor;
 import org.postgresql.util.PGobject;
 
+import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -23,6 +24,8 @@ import io.vlingo.symbio.store.EntryReader.Advice;
 import io.vlingo.symbio.store.common.jdbc.CachedStatement;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
+import io.vlingo.symbio.store.state.jdbc.DbStateStoreEntryReaderActor;
+import io.vlingo.symbio.store.state.jdbc.DbStateStoreEntryReaderActor.DbStateStoreEntryReaderInstantiator;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 
@@ -64,6 +67,12 @@ public class PostgresStorageDelegate extends JDBCStorageDelegate<Object> impleme
         } catch (Exception e) {
             throw new IllegalStateException("Cannot create EntryReader.Advice because: " + e.getMessage(), e);
         }
+    }
+
+    @Override
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public <A extends Actor> ActorInstantiator<A> instantiator() {
+      return new DbStateStoreEntryReaderInstantiator();
     }
 
     @Override

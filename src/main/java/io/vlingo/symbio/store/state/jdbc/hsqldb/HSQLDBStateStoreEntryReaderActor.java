@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.BaseEntry.BinaryEntry;
 import io.vlingo.symbio.BaseEntry.TextEntry;
@@ -233,5 +234,40 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
           logger().error("vlingo/symbio-hsqldb: Could not persist the offset. Will retry on next read.");
           logger().error("vlingo/symbio-hsqldb: " + e.getMessage(), e);
       }
+  }
+
+
+  public static class HSQLDBStateStoreEntryReaderInstantiator<T extends Entry<?>> implements ActorInstantiator<HSQLDBStateStoreEntryReaderActor<T>> {
+    private Advice advice;
+    private String name;
+
+    public HSQLDBStateStoreEntryReaderInstantiator() { }
+
+    @Override
+    public HSQLDBStateStoreEntryReaderActor<T> instantiate() {
+      try {
+        return new HSQLDBStateStoreEntryReaderActor<>(advice, name);
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Failed to instantiate " + getClass() + " because: " + e.getMessage(), e);
+      }
+    }
+
+    @Override
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public Class<HSQLDBStateStoreEntryReaderActor<T>> type() {
+      return (Class) HSQLDBStateStoreEntryReaderActor.class;
+    }
+
+    @Override
+    public void set(final String name, final Object value) {
+      switch (name) {
+      case "advice":
+        this.advice = (Advice) value;
+        break;
+      case "name":
+        this.name = (String) value;
+        break;
+      }
+    }
   }
 }

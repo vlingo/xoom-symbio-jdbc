@@ -7,6 +7,12 @@
 
 package io.vlingo.symbio.store.state.jdbc.mysql;
 
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.text.MessageFormat;
+
+import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -15,13 +21,10 @@ import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.common.jdbc.CachedStatement;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStore;
+import io.vlingo.symbio.store.state.jdbc.DbStateStoreEntryReaderActor;
+import io.vlingo.symbio.store.state.jdbc.DbStateStoreEntryReaderActor.DbStateStoreEntryReaderInstantiator;
 import io.vlingo.symbio.store.state.jdbc.JDBCDispatchableCachedStatements;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
-import io.vlingo.symbio.store.state.jdbc.DbStateStoreEntryReaderActor;
-
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.text.MessageFormat;
 
 public class MySQLStorageDelegate extends JDBCStorageDelegate<Object> implements StateStore.StorageDelegate, MySQLQueries{
     private final Configuration configuration;
@@ -62,6 +65,12 @@ public class MySQLStorageDelegate extends JDBCStorageDelegate<Object> implements
         } catch (Exception e) {
             throw new IllegalStateException("Cannot create EntryReader.Advice because: " + e.getMessage(), e);
         }
+    }
+
+    @Override
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public <A extends Actor> ActorInstantiator<A> instantiator() {
+      return new DbStateStoreEntryReaderInstantiator();
     }
 
     @Override

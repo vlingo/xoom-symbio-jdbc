@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
@@ -34,6 +35,7 @@ import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.DispatcherControl.DispatcherControlInstantiator;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
@@ -55,6 +57,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     this(dispatcher, delegate, 1000L, 1000L);
   }
 
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public JDBCStateStoreActor(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate,
           final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
     this.delegate = delegate;
@@ -70,7 +73,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
         DispatcherControl.class,
         Definition.has(
           DispatcherControlActor.class,
-          Definition.parameters(dispatcher, delegate.copy(), checkConfirmationExpirationInterval, confirmationExpiration))
+          new DispatcherControlInstantiator((Dispatcher) dispatcher, (JDBCStorageDelegate) delegate.copy(), checkConfirmationExpirationInterval, confirmationExpiration))
       );
     } else {
       this.dispatcher = null;
@@ -96,7 +99,10 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     StateStoreEntryReader<?> reader = entryReaders.get(name);
     if (reader == null) {
       final EntryReader.Advice advice = delegate.entryReaderAdvice();
-      reader = childActorFor(StateStoreEntryReader.class, Definition.has(advice.entryReaderClass, Definition.parameters(advice, name)));
+      final ActorInstantiator<?> instantiator = delegate.instantiator();
+      instantiator.set("advice", advice);
+      instantiator.set("name", name);
+      reader = childActorFor(StateStoreEntryReader.class, Definition.has(advice.entryReaderClass, instantiator));
       entryReaders.put(name, reader);
     }
     return completes().with((StateStoreEntryReader<ET>) reader);
@@ -235,5 +241,40 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
 
   private Dispatchable<Entry<?>, State<String>> buildDispatchable(final String dispatchId, final State<String> state, final List<Entry<?>> entries) {
     return new Dispatchable<>(dispatchId, LocalDateTime.now(), state.asTextState(), entries);
+  }
+
+  public static class JDBCStateStoreInstantiator implements ActorInstantiator<JDBCStateStoreActor> {
+    private Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher;
+    private JDBCStorageDelegate<TextState> delegate;
+
+    public JDBCStateStoreInstantiator(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate) {
+      this.dispatcher = dispatcher;
+      this.delegate = delegate;
+    }
+
+    public JDBCStateStoreInstantiator() { }
+
+    @Override
+    public JDBCStateStoreActor instantiate() {
+      return new JDBCStateStoreActor(dispatcher, delegate);
+    }
+
+    @Override
+    public Class<JDBCStateStoreActor> type() {
+      return JDBCStateStoreActor.class;
+    }
+
+    @Override
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public void set(final String name, final Object value) {
+      switch (name) {
+      case "dispatcher":
+        this.dispatcher = (Dispatcher) value;
+        break;
+      case "delegate":
+        this.delegate = (JDBCStorageDelegate) value;
+        break;
+      }
+    }
   }
 }

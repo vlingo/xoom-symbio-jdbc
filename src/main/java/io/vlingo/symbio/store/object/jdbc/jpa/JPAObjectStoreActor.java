@@ -34,12 +34,14 @@ import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.DispatcherControl.DispatcherControlInstantiator;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
 import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.StateSources;
 import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryReaderActor;
+import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryReaderActor.JDBCObjectStoreEntryReaderInstantiator;
 
 /**
  * JPAObjectStoreActor
@@ -76,6 +78,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
    * @param checkConfirmationExpirationInterval the long confirmation expiration interval
    * @param confirmationExpiration the long confirmation expiration
    */
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public JPAObjectStoreActor(
           final JPAObjectStoreDelegate delegate,
           final ConnectionProvider connectionProvider,
@@ -95,7 +98,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
             DispatcherControl.class,
             Definition.has(
                     DispatcherControlActor.class,
-                    Definition.parameters(
+                    new DispatcherControlInstantiator(
                             //Get a copy of storage delegate to use other connection
                             dispatcher, delegate.copy(),
                             checkConfirmationExpirationInterval,
@@ -123,7 +126,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
 
       reader = childActorFor(
               ObjectStoreEntryReader.class,
-              Definition.has(JDBCObjectStoreEntryReaderActor.class, Definition.parameters(databaseType, connection, name)));
+              Definition.has(JDBCObjectStoreEntryReaderActor.class, new JDBCObjectStoreEntryReaderInstantiator(databaseType, connection, name)));
       entryReaders.put(name, reader);
     }
     return completes().with(reader);

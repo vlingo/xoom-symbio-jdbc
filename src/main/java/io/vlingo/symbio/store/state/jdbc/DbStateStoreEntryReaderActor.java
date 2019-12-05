@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.BaseEntry.BinaryEntry;
 import io.vlingo.symbio.BaseEntry.TextEntry;
@@ -229,5 +230,39 @@ public class DbStateStoreEntryReaderActor<T extends Entry<?>> extends Actor impl
           logger().error("vlingo/symbio-postgres: Could not persist the offset. Will retry on next read.");
           logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
       }
+  }
+
+  public static class DbStateStoreEntryReaderInstantiator<T extends Entry<?>> implements ActorInstantiator<DbStateStoreEntryReaderActor<T>> {
+    private Advice advice;
+    private String name;
+
+    public DbStateStoreEntryReaderInstantiator() { }
+
+    @Override
+    public DbStateStoreEntryReaderActor<T> instantiate() {
+      try {
+        return new DbStateStoreEntryReaderActor<>(advice, name);
+      } catch (Exception e) {
+        throw new IllegalArgumentException("Failed to instantiate " + getClass() + " because: " + e.getMessage(), e);
+      }
+    }
+
+    @Override
+    @SuppressWarnings({ "unchecked", "rawtypes" })
+    public Class<DbStateStoreEntryReaderActor<T>> type() {
+      return (Class) DbStateStoreEntryReaderActor.class;
+    }
+
+    @Override
+    public void set(final String name, final Object value) {
+      switch (name) {
+      case "advice":
+        this.advice = (Advice) value;
+        break;
+      case "name":
+        this.name = (String) value;
+        break;
+      }
+    }
   }
 }
