@@ -17,7 +17,7 @@ import java.text.MessageFormat;
 public class MySQLObjectStoreEntryJournalQueries extends JDBCObjectStoreEntryJournalQueries {
     /**
      * Construct my state.
-     * @param connection
+     * @param connection the Connection on which to perform queries
      */
     public MySQLObjectStoreEntryJournalQueries(Connection connection) {
         super(connection);
