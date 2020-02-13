@@ -291,7 +291,11 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
 
     if (maybeCached == null) {
       final String select = readExpression(storeName, id);
-      final PreparedStatement preparedStatement = connection.prepareStatement(select);
+      final PreparedStatement preparedStatement =
+              connection.prepareStatement(
+                      select,
+                      ResultSet.TYPE_SCROLL_INSENSITIVE,
+                      ResultSet.CONCUR_READ_ONLY);
       final CachedStatement<T> cached = new CachedStatement<>(preparedStatement, null);
       readStatements.put(storeName, cached);
       prepareForRead(cached, id);
