@@ -127,8 +127,8 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
         delegate.beginRead();
         final PreparedStatement readStatement = delegate.readExpressionFor(storeName, id);
         try (final ResultSet result = readStatement.executeQuery()) {
-          if (result.first()) {
-            final TextState raw = delegate.stateFrom(result, id);
+          final TextState raw = delegate.stateFrom(result, id);
+          if (!raw.isEmpty()) {
             final Object state = stateAdapterProvider.fromRaw(raw);
             interest.readResultedIn(Success.of(Result.Success), id, state, raw.dataVersion, raw.metadata, object);
           } else {
