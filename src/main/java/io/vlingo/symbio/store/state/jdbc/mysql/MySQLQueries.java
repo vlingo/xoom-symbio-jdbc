@@ -9,9 +9,9 @@ package io.vlingo.symbio.store.state.jdbc.mysql;
 
 public interface MySQLQueries {
     final static String SQL_STATE_READ =
-            "SELECT tbl_{0}.S_TYPE, tbl_{0}.S_TYPE_VERSION, tbl_{0}.S_DATA, tbl_{0}.S_DATA_VERSION, tbl_{0}.S_METADATA_VALUE, tbl_{0}.S_METADATA_OP " +
+            "SELECT tbl_{0}.s_type, tbl_{0}.s_type_version, tbl_{0}.s_data, tbl_{0}.s_data_version, tbl_{0}.s_metadata_value, tbl_{0}.s_metadata_op " +
                     "FROM tbl_{0} " +
-                    "WHERE tbl_{0}.S_ID = ?";
+                    "WHERE tbl_{0}.s_id = ?";
 
     final static String SQL_STATE_WRITE =
             "INSERT INTO tbl_{0} \n" +
