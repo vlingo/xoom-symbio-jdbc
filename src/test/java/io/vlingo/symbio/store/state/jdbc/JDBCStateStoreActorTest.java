@@ -50,6 +50,40 @@ public abstract class JDBCStateStoreActorTest {
   protected World world;
 
   @Test
+  public void testThatStateStoreReadsWrites() throws Exception {
+    final AccessSafely accessInterest = interest.afterCompleting(6);
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(6);
+
+    final String entity1Id = "123";
+    final Entity1 entity1 = new Entity1(entity1Id, 1);
+    store.write(entity1.id, entity1, 1, interest);
+    final String entity2Id = "234";
+    final Entity1 entity2 = new Entity1(entity2Id, 2);
+    store.write(entity2.id, entity2, 1, interest);
+    final String entity3Id = "345";
+    final Entity1 entity3 = new Entity1(entity3Id, 3);
+    store.write(entity3.id, entity3, 1, interest);
+
+    assertEquals(3, (int) accessDispatcher.readFrom("dispatchedStateCount"));
+    assertEquals(3, (int) accessInterest.readFrom("confirmDispatchedResultedIn"));
+
+    final AccessSafely accessInterest1 = interest.afterCompleting(1);
+    store.read(entity1Id, Entity1.class, interest);
+    final Entity1 entity1_1 = accessInterest1.readFrom("readStoreData");
+    assertEquals(entity1, entity1_1);
+
+    final AccessSafely accessInterest2 = interest.afterCompleting(1);
+    store.read(entity2Id, Entity1.class, interest);
+    final Entity1 entity2_1 = accessInterest2.readFrom("readStoreData");
+    assertEquals(entity2, entity2_1);
+
+    final AccessSafely accessInterest3 = interest.afterCompleting(1);
+    store.read(entity3Id, Entity1.class, interest);
+    final Entity1 entity3_1 = accessInterest3.readFrom("readStoreData");
+    assertEquals(entity3, entity3_1);
+  }
+
+  @Test
   public void testThatStateStoreDispatches() throws Exception {
     final AccessSafely accessInterest1 = interest.afterCompleting(6);
     final AccessSafely accessDispatcher1 = dispatcher.afterCompleting(6);
