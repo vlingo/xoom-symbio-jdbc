@@ -126,7 +126,9 @@ public class MockResultInterest
       .readingWith("stateHolder", () -> stateHolder.get())
       .readingWith("errorCauses", () -> errorCauses.poll())
       .readingWith("errorCausesCount", () -> errorCauses.size())
-      .readingWith("writeTextResultedIn", () -> writeTextResultedIn.get());
+      .readingWith("writeTextResultedIn", () -> writeTextResultedIn.get())
+      .readingWith("writeStoreData", () -> stateHolder.get())
+      .readingWith("readStoreData", () -> stateHolder.get());
 
     return access;
   }
