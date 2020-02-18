@@ -51,15 +51,15 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   private final StateAdapterProvider stateAdapterProvider;
 
   public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate) {
-    this((Dispatcher<Dispatchable<Entry<?>, State<String>>>) null, delegate, 0L, 0L);
+    this((Dispatcher<Dispatchable<Entry<?>, State<String>>>) null, delegate, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
   }
 
   public JDBCStateStoreActor(final List<Dispatcher<Dispatchable<Entry<?>, State<String>>>> dispatchers, final JDBCStorageDelegate<TextState> delegate) {
-    this(dispatchers, delegate, 1000L, 1000L);
+    this(dispatchers, delegate, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
   }
 
   public JDBCStateStoreActor(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate) {
-    this(Arrays.asList(dispatcher), delegate, 1000L, 1000L);
+    this(Arrays.asList(dispatcher), delegate, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })

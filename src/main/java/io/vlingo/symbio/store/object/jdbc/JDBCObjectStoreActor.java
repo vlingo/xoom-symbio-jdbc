@@ -9,7 +9,6 @@ package io.vlingo.symbio.store.object.jdbc;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -65,12 +64,12 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   private final IdentityGenerator identityGenerator;
 
   public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final List<Dispatcher<Dispatchable<Entry<?>, State<?>>>> dispatchers) {
-     this(delegate, dispatchers, 1000L, 1000L);
+     this(delegate, dispatchers, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
   }
 
-  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher) {
-     this(delegate, dispatcher, 1000L, 1000L);
-  }
+//  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher) {
+//     this(delegate, dispatcher, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
+//  }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public JDBCObjectStoreActor(
@@ -78,7 +77,6 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
           final List<Dispatcher<Dispatchable<Entry<?>, State<?>>>> dispatchers,
           final long checkConfirmationExpirationInterval,
           final long confirmationExpiration) {
-    try {
     this.delegate = delegate;
     this.dispatchers = dispatchers;
     this.closed = false;
@@ -99,25 +97,15 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
                             dispatchers, delegate.copy(),
                             checkConfirmationExpirationInterval,
                             confirmationExpiration)));
-    } catch (Exception e) {
-      System.out.println("===============================================");
-      System.out.println("===============================================");
-      System.out.println("===============================================");
-      e.printStackTrace();
-      System.out.println("===============================================");
-      System.out.println("===============================================");
-      System.out.println("===============================================");
-      throw new IllegalArgumentException(e);
-    }
   }
 
-  public JDBCObjectStoreActor(
-          final JDBCObjectStoreDelegate delegate,
-          final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher,
-          final long checkConfirmationExpirationInterval,
-          final long confirmationExpiration) {
-    this(delegate, Arrays.asList(dispatcher), checkConfirmationExpirationInterval, confirmationExpiration);
-  }
+//  public JDBCObjectStoreActor(
+//          final JDBCObjectStoreDelegate delegate,
+//          final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher,
+//          final long checkConfirmationExpirationInterval,
+//          final long confirmationExpiration) {
+//    this(delegate, Arrays.asList(dispatcher), checkConfirmationExpirationInterval, confirmationExpiration);
+//  }
 
   /*
    * @see io.vlingo.symbio.store.object.ObjectStore#close()

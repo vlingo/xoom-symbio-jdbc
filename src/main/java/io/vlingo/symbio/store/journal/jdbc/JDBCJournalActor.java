@@ -71,16 +71,20 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     private final JDBCQueries queries;
 
     public JDBCJournalActor(final Configuration configuration) throws Exception {
-        this((Dispatcher<Dispatchable<Entry<String>, TextState>>) null, configuration, 0L, 0L);
+        this((Dispatcher<Dispatchable<Entry<String>, TextState>>) null, configuration, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
     }
 
     public JDBCJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration) throws Exception {
-        this(dispatcher, configuration, 1000L, 1000L);
+        this(dispatcher, configuration, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public JDBCJournalActor(final List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers, final Configuration configuration,
-                            final long checkConfirmationExpirationInterval, final long confirmationExpiration) throws Exception {
+    public JDBCJournalActor(
+            final List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers,
+            final Configuration configuration,
+            final long checkConfirmationExpirationInterval,
+            final long confirmationExpiration)
+    throws Exception {
         this.configuration = configuration;
         this.connection = configuration.connection;
         this.databaseType = configuration.databaseType;

@@ -68,7 +68,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
           final JPAObjectStoreDelegate delegate,
           final ConnectionProvider connectionProvider,
           final Dispatcher<Dispatchable<Entry<String>, State<?>>> dispatcher) {
-    this(delegate, connectionProvider, dispatcher, 1000L, 1000L);
+    this(delegate, connectionProvider, dispatcher, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
   }
 
   /**
