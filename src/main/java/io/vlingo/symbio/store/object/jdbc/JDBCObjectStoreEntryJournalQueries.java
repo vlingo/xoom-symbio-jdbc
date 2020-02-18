@@ -137,6 +137,24 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
   }
 
   /**
+   * Answer the parameterized query for retrieving multiple {@code Entry} instances based on ids.
+   * @param idsCount count of ids.
+   * @return
+   */
+  public String entriesQuery(final int idsCount) {
+    StringBuilder inQuery = new StringBuilder("?");
+    for (int i = 1; i < idsCount; i++) {
+      inQuery.append(", ?");
+    }
+
+    return MessageFormat.format(
+            "SELECT E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP " +
+                    "FROM {0} WHERE E_ID IN ({1}) ORDER BY E_ID",
+            EntryJournalTableName,
+            inQuery.toString());
+  }
+
+  /**
    * Answer the query for deleting a given dispatchable.
    * @param idPlaceholder the String placeholder for the dispatchable id parameter
    * @return String
@@ -337,6 +355,16 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
    */
   public PreparedStatement statementForEntriesQuery(final String[] placeholders) throws SQLException {
     return connection.prepareStatement(entriesQuery(placeholders));
+  }
+
+  /**
+   * Answer the parameterized {@code PreparedStatement} for retrieving multiple {@code Entry} instances based on ids.
+   * @param idsCount
+   * @return
+   * @throws SQLException
+   */
+  public PreparedStatement statementForEntriesQuery(final int idsCount) throws SQLException {
+    return connection.prepareStatement(entriesQuery(idsCount));
   }
 
   /**

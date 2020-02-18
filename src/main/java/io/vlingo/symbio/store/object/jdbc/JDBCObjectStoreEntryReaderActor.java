@@ -12,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import io.vlingo.actors.Actor;
@@ -21,6 +22,8 @@ import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
+import io.vlingo.symbio.store.gap.GapRetryReader;
+import io.vlingo.symbio.store.gap.GappedEntries;
 import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
 
 /**
@@ -34,6 +37,8 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
 
   private final PreparedStatement entryQuery;
   private final PreparedStatement entriesQuery;
+
+  private GapRetryReader<String> reader = null;
 
   private final PreparedStatement queryLastEntryId;
   private final PreparedStatement querySize;
@@ -61,6 +66,14 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
     restoreCurrentOffset();
   }
 
+  private GapRetryReader<String> reader() {
+    if (reader == null) {
+      reader = new GapRetryReader<>(stage(), scheduler());
+    }
+
+    return reader;
+  }
+
   @Override
   public void close() {
     try {
@@ -77,6 +90,23 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
     return completes().with(name);
   }
 
+  private List<Entry<String>> readIds(List<Long> ids) {
+    try {
+      PreparedStatement statement = queries.statementForEntriesQuery(ids.size());
+      for (int i = 0; i < ids.size(); i++) {
+        // parameter index starts from 1
+        statement.setLong(i + 1, ids.get(i));
+      }
+
+      try (final ResultSet result = statement.executeQuery()) {
+        return mapQueriedEntriesFrom(result);
+      }
+    } catch (Exception e) {
+      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read ids because: " + e.getMessage(), e);
+      return new ArrayList<>();
+    }
+  }
+
   @Override
   public Completes<Entry<String>> readNext() {
     try {
@@ -84,9 +114,21 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
       entryQuery.setLong(1, offset);
       try (final ResultSet result = entryQuery.executeQuery()) {
         final Entry<String> entry = mapQueriedEntryFrom(result);
-        ++offset;
-        updateCurrentOffset();
-        return completes().with(entry);
+        List<Long> gapIds = reader().detectGaps(entry, offset);
+        if (!gapIds.isEmpty()) {
+          // gaps have been detected
+          List<Entry<String>> entries = entry == null ? new ArrayList<>() : Collections.singletonList(entry);
+          GappedEntries<String> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+          reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
+
+          ++offset;
+          updateCurrentOffset();
+          return completes();
+        } else {
+          ++offset;
+          updateCurrentOffset();
+          return completes().with(entry);
+        }
       }
     } catch (Exception e) {
       logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
