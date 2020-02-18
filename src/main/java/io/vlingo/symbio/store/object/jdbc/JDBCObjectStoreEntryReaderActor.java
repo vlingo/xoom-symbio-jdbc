@@ -150,9 +150,20 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
       entriesQuery.setLong(2, offset + maximumEntries - 1L);
       try (final ResultSet result = entriesQuery.executeQuery()) {
         final List<Entry<String>> entries = mapQueriedEntriesFrom(result);
-        offset += entries.size();
-        updateCurrentOffset();
-        return completes().with(entries);
+        List<Long> gapIds = reader().detectGaps(entries, offset, maximumEntries);
+        if (!gapIds.isEmpty()) {
+          GappedEntries<String> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+          reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
+
+          // Move offset with maximumEntries regardless of filled up gaps
+          offset += maximumEntries;
+          updateCurrentOffset();
+          return completes();
+        } else {
+          offset += maximumEntries;
+          updateCurrentOffset();
+          return completes().with(entries);
+        }
       }
     } catch (Exception e) {
       logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
