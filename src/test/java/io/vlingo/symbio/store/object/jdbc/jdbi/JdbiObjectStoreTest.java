@@ -344,7 +344,7 @@ public class JdbiObjectStoreTest {
                             (update,object) -> update.bindFields(object)),
                     new PersonMapper());
 
-    objectStore = jdbi.objectStore(world, dispatcher, Collections.singletonList(personMapper));
+    objectStore = jdbi.objectStore(world, Arrays.asList(dispatcher), Collections.singletonList(personMapper));
   }
 
   @After

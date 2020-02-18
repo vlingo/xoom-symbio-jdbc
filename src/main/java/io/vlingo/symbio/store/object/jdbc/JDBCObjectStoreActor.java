@@ -9,6 +9,7 @@ package io.vlingo.symbio.store.object.jdbc;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -57,21 +58,29 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   private final DispatcherControl dispatcherControl;
   private boolean closed;
   private final JDBCObjectStoreDelegate delegate;
-  private final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher;
+  private final List<Dispatcher<Dispatchable<Entry<?>, State<?>>>> dispatchers;
   private final Map<String,ObjectStoreEntryReader<?>> entryReaders;
   private final Logger logger;
   private final EntryAdapterProvider entryAdapterProvider;
   private final IdentityGenerator identityGenerator;
+
+  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final List<Dispatcher<Dispatchable<Entry<?>, State<?>>>> dispatchers) {
+     this(delegate, dispatchers, 1000L, 1000L);
+  }
 
   public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher) {
      this(delegate, dispatcher, 1000L, 1000L);
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher,
-          final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+  public JDBCObjectStoreActor(
+          final JDBCObjectStoreDelegate delegate,
+          final List<Dispatcher<Dispatchable<Entry<?>, State<?>>>> dispatchers,
+          final long checkConfirmationExpirationInterval,
+          final long confirmationExpiration) {
+    try {
     this.delegate = delegate;
-    this.dispatcher = dispatcher;
+    this.dispatchers = dispatchers;
     this.closed = false;
     this.logger = stage().world().defaultLogger();
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
@@ -79,7 +88,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
     this.entryReaders = new HashMap<>();
 
     final long timeout = delegate.configuration.transactionTimeoutMillis;
-    stage().scheduler().schedule(selfAs(Scheduled.class), null, timeout, timeout);
+    stage().scheduler().schedule(selfAs(Scheduled.class), null, 5, timeout);
 
     this.dispatcherControl = stage().actorFor(
             DispatcherControl.class,
@@ -87,9 +96,27 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
                     DispatcherControlActor.class,
                     new DispatcherControlInstantiator(
                             //Get a copy of storage delegate to use other connection
-                            dispatcher, delegate.copy(),
+                            dispatchers, delegate.copy(),
                             checkConfirmationExpirationInterval,
                             confirmationExpiration)));
+    } catch (Exception e) {
+      System.out.println("===============================================");
+      System.out.println("===============================================");
+      System.out.println("===============================================");
+      e.printStackTrace();
+      System.out.println("===============================================");
+      System.out.println("===============================================");
+      System.out.println("===============================================");
+      throw new IllegalArgumentException(e);
+    }
+  }
+
+  public JDBCObjectStoreActor(
+          final JDBCObjectStoreDelegate delegate,
+          final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher,
+          final long checkConfirmationExpirationInterval,
+          final long confirmationExpiration) {
+    this(delegate, Arrays.asList(dispatcher), checkConfirmationExpirationInterval, confirmationExpiration);
   }
 
   /*
@@ -154,7 +181,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
 
       delegate.completeTransaction();
 
-      dispatcher.dispatch(dispatchable);
+      dispatchers.forEach(d -> d.dispatch(dispatchable));
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, 1, object);
 
     } catch (final StorageException e) {
@@ -193,7 +220,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
       delegate.completeTransaction();
 
       //Dispatch after commit
-      allDispatchables.forEach(dispatcher::dispatch);
+      allDispatchables.forEach(dispatchable -> dispatchers.forEach(d -> d.dispatch(dispatchable)));
       interest.persistResultedIn(Success.of(Result.Success), allPersistentObjects, allPersistentObjects.size(), allPersistentObjects.size(), object);
 
     } catch (final StorageException e) {

@@ -10,6 +10,7 @@ package io.vlingo.symbio.store.state.jdbc;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -43,23 +44,30 @@ import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 
 public class JDBCStateStoreActor extends Actor implements StateStore {
   private final JDBCStorageDelegate<TextState> delegate;
-  private final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher;
+  private final List<Dispatcher<Dispatchable<Entry<?>, State<String>>>> dispatchers;
   private final DispatcherControl dispatcherControl;
   private final Map<String,StateStoreEntryReader<?>> entryReaders;
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
 
   public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate) {
-    this(null, delegate, 0L, 0L);
+    this((Dispatcher<Dispatchable<Entry<?>, State<String>>>) null, delegate, 0L, 0L);
+  }
+
+  public JDBCStateStoreActor(final List<Dispatcher<Dispatchable<Entry<?>, State<String>>>> dispatchers, final JDBCStorageDelegate<TextState> delegate) {
+    this(dispatchers, delegate, 1000L, 1000L);
   }
 
   public JDBCStateStoreActor(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate) {
-    this(dispatcher, delegate, 1000L, 1000L);
+    this(Arrays.asList(dispatcher), delegate, 1000L, 1000L);
   }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  public JDBCStateStoreActor(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate,
-          final long checkConfirmationExpirationInterval, final long confirmationExpiration) {
+  public JDBCStateStoreActor(
+          final List<Dispatcher<Dispatchable<Entry<?>, State<String>>>> dispatchers,
+          final JDBCStorageDelegate<TextState> delegate,
+          final long checkConfirmationExpirationInterval,
+          final long confirmationExpiration) {
     this.delegate = delegate;
 
     this.entryReaders = new HashMap<>();
@@ -67,18 +75,26 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
 
-    if (dispatcher!=null){
-      this.dispatcher = dispatcher;
+    if (dispatchers!=null){
+      this.dispatchers = dispatchers;
       this.dispatcherControl = stage().actorFor(
         DispatcherControl.class,
         Definition.has(
           DispatcherControlActor.class,
-          new DispatcherControlInstantiator((Dispatcher) dispatcher, (JDBCStorageDelegate) delegate.copy(), checkConfirmationExpirationInterval, confirmationExpiration))
+          new DispatcherControlInstantiator(dispatchers, (JDBCStorageDelegate) delegate.copy(), checkConfirmationExpirationInterval, confirmationExpiration))
       );
     } else {
-      this.dispatcher = null;
+      this.dispatchers = null;
       this.dispatcherControl = null;
     }
+  }
+
+  public JDBCStateStoreActor(
+          final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher,
+          final JDBCStorageDelegate<TextState> delegate,
+          final long checkConfirmationExpirationInterval,
+          final long confirmationExpiration) {
+    this(dispatcher == null ? null : Arrays.asList(dispatcher), delegate, checkConfirmationExpirationInterval, confirmationExpiration);
   }
 
   @Override
@@ -234,8 +250,8 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   }
 
   private void dispatch(final Dispatchable<Entry<?>, State<String>> dispatchable) {
-    if (this.dispatcher != null) {
-      dispatcher.dispatch(dispatchable);
+    if (this.dispatchers != null) {
+      dispatchers.forEach(d -> d.dispatch(dispatchable));
     }
   }
 
@@ -244,19 +260,25 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   }
 
   public static class JDBCStateStoreInstantiator implements ActorInstantiator<JDBCStateStoreActor> {
-    private Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher;
+    private static final long serialVersionUID = -1976058842295214942L;
+
+    private List<Dispatcher<Dispatchable<Entry<?>, State<String>>>> dispatchers;
     private JDBCStorageDelegate<TextState> delegate;
 
-    public JDBCStateStoreInstantiator(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate) {
-      this.dispatcher = dispatcher;
+    public JDBCStateStoreInstantiator(final List<Dispatcher<Dispatchable<Entry<?>, State<String>>>> dispatchers, final JDBCStorageDelegate<TextState> delegate) {
+      this.dispatchers = dispatchers;
       this.delegate = delegate;
+    }
+
+    public JDBCStateStoreInstantiator(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate) {
+      this(Arrays.asList(dispatcher), delegate);
     }
 
     public JDBCStateStoreInstantiator() { }
 
     @Override
     public JDBCStateStoreActor instantiate() {
-      return new JDBCStateStoreActor(dispatcher, delegate);
+      return new JDBCStateStoreActor(dispatchers, delegate);
     }
 
     @Override
@@ -268,8 +290,11 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public void set(final String name, final Object value) {
       switch (name) {
+      case "dispatchers":
+        this.dispatchers = (List<Dispatcher<Dispatchable<Entry<?>, State<String>>>>) value;
+        break;
       case "dispatcher":
-        this.dispatcher = (Dispatcher) value;
+        this.dispatchers = Arrays.asList((Dispatcher<Dispatchable<Entry<?>, State<String>>>) value);
         break;
       case "delegate":
         this.delegate = (JDBCStorageDelegate) value;

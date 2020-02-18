@@ -160,6 +160,8 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
   }
 
   public static class JdbiObjectStoreEntryReaderInstantiator implements ActorInstantiator<JdbiObjectStoreEntryReaderActor> {
+    private static final long serialVersionUID = 3588678272821601213L;
+
     private final JdbiOnDatabase jdbi;
     final Collection<StateObjectMapper> mappers;
     final String name;

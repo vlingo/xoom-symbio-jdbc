@@ -9,6 +9,7 @@ package io.vlingo.symbio.store.object.jdbc.jpa;
 import java.sql.Connection;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -49,7 +50,7 @@ import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryReaderActor.JDBCOb
 public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   private final ConnectionProvider connectionProvider;
   private final DispatcherControl dispatcherControl;
-  private final Dispatcher<Dispatchable<Entry<String>, State<?>>> dispatcher;
+  private final List<Dispatcher<Dispatchable<Entry<String>, State<?>>>> dispatchers;
   private boolean closed;
   private final JPAObjectStoreDelegate delegate;
   private final EntryAdapterProvider entryAdapterProvider;
@@ -74,7 +75,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
    * Construct my default state.
    * @param delegate the JPAObjectStoreDelegate
    * @param connectionProvider the ConnectionProvider
-   * @param dispatcher the Dispatcher
+   * @param dispatchers the {@code List<Dispatcher<Dispatchable<Entry<String>, State<?>>>>}
    * @param checkConfirmationExpirationInterval the long confirmation expiration interval
    * @param confirmationExpiration the long confirmation expiration
    */
@@ -82,12 +83,12 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   public JPAObjectStoreActor(
           final JPAObjectStoreDelegate delegate,
           final ConnectionProvider connectionProvider,
-          final Dispatcher<Dispatchable<Entry<String>, State<?>>> dispatcher,
+          final List<Dispatcher<Dispatchable<Entry<String>, State<?>>>> dispatchers,
           final long checkConfirmationExpirationInterval,
           final long confirmationExpiration) {
     this.delegate = delegate;
     this.connectionProvider = connectionProvider;
-    this.dispatcher = dispatcher;
+    this.dispatchers = dispatchers;
     this.entryReaders = new HashMap<>();
     this.closed = false;
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
@@ -100,9 +101,26 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
                     DispatcherControlActor.class,
                     new DispatcherControlInstantiator(
                             //Get a copy of storage delegate to use other connection
-                            dispatcher, delegate.copy(),
+                            dispatchers, delegate.copy(),
                             checkConfirmationExpirationInterval,
                             confirmationExpiration)));
+  }
+
+  /**
+   * Construct my default state.
+   * @param delegate the JPAObjectStoreDelegate
+   * @param connectionProvider the ConnectionProvider
+   * @param dispatcher the Dispatcher
+   * @param checkConfirmationExpirationInterval the long confirmation expiration interval
+   * @param confirmationExpiration the long confirmation expiration
+   */
+  public JPAObjectStoreActor(
+          final JPAObjectStoreDelegate delegate,
+          final ConnectionProvider connectionProvider,
+          final Dispatcher<Dispatchable<Entry<String>, State<?>>> dispatcher,
+          final long checkConfirmationExpirationInterval,
+          final long confirmationExpiration) {
+    this(delegate, connectionProvider, Arrays.asList(dispatcher), checkConfirmationExpirationInterval, confirmationExpiration);
   }
 
   /* @see io.vlingo.symbio.store.object.ObjectStore#close() */
@@ -151,7 +169,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
 
       delegate.completeTransaction();
 
-      dispatcher.dispatch(dispatchable);
+      dispatchers.forEach(d -> d.dispatch(dispatchable));
       interest.persistResultedIn(Success.of(Result.Success), persistentObject, 1, 1, object);
 
     } catch (final StorageException e) {
@@ -189,7 +207,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
       }
       delegate.completeTransaction();
 
-      allDispatchables.forEach(dispatcher::dispatch);
+      allDispatchables.forEach(dispatchable -> dispatchers.forEach(d -> d.dispatch(dispatchable)));
       interest.persistResultedIn(Success.of(Result.Success), allPersistentObjects, allPersistentObjects.size(), allPersistentObjects.size(), object);
 
     } catch (final StorageException e) {

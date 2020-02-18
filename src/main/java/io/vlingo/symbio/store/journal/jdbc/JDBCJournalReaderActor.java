@@ -205,6 +205,8 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
     }
 
     public static class JDBCJournalReaderInstantiator implements ActorInstantiator<JDBCJournalReaderActor> {
+      private static final long serialVersionUID = -7848399986246046163L;
+
       private final Configuration configuration;
       private final String name;
 

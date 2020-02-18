@@ -238,6 +238,8 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
 
 
   public static class HSQLDBStateStoreEntryReaderInstantiator<T extends Entry<?>> implements ActorInstantiator<HSQLDBStateStoreEntryReaderActor<T>> {
+    private static final long serialVersionUID = -4281215905570289673L;
+
     private Advice advice;
     private String name;
 

@@ -228,6 +228,8 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
   }
 
   public static class JDBCObjectStoreEntryReaderInstantiator implements ActorInstantiator<JDBCObjectStoreEntryReaderActor> {
+    private static final long serialVersionUID = 4022321764623417613L;
+
     private final Connection connection;
     private final DatabaseType databaseType;
     private final String name;

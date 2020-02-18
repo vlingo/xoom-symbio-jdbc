@@ -233,6 +233,8 @@ public class DbStateStoreEntryReaderActor<T extends Entry<?>> extends Actor impl
   }
 
   public static class DbStateStoreEntryReaderInstantiator<T extends Entry<?>> implements ActorInstantiator<DbStateStoreEntryReaderActor<T>> {
+    private static final long serialVersionUID = -6878220534139715L;
+
     private Advice advice;
     private String name;
 

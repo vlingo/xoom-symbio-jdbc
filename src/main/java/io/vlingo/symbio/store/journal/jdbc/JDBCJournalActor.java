@@ -12,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -64,13 +65,13 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     private final Map<String, JournalReader<TextEntry>> journalReaders;
     private final Map<String, StreamReader<String>> streamReaders;
     private final IdentityGenerator dispatchablesIdentityGenerator;
-    private final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher;
+    private final List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers;
     private final DispatcherControl dispatcherControl;
 
     private final JDBCQueries queries;
 
     public JDBCJournalActor(final Configuration configuration) throws Exception {
-        this(null, configuration, 0L, 0L);
+        this((Dispatcher<Dispatchable<Entry<String>, TextState>>) null, configuration, 0L, 0L);
     }
 
     public JDBCJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration) throws Exception {
@@ -78,7 +79,7 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public JDBCJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration,
+    public JDBCJournalActor(final List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers, final Configuration configuration,
                             final long checkConfirmationExpirationInterval, final long confirmationExpiration) throws Exception {
         this.configuration = configuration;
         this.connection = configuration.connection;
@@ -94,22 +95,31 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
 
         this.dispatchablesIdentityGenerator = new IdentityGenerator.RandomIdentityGenerator();
 
-        if (dispatcher != null) {
-            this.dispatcher = dispatcher;
+        if (dispatchers != null) {
+            this.dispatchers = dispatchers;
             final JDBCDispatcherControlDelegate dispatcherControlDelegate =
                     new JDBCDispatcherControlDelegate(Configuration.cloneOf(configuration), stage().world().defaultLogger());
             this.dispatcherControl = stage().actorFor(DispatcherControl.class,
                     Definition.has(DispatcherControlActor.class,
-                            new DispatcherControlInstantiator(dispatcher,
+                            new DispatcherControlInstantiator(dispatchers,
                                     dispatcherControlDelegate,
                                     checkConfirmationExpirationInterval,
                                     confirmationExpiration)
                     )
             );
         } else {
-            this.dispatcher = null;
+            this.dispatchers = null;
             this.dispatcherControl = null;
         }
+    }
+
+    public JDBCJournalActor(
+            final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher,
+            final Configuration configuration,
+            final long checkConfirmationExpirationInterval,
+            final long confirmationExpiration)
+    throws Exception {
+      this(Arrays.asList(dispatcher), configuration, checkConfirmationExpirationInterval, confirmationExpiration);
     }
 
     @Override
@@ -377,9 +387,9 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     }
 
     private void dispatch(final Dispatchable<Entry<String>, TextState> dispatchable) {
-        if (dispatcher != null) {
+        if (dispatchers != null) {
             //dispatch only if insert successful
-            this.dispatcher.dispatch(dispatchable);
+            this.dispatchers.forEach(d -> d.dispatch(dispatchable));
         }
     }
 

@@ -9,6 +9,7 @@ package io.vlingo.symbio.store.object.jdbc.jdbi;
 
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -132,13 +133,13 @@ public abstract class JdbiOnDatabase {
     /**
      * Answer the {@code ObjectStore} instance for the host database.
      * @param world the World in which the ObjectStore implementing Actor is created
-     * @param dispatcher the Dispatcher used by the ObjectStore
+     * @param dispatchers the {@code List<Dispatcher<Dispatchable<TextEntry, State.TextState>>>} used by the ObjectStore
      * @param mappers the Collection of PersistentObjectMapper for service/application specific tables
      * @return ObjectStore
      */
     public ObjectStore objectStore(
             final World world,
-            final Dispatcher<Dispatchable<TextEntry, State.TextState>> dispatcher,
+            final List<Dispatcher<Dispatchable<TextEntry, State.TextState>>> dispatchers,
             final Collection<StateObjectMapper> mappers) {
         if (objectStore == null) {
             final List<StateObjectMapper> objectMappers = new ArrayList<>(mappers);
@@ -149,10 +150,24 @@ public abstract class JdbiOnDatabase {
 
             final JdbiObjectStoreDelegate delegate = new JdbiObjectStoreDelegate(configuration, stateAdapterProvider, unconfirmedDispatchablesQueryExpression(), objectMappers, world.defaultLogger());
 
-            objectStore = world.actorFor(ObjectStore.class, JDBCObjectStoreActor.class, delegate, dispatcher);
+            objectStore = world.actorFor(ObjectStore.class, JDBCObjectStoreActor.class, delegate, dispatchers);
         }
 
         return objectStore;
+    }
+
+    /**
+     * Answer the {@code ObjectStore} instance for the host database.
+     * @param world the World in which the ObjectStore implementing Actor is created
+     * @param dispatcher the Dispatcher used by the ObjectStore
+     * @param mappers the Collection of PersistentObjectMapper for service/application specific tables
+     * @return ObjectStore
+     */
+    public ObjectStore objectStore(
+            final World world,
+            final Dispatcher<Dispatchable<TextEntry, State.TextState>> dispatcher,
+            final Collection<StateObjectMapper> mappers) {
+      return objectStore(world, Arrays.asList(dispatcher), mappers);
     }
 
     /**

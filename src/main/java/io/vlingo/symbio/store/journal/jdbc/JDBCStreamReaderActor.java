@@ -121,6 +121,8 @@ public class JDBCStreamReaderActor extends Actor implements StreamReader<String>
     }
 
     public static class JDBCStreamReaderInstantiator implements ActorInstantiator<JDBCStreamReaderActor> {
+      private static final long serialVersionUID = -560289226104663046L;
+
       private final Configuration configuration;
 
       public JDBCStreamReaderInstantiator(final Configuration configuration) {
