@@ -68,7 +68,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   }
 
 //  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher) {
-//     this(delegate, dispatcher, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
+//     this(delegate, Arrays.asList(dispatcher), DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
 //  }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
