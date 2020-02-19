@@ -118,14 +118,14 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
         }
     }
 
-    public JDBCJournalActor(
-            final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher,
-            final Configuration configuration,
-            final long checkConfirmationExpirationInterval,
-            final long confirmationExpiration)
-    throws Exception {
-      this(Arrays.asList(dispatcher), configuration, checkConfirmationExpirationInterval, confirmationExpiration);
-    }
+//    public JDBCJournalActor(
+//            final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher,
+//            final Configuration configuration,
+//            final long checkConfirmationExpirationInterval,
+//            final long confirmationExpiration)
+//    throws Exception {
+//      this(Arrays.asList(dispatcher), configuration, checkConfirmationExpirationInterval, confirmationExpiration);
+//    }
 
     @Override
     public void stop() {
