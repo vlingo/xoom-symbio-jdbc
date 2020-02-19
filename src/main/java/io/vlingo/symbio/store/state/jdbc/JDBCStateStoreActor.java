@@ -51,16 +51,16 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   private final StateAdapterProvider stateAdapterProvider;
 
   public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate) {
-    this((Dispatcher<Dispatchable<Entry<?>, State<String>>>) null, delegate, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
+    this((List<Dispatcher<Dispatchable<Entry<?>, State<String>>>>) null, delegate, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
   }
 
   public JDBCStateStoreActor(final List<Dispatcher<Dispatchable<Entry<?>, State<String>>>> dispatchers, final JDBCStorageDelegate<TextState> delegate) {
     this(dispatchers, delegate, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
   }
 
-  public JDBCStateStoreActor(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate) {
-    this(Arrays.asList(dispatcher), delegate, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
-  }
+//  public JDBCStateStoreActor(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate) {
+//    this(Arrays.asList(dispatcher), delegate, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
+//  }
 
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public JDBCStateStoreActor(
@@ -89,13 +89,13 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     }
   }
 
-  public JDBCStateStoreActor(
-          final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher,
-          final JDBCStorageDelegate<TextState> delegate,
-          final long checkConfirmationExpirationInterval,
-          final long confirmationExpiration) {
-    this(dispatcher == null ? null : Arrays.asList(dispatcher), delegate, checkConfirmationExpirationInterval, confirmationExpiration);
-  }
+//  public JDBCStateStoreActor(
+//          final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher,
+//          final JDBCStorageDelegate<TextState> delegate,
+//          final long checkConfirmationExpirationInterval,
+//          final long confirmationExpiration) {
+//    this(dispatcher == null ? null : Arrays.asList(dispatcher), delegate, checkConfirmationExpirationInterval, confirmationExpiration);
+//  }
 
   @Override
   public void stop() {
