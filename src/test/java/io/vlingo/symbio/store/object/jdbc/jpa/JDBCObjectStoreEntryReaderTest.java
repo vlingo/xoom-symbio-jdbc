@@ -80,8 +80,10 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
             final PersonAdded event = new PersonAdded(person);
             events2.add(event);
         }
-        objectStore.persist(StateSources.of(person, events2), -1L, persistInterest);
-        final Outcome<StorageException, Result> outcome2 = access.readFrom("outcome");
+        final TestPersistResultInterest persistInterest2 = new TestPersistResultInterest();
+        final AccessSafely access2 = persistInterest2.afterCompleting(1);
+        objectStore.persist(StateSources.of(person, events2), -1L, persistInterest2);
+        final Outcome<StorageException, Result> outcome2 = access2.readFrom("outcome");
         assertEquals(Result.Success, outcome2.andThen(success -> success).get());
 
         // read more events than available
