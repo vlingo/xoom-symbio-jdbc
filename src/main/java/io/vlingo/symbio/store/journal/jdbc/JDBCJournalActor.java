@@ -71,7 +71,7 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     private final JDBCQueries queries;
 
     public JDBCJournalActor(final Configuration configuration) throws Exception {
-        this((Dispatcher<Dispatchable<Entry<String>, TextState>>) null, configuration, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
+        this((List<Dispatcher<Dispatchable<Entry<String>, TextState>>>) null, configuration, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
     }
 
     public JDBCJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration) throws Exception {
