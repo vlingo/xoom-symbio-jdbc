@@ -75,7 +75,7 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     }
 
     public JDBCJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration) throws Exception {
-        this(dispatcher, configuration, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
+        this(Arrays.asList(dispatcher), configuration, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -105,7 +105,8 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
                     new JDBCDispatcherControlDelegate(Configuration.cloneOf(configuration), stage().world().defaultLogger());
             this.dispatcherControl = stage().actorFor(DispatcherControl.class,
                     Definition.has(DispatcherControlActor.class,
-                            new DispatcherControlInstantiator(dispatchers,
+                            new DispatcherControlInstantiator(
+                                    dispatchers,
                                     dispatcherControlDelegate,
                                     checkConfirmationExpirationInterval,
                                     confirmationExpiration)
@@ -145,7 +146,7 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     public <S, ST> void append(final String streamName, final int streamVersion, final Source<S> source, final Metadata metadata,
                                final AppendResultInterest interest, final Object object) {
         final Consumer<Exception> whenFailed = (e) -> appendResultedInFailure(streamName, streamVersion, source, null, interest, object, e);
-        final Entry<String> entry = asEntry(source, metadata, whenFailed);
+        final Entry<String> entry = asEntry(source, streamVersion, metadata, whenFailed);
         insertEntry(streamName, streamVersion, entry, whenFailed);
         final Dispatchable<Entry<String>, TextState> dispatchable = buildDispatchable(streamName, streamVersion, Collections.singletonList(entry), null);
         insertDispatchable(dispatchable, whenFailed);
@@ -159,7 +160,7 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     public <S, ST> void appendWith(final String streamName, final int streamVersion, final Source<S> source, final Metadata metadata, final ST snapshot,
                                    final AppendResultInterest interest, final Object object) {
         final Consumer<Exception> whenFailed = (e) -> appendResultedInFailure(streamName, streamVersion, source, snapshot, interest, object, e);
-        final Entry<String> entry = asEntry(source, metadata, whenFailed);
+        final Entry<String> entry = asEntry(source, streamVersion, metadata, whenFailed);
         insertEntry(streamName, streamVersion, entry, whenFailed);
         final Tuple2<Optional<ST>, Optional<TextState>> snapshotState = toState(streamName, snapshot, streamVersion);
         snapshotState._2.ifPresent(state -> insertSnapshot(streamName, streamVersion, state, whenFailed));
@@ -178,7 +179,7 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     public <S, ST> void appendAll(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final Metadata metadata,
                                   final AppendResultInterest interest, final Object object) {
         final Consumer<Exception> whenFailed = (e) -> appendAllResultedInFailure(streamName, fromStreamVersion, sources, null, interest, object, e);
-        final List<Entry<String>> entries = asEntries(sources, metadata, whenFailed);
+        final List<Entry<String>> entries = asEntries(sources, fromStreamVersion, metadata, whenFailed);
         int version = fromStreamVersion;
         for (final Entry<String> entry : entries) {
             insertEntry(streamName, version++, entry, whenFailed);
@@ -196,7 +197,7 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     public <S, ST> void appendAllWith(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final Metadata metadata,
                                       final ST snapshot, final AppendResultInterest interest, final Object object) {
         final Consumer<Exception> whenFailed = (e) -> appendAllResultedInFailure(streamName, fromStreamVersion, sources, snapshot, interest, object, e);
-        final List<Entry<String>> entries = asEntries(sources, metadata, whenFailed);
+        final List<Entry<String>> entries = asEntries(sources,fromStreamVersion, metadata, whenFailed);
         int version = fromStreamVersion;
         for (final Entry<String> entry : entries) {
             insertEntry(streamName, version++, entry, whenFailed);
@@ -364,17 +365,18 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
         }
     }
 
-    private <S> List<Entry<String>> asEntries(final List<Source<S>> sources, final Metadata metadata, final Consumer<Exception> whenFailed) {
+    private <S> List<Entry<String>> asEntries(final List<Source<S>> sources, final int fromStreamVersion, final Metadata metadata, final Consumer<Exception> whenFailed) {
         final List<Entry<String>> entries = new ArrayList<>(sources.size());
+        int version = fromStreamVersion;
         for (final Source<?> source : sources) {
-            entries.add(asEntry(source, metadata, whenFailed));
+            entries.add(asEntry(source, version++, metadata, whenFailed));
         }
         return entries;
     }
 
-    private <S> Entry<String> asEntry(final Source<S> source, final Metadata metadata, final Consumer<Exception> whenFailed) {
+    private <S> Entry<String> asEntry(final Source<S> source, final int streamVersion, final Metadata metadata, final Consumer<Exception> whenFailed) {
         try {
-            return entryAdapterProvider.asEntry(source, metadata);
+            return entryAdapterProvider.asEntry(source, streamVersion, metadata);
         } catch (final Exception e) {
             whenFailed.accept(e);
             logger().error("vlingo-symbio-jdbc:journal-" + databaseType + ": Cannot adapt source to entry because: ", e);
