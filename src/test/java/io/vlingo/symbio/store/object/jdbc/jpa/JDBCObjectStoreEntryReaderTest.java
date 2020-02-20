@@ -7,9 +7,6 @@
 
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -28,6 +25,8 @@ import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.object.StateSources;
 import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonAdded;
 
+import static org.junit.Assert.*;
+
 public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest {
     protected EntryReader<Entry<String>> entryReader;
 
@@ -43,6 +42,10 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
 
         final Entry<String> entry = entryReader.readNext().await();
         assertNotNull(entry);
+
+        // Check gap prevention for one entry
+        final Entry<String> empty = entryReader.readNext().await();
+        assertNull(empty);
     }
 
     @Test
@@ -69,6 +72,23 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
                 assertEquals(count++, Long.parseLong(entry.id()));
             }
         }
+
+        // check gap prevention for multiple entries
+        final int fewEvents = 7;
+        final List<Source<PersonAdded>> events2 = new ArrayList<>(fewEvents);
+        for (int idx = 1; idx <= fewEvents; ++idx) {
+            final PersonAdded event = new PersonAdded(person);
+            events2.add(event);
+        }
+        final TestPersistResultInterest persistInterest2 = new TestPersistResultInterest();
+        final AccessSafely access2 = persistInterest2.afterCompleting(1);
+        objectStore.persist(StateSources.of(person, events2), -1L, persistInterest2);
+        final Outcome<StorageException, Result> outcome2 = access2.readFrom("outcome");
+        assertEquals(Result.Success, outcome2.andThen(success -> success).get());
+
+        // read more events than available
+        final List<Entry<String>> entries = entryReader.readNext(fewEvents + 4).await();
+        assertEquals(fewEvents, entries.size());
     }
 
     @Test
