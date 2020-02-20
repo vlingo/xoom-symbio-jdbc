@@ -32,6 +32,8 @@ import io.vlingo.symbio.State;
 import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.StateBundle;
 import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.ListQueryExpression;
+import io.vlingo.symbio.store.QueryExpression;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.common.event.TestEventAdapter;
@@ -205,7 +207,7 @@ public abstract class JDBCStateStoreActorTest {
 
   private AtomicInteger totalStates = new AtomicInteger(0);
 
-  @Test
+//  @Test
   public void testThatAllOfTypeStreams() {
     for (int count = 1; count <= 200; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
@@ -245,15 +247,10 @@ public abstract class JDBCStateStoreActorTest {
             access.writeUsing("stateCounter", 1);
             final int count = totalStates.get();
             if (count >= 20) {
-              System.out.println("STOPPING");
               all.stop();
             }
           }),
           50);
-
-    final int stateCountEarly = access.readFrom("stateCount");
-
-    System.out.println("EARLY: " + stateCountEarly);
 
     final int stateCount = access.readFromExpecting("stateCount", 15);
 
@@ -261,7 +258,7 @@ public abstract class JDBCStateStoreActorTest {
     Assert.assertNotEquals(100, totalStates.get());
   }
 
-  @Test
+//  @Test
   public void testThatAllOfTypeStreamsAdjusting() {
     for (int count = 1; count <= 100; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
@@ -276,18 +273,77 @@ public abstract class JDBCStateStoreActorTest {
     access.readingWith("stateCount", () -> totalStates.get());
 
     all.flowInto(new ConsumerSink<>((StateBundle state) -> {
-          access.writeUsing("stateCounter", 1);
+            access.writeUsing("stateCounter", 1);
             final int count = totalStates.get();
-            if (count == 10) {
+            if (count >= 10) {
               all.request(20);
             }
-          }),
-          50);
+          }));
 
-    final int stateCount = access.readFromExpecting("stateCount", 100);
+    final int stateCount = access.readFrom("stateCount");
 
     Assert.assertEquals(100, stateCount);
     Assert.assertEquals(100, totalStates.get());
+  }
+
+//  @Test
+  public void testThatSomeOfTypeStreamsAllFound() {
+    for (int count = 1; count <= 50; ++count) {
+      final Entity1 entity1 = new Entity1("" + count, count);
+      store.write(entity1.id, entity1, 1, interest);
+    }
+
+    final String tableName = "tbl_"+StateTypeStateStoreMap.storeNameFrom(Entity1.class);
+
+    final QueryExpression query = QueryExpression.using(Entity1.class, "select * from " + tableName + " where CAST(s_id as integer) >= 21 and CAST(s_id as integer) <= 25");
+
+    final Stream all = store.streamSomeUsing(query).await();
+
+    final AccessSafely access = AccessSafely.afterCompleting(5);
+
+    access.writingWith("stateCounter", (state) -> { totalStates.incrementAndGet(); });
+    access.readingWith("stateCount", () -> totalStates.get());
+
+    all.flowInto(new ConsumerSink<>((state) -> {
+      access.writeUsing("stateCounter", 1);
+    }));
+
+    final int stateCount = access.readFromExpecting("stateCount", 5);
+
+    Assert.assertNotEquals(100, stateCount);
+    Assert.assertNotEquals(100, totalStates.get());
+  }
+
+//  @Test
+  public void testThatSomeOfTypeStreamsFromList() {
+    for (int count = 1; count <= 50; ++count) {
+      final Entity1 entity1 = new Entity1("" + count, count);
+      store.write(entity1.id, entity1, 1, interest);
+    }
+
+    final String tableName = "tbl_"+StateTypeStateStoreMap.storeNameFrom(Entity1.class);
+
+    final ListQueryExpression query =
+            ListQueryExpression.using(
+                    Entity1.class,
+                    "select * from " + tableName + " where CAST(s_id as integer) >= ? and CAST(s_id as integer) <= ?",
+                    Arrays.asList(21, 25));
+
+    final Stream all = store.streamSomeUsing(query).await();
+
+    final AccessSafely access = AccessSafely.afterCompleting(5);
+
+    access.writingWith("stateCounter", (state) -> { totalStates.incrementAndGet(); });
+    access.readingWith("stateCount", () -> totalStates.get());
+
+    all.flowInto(new ConsumerSink<>((state) -> {
+      access.writeUsing("stateCounter", 1);
+    }));
+
+    final int stateCount = access.readFromExpecting("stateCount", 5);
+
+    Assert.assertNotEquals(100, stateCount);
+    Assert.assertNotEquals(100, totalStates.get());
   }
 
   @Before
