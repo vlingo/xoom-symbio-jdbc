@@ -175,9 +175,11 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   public Completes<Stream> streamAllOf(final Class<?> type) {
     final String storeName = StateTypeStateStoreMap.storeNameFrom(type);
 
+    PreparedStatement readStatement = null;
+
     try {
       delegate.beginRead();
-      final PreparedStatement readStatement = delegate.readAllExpressionFor(storeName);
+      readStatement = delegate.readAllExpressionFor(storeName);
       final ResultSet resultSet = readStatement.executeQuery();
       delegate.complete();
       return completes().with(new JDBCStateStoreStream<>(stage(), delegate, stateAdapterProvider, resultSet, logger()));
@@ -190,12 +192,31 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
               e);
     }
 
-    return Completes.withFailure();
+    return completes().with(null); // this should be an EmptyStream
   }
 
   @Override
   public Completes<Stream> streamSomeUsing(final QueryExpression query) {
-    return null;
+    final String storeName = StateTypeStateStoreMap.storeNameFrom(query.type);
+
+    PreparedStatement readSomeStatement = null;
+
+    try {
+      readSomeStatement = delegate.readSomeExpressionFor(storeName, query);
+      delegate.beginRead();
+      final ResultSet resultSet = readSomeStatement.executeQuery();
+      delegate.complete();
+      return completes().with(new JDBCStateStoreStream<>(stage(), delegate, stateAdapterProvider, resultSet, logger()));
+    } catch (Exception e) {
+      delegate.fail();
+      logger().error(
+              getClass().getSimpleName() +
+              " streamSomeUsing() failed because: " + e.getMessage() +
+              " for: " + storeName,
+              e);
+    }
+
+    return completes().with(null); // this should be an EmptyStream
   }
 
   @Override
