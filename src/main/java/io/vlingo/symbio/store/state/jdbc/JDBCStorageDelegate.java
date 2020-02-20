@@ -16,9 +16,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.text.MessageFormat;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +36,7 @@ import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.BinaryState;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.QueryExpression;
 import io.vlingo.symbio.store.common.jdbc.CachedStatement;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
@@ -331,6 +334,23 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     return (R) maybeCached.preparedStatement;
   }
 
+  @SuppressWarnings("unchecked")
+  public <R> R readSomeExpressionFor(final String storeName, final QueryExpression query) throws Exception {
+    final String select = readSomeExpression(storeName, query.query);
+
+    final PreparedStatement preparedStatement =
+            connection.prepareStatement(
+                    select,
+                    ResultSet.TYPE_SCROLL_INSENSITIVE,
+                    ResultSet.CONCUR_READ_ONLY);
+
+    if (query.isListQueryExpression()) {
+      setStatementArguments(preparedStatement, query.asListQueryExpression().parameters);
+    }
+
+    return (R) preparedStatement;
+  }
+
   public <S> S session() throws Exception {
     return null;
   }
@@ -409,6 +429,36 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   protected abstract String tableNameFor(final String storeName);
   protected abstract String textDataFrom(final ResultSet resultSet, final int columnIndex) throws Exception;
   protected abstract String writeExpression(final String storeName);
+
+  protected String readSomeExpression(final String storeName, final String expression) {
+    return MessageFormat.format(expression, this.tableNameFor(storeName));
+  }
+
+  protected void setStatementArguments(final PreparedStatement statement, final List<?> arguments) throws SQLException {
+    final int count = arguments.size();
+
+    for (int idx = 0; idx < count; ++idx) {
+      final Object argument = arguments.get(idx);
+      final Class<?> argumentType = argument.getClass();
+
+      if (argumentType == String.class) {
+        statement.setString(idx + 1, (String) argument);
+      } else if (argumentType == Integer.class) {
+        statement.setInt(idx + 1, (Integer) argument);
+      } else if (argumentType == Long.class) {
+        statement.setLong(idx + 1, (Long) argument);
+      } else if (argumentType == Boolean.class) {
+        statement.setBoolean(idx + 1, (Boolean) argument);
+      } else if (argumentType == Date.class) {
+        java.sql.Date sqlDate = new java.sql.Date(((Date) argument).getTime());
+        statement.setDate(idx + 1, sqlDate);
+      } else if (argumentType == Double.class) {
+        statement.setDouble(idx + 1, (Double) argument);
+      } else if (argumentType == Float.class) {
+        statement.setFloat(idx + 1, (Float) argument);
+      }
+    }
+  }
 
   private void createDispatchablesTable() throws Exception {
     final String tableName = dispatchableTableName();
