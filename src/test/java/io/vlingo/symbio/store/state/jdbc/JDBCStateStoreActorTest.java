@@ -14,8 +14,10 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -23,9 +25,12 @@ import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
+import io.vlingo.reactivestreams.Stream;
+import io.vlingo.reactivestreams.sink.ConsumerSink;
 import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.StateAdapterProvider;
+import io.vlingo.symbio.StateBundle;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.common.event.TestEvent;
@@ -198,6 +203,93 @@ public abstract class JDBCStateStoreActorTest {
     assertEquals("dispatchAttemptCount", 3, dispatchAttemptCount);
   }
 
+  private AtomicInteger totalStates = new AtomicInteger(0);
+
+  @Test
+  public void testThatAllOfTypeStreams() {
+    for (int count = 1; count <= 200; ++count) {
+      final Entity1 entity1 = new Entity1("" + count, count);
+      store.write(entity1.id, entity1, 1, interest);
+    }
+
+    final Stream all = store.streamAllOf(Entity1.class).await();
+
+    final AccessSafely access = AccessSafely.afterCompleting(200);
+
+    access.writingWith("stateCounter", (state) -> { totalStates.incrementAndGet(); });
+    access.readingWith("stateCount", () -> totalStates.get());
+
+    all.flowInto(new ConsumerSink<>((state) -> access.writeUsing("stateCounter", 1)), 10);
+
+    final int stateCount = access.readFromExpecting("stateCount", 200);
+
+    Assert.assertEquals(totalStates.get(), 200);
+    Assert.assertEquals(totalStates.get(), stateCount);
+  }
+
+//  @Test
+  public void testThatAllOfTypeStreamsUntilStop() {
+    for (int count = 1; count <= 100; ++count) {
+      final Entity1 entity1 = new Entity1("" + count, count);
+      store.write(entity1.id, entity1, 1, interest);
+    }
+
+    final Stream all = store.streamAllOf(Entity1.class).await();
+
+    final AccessSafely access = AccessSafely.afterCompleting(100);
+
+    access.writingWith("stateCounter", (state) -> { totalStates.incrementAndGet(); });
+    access.readingWith("stateCount", () -> totalStates.get());
+
+    all.flowInto(new ConsumerSink<>((state) -> {
+            access.writeUsing("stateCounter", 1);
+            final int count = totalStates.get();
+            if (count >= 20) {
+              System.out.println("STOPPING");
+              all.stop();
+            }
+          }),
+          50);
+
+    final int stateCountEarly = access.readFrom("stateCount");
+
+    System.out.println("EARLY: " + stateCountEarly);
+
+    final int stateCount = access.readFromExpecting("stateCount", 15);
+
+    Assert.assertNotEquals(100, stateCount);
+    Assert.assertNotEquals(100, totalStates.get());
+  }
+
+  @Test
+  public void testThatAllOfTypeStreamsAdjusting() {
+    for (int count = 1; count <= 100; ++count) {
+      final Entity1 entity1 = new Entity1("" + count, count);
+      store.write(entity1.id, entity1, count, interest);
+    }
+
+    final Stream all = store.streamAllOf(Entity1.class).await();
+
+    final AccessSafely access = AccessSafely.afterCompleting(100);
+
+    access.writingWith("stateCounter", (state) -> { totalStates.incrementAndGet(); });
+    access.readingWith("stateCount", () -> totalStates.get());
+
+    all.flowInto(new ConsumerSink<>((StateBundle state) -> {
+          access.writeUsing("stateCounter", 1);
+            final int count = totalStates.get();
+            if (count == 10) {
+              all.request(20);
+            }
+          }),
+          50);
+
+    final int stateCount = access.readFromExpecting("stateCount", 100);
+
+    Assert.assertEquals(100, stateCount);
+    Assert.assertEquals(100, totalStates.get());
+  }
+
   @Before
   public void setUp() throws Exception {
     world = World.startWithDefaults("test-store");
@@ -210,7 +302,9 @@ public abstract class JDBCStateStoreActorTest {
     delegate = delegate();
 
     interest = new MockResultInterest();
+    interest.afterCompleting(0); // avoid NPE
     dispatcher = new MockTextDispatcher(0, interest);
+    dispatcher.afterCompleting(0); // avoid NPE
 
     EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
     StateAdapterProvider.instance(world).registerAdapter(Entity1.class, new Entity1StateAdapter());

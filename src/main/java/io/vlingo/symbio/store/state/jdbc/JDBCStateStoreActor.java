@@ -22,6 +22,7 @@ import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Success;
+import io.vlingo.reactivestreams.Stream;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
@@ -31,6 +32,7 @@ import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.EntryReader;
+import io.vlingo.symbio.store.QueryExpression;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
@@ -167,6 +169,33 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
               " readText() missing ResultInterest for: " +
               (id == null ? "unknown id" : id));
     }
+  }
+
+  @Override
+  public Completes<Stream> streamAllOf(final Class<?> type) {
+    final String storeName = StateTypeStateStoreMap.storeNameFrom(type);
+
+    try {
+      delegate.beginRead();
+      final PreparedStatement readStatement = delegate.readAllExpressionFor(storeName);
+      final ResultSet resultSet = readStatement.executeQuery();
+      delegate.complete();
+      return completes().with(new JDBCStateStoreStream<>(stage(), delegate, stateAdapterProvider, resultSet, logger()));
+    } catch (final Exception e) {
+      delegate.fail();
+      logger().error(
+              getClass().getSimpleName() +
+              " streamAllOf() failed because: " + e.getMessage() +
+              " for: " + storeName,
+              e);
+    }
+
+    return Completes.withFailure();
+  }
+
+  @Override
+  public Completes<Stream> streamSomeUsing(final QueryExpression query) {
+    return null;
   }
 
   @Override

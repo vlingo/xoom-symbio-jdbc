@@ -1,6 +1,12 @@
 package io.vlingo.symbio.store.object.jdbc.jpa;
 
-import io.vlingo.actors.*;
+import java.util.Collection;
+
+import io.vlingo.actors.Actor;
+import io.vlingo.actors.DeadLetter;
+import io.vlingo.actors.LocalMessage;
+import io.vlingo.actors.Mailbox;
+import io.vlingo.actors.Returns;
 import io.vlingo.common.BasicCompletes;
 import io.vlingo.common.Completes;
 import io.vlingo.common.SerializableConsumer;
@@ -10,8 +16,6 @@ import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.StateObject;
 import io.vlingo.symbio.store.object.StateSources;
-
-import java.util.Collection;
 
 public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStore {
 
@@ -84,7 +88,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     return null;
   }
   @Override
-  public void queryObject(final io.vlingo.symbio.store.object.QueryExpression arg0, final io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1, final java.lang.Object arg2) {
+  public void queryObject(final io.vlingo.symbio.store.QueryExpression arg0, final io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1, final java.lang.Object arg2) {
     if (!actor.isStopped()) {
       final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.queryObject(arg0, arg1, arg2);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, queryObjectRepresentation5); }
@@ -94,7 +98,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public void queryObject(final io.vlingo.symbio.store.object.QueryExpression arg0, final io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1) {
+  public void queryObject(final io.vlingo.symbio.store.QueryExpression arg0, final io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1) {
     if (!actor.isStopped()) {
       final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.queryObject(arg0, arg1);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, queryObjectRepresentation6); }
@@ -104,7 +108,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public void queryAll(final io.vlingo.symbio.store.object.QueryExpression arg0, final io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1) {
+  public void queryAll(final io.vlingo.symbio.store.QueryExpression arg0, final io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1) {
     if (!actor.isStopped()) {
       final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.queryAll(arg0, arg1);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, queryAllRepresentation7); }
@@ -114,7 +118,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
     }
   }
   @Override
-  public void queryAll(final io.vlingo.symbio.store.object.QueryExpression arg0, final io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1, final java.lang.Object arg2) {
+  public void queryAll(final io.vlingo.symbio.store.QueryExpression arg0, final io.vlingo.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1, final java.lang.Object arg2) {
     if (!actor.isStopped()) {
       final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.queryAll(arg0, arg1, arg2);
       if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, queryAllRepresentation8); }

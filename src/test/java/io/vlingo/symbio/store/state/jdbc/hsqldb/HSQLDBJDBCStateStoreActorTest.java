@@ -19,13 +19,13 @@ public class HSQLDBJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
 
   @Override
   protected StorageDelegate delegate() throws Exception {
-    System.out.println("Starting: HSQLDBJDBCTextStateStoreActorTest: delegate()");
+    System.out.println("Starting: HSQLDBJDBCStateStoreActorTest: delegate()");
     return new HSQLDBStorageDelegate(configuration, world.defaultLogger());
   }
 
   @Override
   protected TestConfiguration testConfiguration(final DataFormat format) throws Exception {
-    System.out.println("Starting: HSQLDBJDBCTextStateStoreActorTest: testConfiguration()");
+    System.out.println("Starting: HSQLDBJDBCStateStoreActorTest: testConfiguration()");
     return HSQLDBConfigurationProvider.testConfiguration(format, UUID.randomUUID().toString());
   }
 }

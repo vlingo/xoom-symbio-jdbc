@@ -17,18 +17,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import io.vlingo.symbio.store.object.StateSources;
 import org.junit.Assert;
 import org.junit.Test;
 
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.ListQueryExpression;
+import io.vlingo.symbio.store.MapQueryExpression;
+import io.vlingo.symbio.store.QueryExpression;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.object.ListQueryExpression;
-import io.vlingo.symbio.store.object.MapQueryExpression;
-import io.vlingo.symbio.store.object.QueryExpression;
+import io.vlingo.symbio.store.object.StateSources;
 import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonAdded;
 import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents.PersonRenamed;
 

@@ -17,8 +17,8 @@ import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
 import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.store.QueryExpression;
 import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
-import io.vlingo.symbio.store.object.QueryExpression;
 import io.vlingo.symbio.store.object.StateObjectMapper;
 
 /**

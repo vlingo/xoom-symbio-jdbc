@@ -286,6 +286,30 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   }
 
   @SuppressWarnings("unchecked")
+  public <R> R readAllExpressionFor(final String storeName) throws Exception {
+    final String storeNameKey = "ALL:"+storeName;
+
+    final CachedStatement<T> maybeCached = readStatements.get(storeNameKey);
+
+    if (maybeCached == null) {
+      final String select = readAllExpression(storeName);
+      final PreparedStatement preparedStatement =
+              connection.prepareStatement(
+                      select,
+                      ResultSet.TYPE_SCROLL_INSENSITIVE,
+                      ResultSet.CONCUR_READ_ONLY);
+      final CachedStatement<T> cached = new CachedStatement<>(preparedStatement, null);
+      readStatements.put(storeNameKey, cached);
+      prepareForReadAll(cached);
+      return (R) preparedStatement;
+    }
+
+    prepareForReadAll(maybeCached);
+
+    return (R) maybeCached.preparedStatement;
+  }
+
+  @SuppressWarnings("unchecked")
   public <R> R readExpressionFor(final String storeName, final String id) throws Exception {
     final CachedStatement<T> maybeCached = readStatements.get(storeName);
 
@@ -318,12 +342,19 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     if (!resultSet.next()) {
       return (S) (format.isBinary() ? new BinaryState() : new TextState());
     }
-    final Class<?> type = Class.forName(resultSet.getString(1));
-    final int typeVersion = resultSet.getInt(2);
+    return stateFrom(resultSet, id, 0);
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public <S, R> S stateFrom(final R result, final String id, final int columnOffset) throws Exception {
+    final ResultSet resultSet = ((ResultSet) result);
+    final Class<?> type = Class.forName(resultSet.getString(1 + columnOffset));
+    final int typeVersion = resultSet.getInt(2 + columnOffset);
     // 3 below
-    final int dataVersion = resultSet.getInt(4);
-    final String metadataValue = resultSet.getString(5);
-    final String metadataOperation = resultSet.getString(6);
+    final int dataVersion = resultSet.getInt(4 + columnOffset);
+    final String metadataValue = resultSet.getString(5 + columnOffset);
+    final String metadataOperation = resultSet.getString(6 + columnOffset);
 
     final Metadata metadata = Metadata.with(metadataValue, metadataOperation);
 
@@ -331,10 +362,10 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     // hopefully no objects are larger than int max value
 
     if (format.isBinary()) {
-      final byte[] data = binaryDataFrom(resultSet, 3);
+      final byte[] data = binaryDataFrom(resultSet, 3 + columnOffset);
       return (S) new BinaryState(id, type, typeVersion, data, dataVersion, metadata);
     } else {
-      final String data = textDataFrom(resultSet, 3);
+      final String data = textDataFrom(resultSet, 3 + columnOffset);
       return (S) new TextState(id, type, typeVersion, data, dataVersion, metadata);
     }
   }
@@ -368,6 +399,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   protected abstract String entryTableName();
   protected abstract String entryOffsetsTableName();
   protected abstract String entryOffsetsTableCreateExpression();
+  protected abstract String readAllExpression(final String storeName);
   protected abstract String readExpression(final String storeName, final String id);
   protected abstract <S> void setBinaryObject(final CachedStatement<T> cached, int columnIndex, final State<S> state) throws Exception;
   protected abstract <E> void setBinaryObject(final CachedStatement<T> cached, int columnIndex, final Entry<E> entry) throws Exception;
@@ -457,6 +489,10 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
         logger.error("Could not create " + tableName + " table because: " + e.getMessage(), e);
       }
     }
+  }
+
+  private void prepareForReadAll(final CachedStatement<T> cached) throws Exception {
+    cached.preparedStatement.clearParameters();
   }
 
   private void prepareForRead(final CachedStatement<T> cached, final String id) throws Exception {

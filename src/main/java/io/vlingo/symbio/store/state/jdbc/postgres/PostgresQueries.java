@@ -13,6 +13,10 @@ public interface PostgresQueries {
                     "FROM tbl_{0} " +
                     "WHERE tbl_{0}.s_id = ?";
 
+    final static String SQL_ALL_STATE_READ =
+            "SELECT tbl_{0}.s_id, tbl_{0}.s_type, tbl_{0}.s_type_version, tbl_{0}.s_data, tbl_{0}.s_data_version, tbl_{0}.s_metadata_value, tbl_{0}.s_metadata_op " +
+                    "FROM tbl_{0}";
+
     final static String SQL_STATE_WRITE =
             "INSERT INTO tbl_{0} \n" +
                     "(s_id, s_type, s_type_version, s_data, s_data_version, s_metadata_value, s_metadata_op) \n" +

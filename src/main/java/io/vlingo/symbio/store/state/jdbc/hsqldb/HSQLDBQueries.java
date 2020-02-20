@@ -13,6 +13,10 @@ public interface HSQLDBQueries {
           "FROM TBL_{0} " +
           "WHERE TBL_{0}.S_ID = ?";
 
+  final static String SQL_ALL_STATE_READ =
+          "SELECT TBL_{0}.S_ID, TBL_{0}.S_TYPE, TBL_{0}.S_TYPE_VERSION, TBL_{0}.S_DATA, TBL_{0}.S_DATA_VERSION, TBL_{0}.S_METADATA_VALUE, TBL_{0}.S_METADATA_OP " +
+          "FROM TBL_{0}";
+
   final static String SQL_STATE_WRITE =
           "MERGE INTO TBL_{0} \n" +
           "USING (VALUES ?, ?, ?, {1}, ?, ?, ?) \n" +

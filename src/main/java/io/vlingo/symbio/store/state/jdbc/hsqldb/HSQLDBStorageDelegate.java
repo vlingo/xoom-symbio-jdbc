@@ -136,6 +136,11 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
   }
 
   @Override
+  protected String readAllExpression(final String storeName) {
+    return MessageFormat.format(SQL_ALL_STATE_READ, storeName.toLowerCase());
+  }
+
+  @Override
   protected String readExpression(final String storeName, final String id) {
     return MessageFormat.format(SQL_STATE_READ, storeName.toUpperCase());
   }
