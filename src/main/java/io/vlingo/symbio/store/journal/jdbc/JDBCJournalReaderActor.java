@@ -8,6 +8,7 @@
 package io.vlingo.symbio.store.journal.jdbc;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -18,12 +19,13 @@ import com.google.gson.Gson;
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
-import io.vlingo.common.Tuple2;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
+import io.vlingo.symbio.store.gap.GapRetryReader;
+import io.vlingo.symbio.store.gap.GappedEntries;
 import io.vlingo.symbio.store.journal.JournalReader;
 
 public class JDBCJournalReaderActor extends Actor implements JournalReader<TextEntry> {
@@ -32,6 +34,8 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
     private final Gson gson;
     private final String name;
     private final JDBCQueries queries;
+
+    private GapRetryReader<String, TextEntry> reader = null;
 
     private long offset;
 
@@ -64,10 +68,19 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
     public Completes<TextEntry> readNext() {
         try (final ResultSet resultSet = queries.prepareSelectEntryQuery(offset).executeQuery()) {
             if (resultSet.next()) {
-                final Tuple2<TextEntry,Long> entry = entryFromResultSet(resultSet);
-                offset = entry._2 + 1;
+                TextEntry entry = entryFromResultSet(resultSet);
+
+                ++offset;
                 updateCurrentOffset();
-                return completes().with(entry._1);
+                return completes().with(entry);
+            } else {
+                List<Long> gapIds = reader().detectGaps(null, offset);
+                GappedEntries<String, TextEntry> gappedEntries = new GappedEntries<>(new ArrayList<>(), gapIds, completesEventually());
+                reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
+
+                ++offset;
+                updateCurrentOffset();
+                return completes();
             }
         } catch (Exception e) {
             logger().error("vlingo-symbio-jdbc:journal-reader-" + databaseType + ": " + e.getMessage(), e);
@@ -83,19 +96,23 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
     }
 
     @Override
-    public Completes<List<TextEntry>> readNext(final int maximumEvents) {
-        final List<TextEntry> events = new ArrayList<>(maximumEvents);
+    public Completes<List<TextEntry>> readNext(final int maximumEntries) {
+        try (final ResultSet resultSet = queries.prepareSelectEntryBatchQuery(offset, maximumEntries).executeQuery()) {
+            final List<TextEntry> entries = entriesFromResultSet(resultSet);
+            List<Long> gapIds = reader().detectGaps(entries, offset, maximumEntries);
+            if (!gapIds.isEmpty()) {
+                GappedEntries<String, TextEntry> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+                reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
 
-        try (final ResultSet resultSet = queries.prepareSelectEntryBatchQuery(offset, maximumEvents).executeQuery()) {
-            while (resultSet.next()) {
-                final Tuple2<TextEntry,Long> entry = entryFromResultSet(resultSet);
-                offset = entry._2 + 1;
-                events.add(entry._1);
+                // Move offset with maximumEntries regardless of filled up gaps
+                offset += maximumEntries;
+                updateCurrentOffset();
+                return completes();
+            } else {
+                offset += maximumEntries;
+                updateCurrentOffset();
+                return completes().with(entries);
             }
-
-            updateCurrentOffset();
-            return completes().with(events);
-
         } catch (Exception e) {
             logger().error("vlingo-symbio-jdbc:journal-reader-" + databaseType + ": " + e.getMessage(), e);
         }
@@ -153,7 +170,7 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
         return completes().with(-1L);
     }
 
-    private Tuple2<TextEntry,Long> entryFromResultSet(final ResultSet resultSet) throws SQLException, ClassNotFoundException {
+    private TextEntry entryFromResultSet(final ResultSet resultSet) throws SQLException, ClassNotFoundException {
         final long id = resultSet.getLong(1);
         final String entryData = resultSet.getString(2);
         final String entryType = resultSet.getString(3);
@@ -161,9 +178,38 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
         final String entryMetadata = resultSet.getString(5);
 
         final Class<?> classOfEvent = Class.forName(entryType);
-
         final Metadata eventMetadataDeserialized = gson.fromJson(entryMetadata, Metadata.class);
-        return Tuple2.from(new BaseEntry.TextEntry(String.valueOf(id), classOfEvent, eventTypeVersion, entryData, eventMetadataDeserialized), id);
+
+        return new BaseEntry.TextEntry(String.valueOf(id), classOfEvent, eventTypeVersion, entryData, eventMetadataDeserialized);
+    }
+
+    private List<TextEntry> entriesFromResultSet(ResultSet resultSet) throws SQLException, ClassNotFoundException {
+        final List<TextEntry> entries = new ArrayList<>();
+        while (resultSet.next()) {
+            TextEntry entry = entryFromResultSet(resultSet);
+            entries.add(entry);
+        }
+
+        return entries;
+    }
+
+    private GapRetryReader<String, TextEntry> reader() {
+        if (reader == null) {
+            reader = new GapRetryReader<>(stage(), scheduler());
+        }
+
+        return reader;
+    }
+
+    private List<TextEntry> readIds(List<Long> ids) {
+        try (PreparedStatement statement = queries.prepareNewSelectEntriesByIdsQuery(ids);
+             final ResultSet resultSet = statement.executeQuery()) {
+            final List<TextEntry> entries = entriesFromResultSet(resultSet);
+            return entries;
+        } catch (Exception e) {
+            logger().error("vlingo-symbio-jdbc:journal-reader-" + databaseType + ": " + e.getMessage(), e);
+            return new ArrayList<>();
+        }
     }
 
     private void retrieveCurrentOffset() {
