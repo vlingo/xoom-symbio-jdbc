@@ -7,12 +7,13 @@
 
 package io.vlingo.symbio.store.state.jdbc.yugabyte;
 
+import org.junit.Ignore;
+
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.yugabyte.YugaByteConfigurationProvider;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
-import org.junit.Ignore;
 
 @Ignore
 public class YugaByteJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
@@ -26,5 +27,15 @@ public class YugaByteJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
     protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
         System.out.println("Starting: YugaByteJDBCTextStateStoreActorTest: testConfiguration()");
         return YugaByteConfigurationProvider.testConfiguration(DataFormat.Text);
+    }
+
+    @Override
+    protected String someOfTypeStreams(final Class<?> type) {
+      return "select * from " + tableName(type) + " where cast(s_id as integer) >= 21 and cast(s_id as integer) <= 25";
+    }
+
+    @Override
+    protected String someOfTypeStreamsWithParameters(final Class<?> type) {
+      return "select * from " + tableName(type) + " where cast(s_id as integer) >= ? and cast(s_id as integer) <= ?";
     }
 }

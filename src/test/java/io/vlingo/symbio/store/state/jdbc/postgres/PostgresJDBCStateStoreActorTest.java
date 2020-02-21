@@ -26,4 +26,14 @@ public class PostgresJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
         System.out.println("Starting: PostgresJDBCTextStateStoreActorTest: testConfiguration()");
         return PostgresConfigurationProvider.testConfiguration(DataFormat.Text);
     }
+
+    @Override
+    protected String someOfTypeStreams(final Class<?> type) {
+      return "select * from " + tableName(type) + " where cast(s_id as integer) >= 21 and cast(s_id as integer) <= 25";
+    }
+
+    @Override
+    protected String someOfTypeStreamsWithParameters(final Class<?> type) {
+      return "select * from " + tableName(type) + " where cast(s_id as integer) >= ? and cast(s_id as integer) <= ?";
+    }
 }

@@ -15,6 +15,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -205,9 +206,11 @@ public abstract class JDBCStateStoreActorTest {
     assertEquals("dispatchAttemptCount", 3, dispatchAttemptCount);
   }
 
+  private ConsumerSink<StateBundle> sink;
+
   private AtomicInteger totalStates = new AtomicInteger(0);
 
-//  @Test
+  @Test
   public void testThatAllOfTypeStreams() {
     for (int count = 1; count <= 200; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
@@ -229,7 +232,7 @@ public abstract class JDBCStateStoreActorTest {
     Assert.assertEquals(totalStates.get(), stateCount);
   }
 
-//  @Test
+  @Test
   public void testThatAllOfTypeStreamsUntilStop() {
     for (int count = 1; count <= 100; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
@@ -238,27 +241,33 @@ public abstract class JDBCStateStoreActorTest {
 
     final Stream all = store.streamAllOf(Entity1.class).await();
 
-    final AccessSafely access = AccessSafely.afterCompleting(100);
+    final AccessSafely access = AccessSafely.afterCompleting(20);
 
     access.writingWith("stateCounter", (state) -> { totalStates.incrementAndGet(); });
     access.readingWith("stateCount", () -> totalStates.get());
 
-    all.flowInto(new ConsumerSink<>((state) -> {
-            access.writeUsing("stateCounter", 1);
-            final int count = totalStates.get();
-            if (count >= 20) {
-              all.stop();
-            }
-          }),
-          50);
+    final Consumer<StateBundle> bundles =
+            (state) -> {
+              access.writeUsing("stateCounter", 1);
+              final int count = totalStates.get();
+              if (count == 20) {
+                sink.terminate();
+                all.stop();
+                System.out.println("STOPPED");
+              }
+            };
 
-    final int stateCount = access.readFromExpecting("stateCount", 15);
+    sink = new ConsumerSink<>(bundles);
+
+    all.flowInto(sink, 50);
+
+    final int stateCount = access.readFrom("stateCount");
 
     Assert.assertNotEquals(100, stateCount);
-    Assert.assertNotEquals(100, totalStates.get());
+    Assert.assertEquals(20, totalStates.get());
   }
 
-//  @Test
+  @Test
   public void testThatAllOfTypeStreamsAdjusting() {
     for (int count = 1; count <= 100; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
@@ -286,16 +295,14 @@ public abstract class JDBCStateStoreActorTest {
     Assert.assertEquals(100, totalStates.get());
   }
 
-//  @Test
+  @Test
   public void testThatSomeOfTypeStreamsAllFound() {
     for (int count = 1; count <= 50; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
       store.write(entity1.id, entity1, 1, interest);
     }
 
-    final String tableName = "tbl_"+StateTypeStateStoreMap.storeNameFrom(Entity1.class);
-
-    final QueryExpression query = QueryExpression.using(Entity1.class, "select * from " + tableName + " where CAST(s_id as integer) >= 21 and CAST(s_id as integer) <= 25");
+    final QueryExpression query = QueryExpression.using(Entity1.class, someOfTypeStreams(Entity1.class));
 
     final Stream all = store.streamSomeUsing(query).await();
 
@@ -308,25 +315,23 @@ public abstract class JDBCStateStoreActorTest {
       access.writeUsing("stateCounter", 1);
     }));
 
-    final int stateCount = access.readFromExpecting("stateCount", 5);
+    final int stateCount = access.readFrom("stateCount");
 
     Assert.assertNotEquals(100, stateCount);
-    Assert.assertNotEquals(100, totalStates.get());
+    Assert.assertEquals(5, totalStates.get());
   }
 
-//  @Test
+  @Test
   public void testThatSomeOfTypeStreamsFromList() {
     for (int count = 1; count <= 50; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
       store.write(entity1.id, entity1, 1, interest);
     }
 
-    final String tableName = "tbl_"+StateTypeStateStoreMap.storeNameFrom(Entity1.class);
-
     final ListQueryExpression query =
             ListQueryExpression.using(
                     Entity1.class,
-                    "select * from " + tableName + " where CAST(s_id as integer) >= ? and CAST(s_id as integer) <= ?",
+                    someOfTypeStreamsWithParameters(Entity1.class),
                     Arrays.asList(21, 25));
 
     final Stream all = store.streamSomeUsing(query).await();
@@ -343,7 +348,7 @@ public abstract class JDBCStateStoreActorTest {
     final int stateCount = access.readFromExpecting("stateCount", 5);
 
     Assert.assertNotEquals(100, stateCount);
-    Assert.assertNotEquals(100, totalStates.get());
+    Assert.assertEquals(5, totalStates.get());
   }
 
   @Before
@@ -385,6 +390,12 @@ public abstract class JDBCStateStoreActorTest {
 
   protected abstract StorageDelegate delegate() throws Exception;
   protected abstract TestConfiguration testConfiguration(final DataFormat format) throws Exception;
+  protected abstract String someOfTypeStreams(final Class<?> type);
+  protected abstract String someOfTypeStreamsWithParameters(final Class<?> type);
+
+  protected String tableName(final Class<?> type) {
+    return ("tbl_"+StateTypeStateStoreMap.storeNameFrom(type)).toLowerCase();
+  }
 
   private String dispatchId(final String entityId) {
     return entity1StoreName + ":" + entityId;

@@ -28,4 +28,14 @@ public class HSQLDBJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
     System.out.println("Starting: HSQLDBJDBCStateStoreActorTest: testConfiguration()");
     return HSQLDBConfigurationProvider.testConfiguration(format, UUID.randomUUID().toString());
   }
+
+  @Override
+  protected String someOfTypeStreams(final Class<?> type) {
+    return "select * from " + tableName(type) + " where cast(s_id as integer) >= 21 and cast(s_id as integer) <= 25";
+  }
+
+  @Override
+  protected String someOfTypeStreamsWithParameters(final Class<?> type) {
+    return "select * from " + tableName(type) + " where cast(s_id as integer) >= ? and cast(s_id as integer) <= ?";
+  }
 }

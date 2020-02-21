@@ -25,4 +25,14 @@ public class MySQLJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
         System.out.println("Starting: MySQLJDBCTextStateStoreActorTest: testConfiguration()");
         return MySQLConfigurationProvider.testConfiguration(DataFormat.Text);
     }
+
+    @Override
+    protected String someOfTypeStreams(final Class<?> type) {
+      return "select * from " + tableName(type) + " where s_id between 21 and 25";
+    }
+
+    @Override
+    protected String someOfTypeStreamsWithParameters(final Class<?> type) {
+      return "select * from " + tableName(type) + " where s_id between ? and ?";
+    }
 }
