@@ -139,7 +139,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
   /**
    * Answer the parameterized query for retrieving multiple {@code Entry} instances based on ids.
    * @param idsCount count of ids.
-   * @return
+   * @return String
    */
   public String entriesQuery(final int idsCount) {
     StringBuilder inQuery = new StringBuilder("?");
@@ -359,9 +359,9 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
 
   /**
    * Answer the parameterized {@code PreparedStatement} for retrieving multiple {@code Entry} instances based on ids.
-   * @param idsCount
-   * @return
-   * @throws SQLException
+   * @param idsCount the int number of Entry instances to find
+   * @return PreparedStatement
+   * @throws SQLException if the PreparedStatement creation fails
    */
   public PreparedStatement statementForEntriesQuery(final int idsCount) throws SQLException {
     return connection.prepareStatement(entriesQuery(idsCount));
