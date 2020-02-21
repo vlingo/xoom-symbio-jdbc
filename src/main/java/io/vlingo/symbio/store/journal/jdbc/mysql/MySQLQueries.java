@@ -133,6 +133,11 @@ public class MySQLQueries extends JDBCQueries {
                     "FROM " + TABLE_VLINGO_SYMBIO_JOURNAL + " " +
                     "WHERE E_ID BETWEEN ? AND ? ORDER BY E_ID";
 
+    private static final String SELECT_ENTRY_IDS =
+            "SELECT E_ID, E_ENTRY_DATA, E_ENTRY_TYPE, E_ENTRY_TYPE_VERSION, E_ENTRY_METADATA " +
+                    "FROM " + TABLE_VLINGO_SYMBIO_JOURNAL + " " +
+                    "WHERE E_ID IN ({0}) ORDER BY E_ID";
+
     private static final String SELECT_LAST_OFFSET =
             "SELECT MAX(E_ID) FROM " + TABLE_VLINGO_SYMBIO_JOURNAL;
 
@@ -240,6 +245,11 @@ public class MySQLQueries extends JDBCQueries {
     @Override
     protected String selectEntryBatchQuery() {
         return SELECT_ENTRY_BATCH;
+    }
+
+    @Override
+    protected String selectEntriesByIds() {
+        return SELECT_ENTRY_IDS;
     }
 
     @Override

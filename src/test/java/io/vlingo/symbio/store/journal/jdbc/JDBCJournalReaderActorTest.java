@@ -9,8 +9,7 @@ package io.vlingo.symbio.store.journal.jdbc;
 
 import static io.vlingo.symbio.store.EntryReader.Beginning;
 import static io.vlingo.symbio.store.EntryReader.End;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.*;
 
 import java.util.List;
 import java.util.UUID;
@@ -47,6 +46,9 @@ public abstract class JDBCJournalReaderActorTest extends BasePostgresJournalTest
 
         assertEquals(1, parse(journalReader.readNext().await()).number);
         assertEquals(2, parse(journalReader.readNext().await()).number);
+
+        // gap prevention check for one event
+        assertNull(journalReader.readNext().await());
     }
 
     @Test
@@ -77,7 +79,8 @@ public abstract class JDBCJournalReaderActorTest extends BasePostgresJournalTest
         assertEquals(1, parse(events.get(0)).number);
         assertEquals(2, parse(events.get(1)).number);
 
-        events = journalReader.readNext(2).await();
+        // gap prevention check for multiple entries
+        events = journalReader.readNext(5).await();
         assertEquals(2, events.size());
         assertEquals(3, parse(events.get(0)).number);
         assertEquals(4, parse(events.get(1)).number);
