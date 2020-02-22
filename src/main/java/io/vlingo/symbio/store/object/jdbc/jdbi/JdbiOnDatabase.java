@@ -199,6 +199,15 @@ public abstract class JdbiOnDatabase {
     }
 
     /**
+     * Answer the {@code QueryExpression} for multiple {@code Entry} instances based on ids.
+     * @param ids identities to be selected
+     * @return QueryExpression
+     */
+    public QueryExpression queryEntries(List<Long> ids) {
+        return ListQueryExpression.using(Entry.class, queries.entriesQuery(ids));
+    }
+
+    /**
      * Answer the {@code QueryExpression} for the id of the most recently inserted {@code Entry}.
      * @return QueryExpression
      */

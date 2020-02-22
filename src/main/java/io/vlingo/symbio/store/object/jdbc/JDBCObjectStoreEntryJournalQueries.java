@@ -11,6 +11,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.text.MessageFormat;
+import java.util.List;
 
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 
@@ -134,6 +135,24 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
             EntryJournalTableName,
             id,
             id + count - 1);
+  }
+
+  /**
+   * Answer the query for retrieving multiple {@code Entry} instances based on ids.
+   * @param ids List of ids
+   * @return String
+   */
+  public String entriesQuery(List<Long> ids) {
+    String[] arrayIds = ids.stream().map(id -> Long.toString(id)).toArray(String[]::new);
+    StringBuilder placeholders = new StringBuilder("{0}");
+    for (int i = 1; i < ids.size(); i++) {
+      placeholders.append(", {" + i + "}");
+    }
+
+    return MessageFormat.format(
+            "SELECT E_ID,E_TYPE,E_TYPE_VERSION,E_DATA,E_METADATA_VALUE,E_METADATA_OP " +
+                    "FROM " + EntryJournalTableName + " WHERE E_ID IN (" + placeholders.toString() + ") ORDER BY E_ID",
+            arrayIds);
   }
 
   /**

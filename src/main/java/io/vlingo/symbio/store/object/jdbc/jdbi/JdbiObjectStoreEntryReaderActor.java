@@ -8,9 +8,10 @@
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
 import java.sql.SQLException;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 
+import io.vlingo.symbio.store.gap.GapRetryReader;
+import io.vlingo.symbio.store.gap.GappedEntries;
 import org.jdbi.v3.core.mapper.RowMapper;
 
 import io.vlingo.actors.Actor;
@@ -28,6 +29,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
   private final JdbiPersistMapper currentEntryOffsetMapper;
   private final JdbiOnDatabase jdbi;
   private final String name;
+  private GapRetryReader<String, Entry<String>> reader = null;
   private final QueryExpression queryLastEntryId;
   private final QueryExpression querySize;
 
@@ -67,10 +69,22 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
   public Completes<Entry<String>> readNext() {
     try {
       final QueryExpression expression = jdbi.queryEntry(offset);
-      final Entry entry = jdbi.handle().createQuery(expression.query).mapTo(Entry.class).one();
-      ++offset;
-      updateCurrentOffset();
-      return completes().with(entry);
+      final Optional<Entry> entry = jdbi.handle().createQuery(expression.query).mapTo(Entry.class).findOne();
+      List<Long> gapIds = reader().detectGaps(entry.orElse(null), offset);
+      if (!gapIds.isEmpty()) {
+        // gaps have been detected
+        List<Entry<String>> entries = entry.isPresent() ? Collections.singletonList(entry.get()) : new ArrayList<>();
+        GappedEntries<String, Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+        reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
+
+        ++offset;
+        updateCurrentOffset();
+        return completes();
+      } else {
+        ++offset;
+        updateCurrentOffset();
+        return completes().with(entry.get());
+      }
     } catch (Exception e) {
       logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
       return completes().with(null);
@@ -89,11 +103,22 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
     try {
       final QueryExpression expression = jdbi.queryEntries(offset, maximumEntries);
       final List<Entry<String>> entries = (List) jdbi.handle().createQuery(expression.query).mapTo(expression.type).list();
-      offset += entries.size();
-      updateCurrentOffset();
-      return completes().with(entries);
+      List<Long> gapIds = reader().detectGaps(entries, offset, maximumEntries);
+      if (!gapIds.isEmpty()) {
+        GappedEntries<String, Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+        reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
+
+        // Move offset with maximumEntries regardless of filled up gaps
+        offset += maximumEntries;
+        updateCurrentOffset();
+        return completes();
+      } else {
+        offset += maximumEntries;
+        updateCurrentOffset();
+        return completes().with(entries);
+      }
     } catch (Exception e) {
-      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
+      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read ids because: " + e.getMessage(), e);
       return completes().with(null);
     }
   }
@@ -139,6 +164,26 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
     } catch (Exception e) {
       logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve size, using -1L.");
       return completes().with(-1L);
+    }
+  }
+
+  private GapRetryReader<String, Entry<String>> reader() {
+    if (reader == null) {
+      reader = new GapRetryReader<>(stage(), scheduler());
+    }
+
+    return reader;
+  }
+
+
+  private List<Entry<String>> readIds(List<Long> ids) {
+    try {
+      final QueryExpression expression = jdbi.queryEntries(ids);
+      final List<Entry<String>> entries = (List)jdbi.handle().createQuery(expression.query).mapTo(expression.type).list();
+      return entries;
+    } catch (Exception e) {
+      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
+      return new ArrayList<>();
     }
   }
 

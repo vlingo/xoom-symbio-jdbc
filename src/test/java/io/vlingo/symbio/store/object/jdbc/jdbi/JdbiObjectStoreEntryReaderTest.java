@@ -7,15 +7,14 @@
 
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStoreTest;
+import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents;
 import org.jdbi.v3.core.statement.SqlStatement;
 import org.junit.After;
 import org.junit.Before;
@@ -36,6 +35,8 @@ import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.StateObjectMapper;
 import io.vlingo.symbio.store.object.StateSources;
 
+import static org.junit.Assert.*;
+
 public abstract class JdbiObjectStoreEntryReaderTest {
   protected MockDispatcher<BaseEntry.TextEntry, State.TextState> dispatcher;
   protected EntryReader<Entry<String>> entryReader;
@@ -55,6 +56,10 @@ public abstract class JdbiObjectStoreEntryReaderTest {
 
     final Entry<String> entry = entryReader.readNext().await();
     assertNotNull(entry);
+
+    // Check gap prevention for one entry
+    final Entry<String> empty = entryReader.readNext().await();
+    assertNull(empty);
   }
 
   @Test
@@ -79,6 +84,23 @@ public abstract class JdbiObjectStoreEntryReaderTest {
         assertEquals(count++, Long.parseLong(entry.id()));
       }
     }
+
+    // check gap prevention for multiple entries
+    final int fewEvents = 7;
+    final List<Source<Event>> events2 = new ArrayList<>(fewEvents);
+    for (int idx = 1; idx <= fewEvents; ++idx) {
+      final Event event = new Event("test-event-" + idx);
+      events2.add(event);
+    }
+    final JPAObjectStoreTest.TestPersistResultInterest persistInterest2 = new JPAObjectStoreTest.TestPersistResultInterest();
+    final AccessSafely access2 = persistInterest2.afterCompleting(1);
+    objectStore.persist(StateSources.of(person, events2), -1L, persistInterest2);
+    final Outcome<StorageException, Result> outcome2 = access2.readFrom("outcome");
+    assertEquals(Result.Success, outcome2.andThen(success -> success).get());
+
+    // read more events than available
+    final List<Entry<String>> entries = entryReader.readNext(fewEvents + 4).await();
+    assertEquals(fewEvents, entries.size());
   }
 
   @Test

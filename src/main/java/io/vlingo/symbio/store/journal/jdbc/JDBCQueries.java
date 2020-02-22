@@ -17,6 +17,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.MessageFormat;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 public abstract class JDBCQueries {
@@ -284,6 +287,26 @@ public abstract class JDBCQueries {
         return selectEntryBatch;
     }
 
+    /**
+     * Prepare always a new {@link PreparedStatement} which contains SELECT query of entries based on ids.
+     * @param ids
+     * @return a {@link PreparedStatement} which needs to be closed due to variable size of ids.
+     * @throws SQLException
+     */
+    public PreparedStatement prepareNewSelectEntriesByIdsQuery(List<Long> ids) throws SQLException {
+        String[] placeholderList = new String[ids.size()];
+        Arrays.fill(placeholderList, "?");
+        String placeholders = String.join(", ", placeholderList);
+        String query = MessageFormat.format(selectEntriesByIds(), placeholders);
+        PreparedStatement preparedStatement = connection.prepareStatement(query);
+
+        for (int i = 0; i < ids.size(); i++) {
+            preparedStatement.setLong(i + 1, ids.get(i));
+        }
+
+        return preparedStatement;
+    }
+
     public PreparedStatement prepareSelectLastOffsetQuery() {
         return selectLastOffset;
     }
@@ -386,6 +409,8 @@ public abstract class JDBCQueries {
     protected abstract String selectEntryQuery();
 
     protected abstract String selectEntryBatchQuery();
+
+    protected abstract String selectEntriesByIds();
 
     protected abstract String selectLastOffsetQuery();
 
