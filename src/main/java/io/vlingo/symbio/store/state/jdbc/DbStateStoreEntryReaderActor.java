@@ -17,11 +17,14 @@ import java.util.List;
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
+import io.vlingo.reactivestreams.Stream;
 import io.vlingo.symbio.BaseEntry.BinaryEntry;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.EntryReader;
+import io.vlingo.symbio.store.EntryReaderStream;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 
@@ -29,6 +32,7 @@ public class DbStateStoreEntryReaderActor<T extends Entry<?>> extends Actor impl
   private final Advice advice;
   private final Configuration configuration;
   private long currentId;
+  private final EntryAdapterProvider entryAdapterProvider;
   private final String name;
   private final PreparedStatement queryBatch;
   private final PreparedStatement queryCount;
@@ -41,6 +45,7 @@ public class DbStateStoreEntryReaderActor<T extends Entry<?>> extends Actor impl
     this.name = name;
     this.configuration = advice.specificConfiguration();
     this.currentId = 0;
+    this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
 
     this.queryBatch = configuration.connection.prepareStatement(this.advice.queryEntryBatchExpression);
     this.queryCount = configuration.connection.prepareStatement(this.advice.queryCount);
@@ -129,6 +134,12 @@ public class DbStateStoreEntryReaderActor<T extends Entry<?>> extends Actor impl
       }
 
       return completes().with(-1L);
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public Completes<Stream> streamAll() {
+    return completes().with(new EntryReaderStream<>(stage(), selfAs(EntryReader.class), entryAdapterProvider));
   }
 
   private Entry<?> queryNext() {

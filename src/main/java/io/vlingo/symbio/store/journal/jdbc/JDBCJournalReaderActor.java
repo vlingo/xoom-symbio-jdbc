@@ -19,9 +19,12 @@ import com.google.gson.Gson;
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
+import io.vlingo.reactivestreams.Stream;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.BaseEntry.TextEntry;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.store.EntryReaderStream;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.gap.GapRetryReader;
@@ -30,6 +33,7 @@ import io.vlingo.symbio.store.journal.JournalReader;
 
 public class JDBCJournalReaderActor extends Actor implements JournalReader<TextEntry> {
     private final Connection connection;
+    private final EntryAdapterProvider entryAdapterProvider;
     private final DatabaseType databaseType;
     private final Gson gson;
     private final String name;
@@ -43,6 +47,7 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
         this.connection = configuration.connection;
         this.databaseType = configuration.databaseType;
         this.name = name;
+        this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
 
         this.queries = JDBCQueries.queriesFor(this.connection);
 
@@ -168,6 +173,12 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
         }
 
         return completes().with(-1L);
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Completes<Stream> streamAll() {
+      return completes().with(new EntryReaderStream<>(stage(), selfAs(JournalReader.class), entryAdapterProvider));
     }
 
     private TextEntry entryFromResultSet(final ResultSet resultSet) throws SQLException, ClassNotFoundException {

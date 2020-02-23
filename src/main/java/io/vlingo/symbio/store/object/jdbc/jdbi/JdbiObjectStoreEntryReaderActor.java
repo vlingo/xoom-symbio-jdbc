@@ -8,17 +8,25 @@
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
-import io.vlingo.symbio.store.gap.GapRetryReader;
-import io.vlingo.symbio.store.gap.GappedEntries;
 import org.jdbi.v3.core.mapper.RowMapper;
 
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
+import io.vlingo.reactivestreams.Stream;
 import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.store.EntryReader;
+import io.vlingo.symbio.store.EntryReaderStream;
 import io.vlingo.symbio.store.QueryExpression;
+import io.vlingo.symbio.store.gap.GapRetryReader;
+import io.vlingo.symbio.store.gap.GappedEntries;
 import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
 import io.vlingo.symbio.store.object.StateObjectMapper;
 
@@ -27,6 +35,7 @@ import io.vlingo.symbio.store.object.StateObjectMapper;
  */
 public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStoreEntryReader<Entry<String>> {
   private final JdbiPersistMapper currentEntryOffsetMapper;
+  private final EntryAdapterProvider entryAdapterProvider;
   private final JdbiOnDatabase jdbi;
   private final String name;
   private GapRetryReader<String, Entry<String>> reader = null;
@@ -41,6 +50,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
     this.offset = 1L;
     this.queryLastEntryId = jdbi.queryLastEntryId();
     this.currentEntryOffsetMapper = jdbi.currentEntryOffsetMapper(new String[] {":name", ":offset"});
+    this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.querySize = jdbi.querySize();
 
     mappers.forEach(mapper -> jdbi.handle.registerRowMapper((RowMapper<?>) mapper.queryMapper()));
@@ -167,6 +177,12 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
     }
   }
 
+  @Override
+  @SuppressWarnings("unchecked")
+  public Completes<Stream> streamAll() {
+    return completes().with(new EntryReaderStream<>(stage(), selfAs(EntryReader.class), entryAdapterProvider));
+  }
+
   private GapRetryReader<String, Entry<String>> reader() {
     if (reader == null) {
       reader = new GapRetryReader<>(stage(), scheduler());
@@ -176,6 +192,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
   }
 
 
+  @SuppressWarnings({ "rawtypes", "unchecked" })
   private List<Entry<String>> readIds(List<Long> ids) {
     try {
       final QueryExpression expression = jdbi.queryEntries(ids);

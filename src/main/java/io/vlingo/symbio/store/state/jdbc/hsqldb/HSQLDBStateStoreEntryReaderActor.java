@@ -17,17 +17,22 @@ import java.util.List;
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
+import io.vlingo.reactivestreams.Stream;
 import io.vlingo.symbio.BaseEntry.BinaryEntry;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.store.EntryReaderStream;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 
 public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
   private final Advice advice;
   private final Configuration configuration;
   private long currentId;
+  private final EntryAdapterProvider entryAdapterProvider;
   private final String name;
   private final PreparedStatement queryBatch;
   private final PreparedStatement queryCount;
@@ -40,6 +45,7 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
     this.name = name;
     this.configuration = advice.specificConfiguration();
     this.currentId = 0;
+    this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
 
     try {
     this.queryBatch = configuration.connection.prepareStatement(this.advice.queryEntryBatchExpression);
@@ -134,6 +140,12 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
     }
 
     return completes().with(-1L);
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public Completes<Stream> streamAll() {
+    return completes().with(new EntryReaderStream<>(stage(), selfAs(JournalReader.class), entryAdapterProvider));
   }
 
   private Entry<?> queryNext() {

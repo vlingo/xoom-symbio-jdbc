@@ -16,10 +16,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
-import io.vlingo.symbio.store.journal.jdbc.BasePostgresJournalTest;
-import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActor;
-import io.vlingo.symbio.store.journal.jdbc.MockAppendResultInterest;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,9 +26,12 @@ import org.junit.Test;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.common.Completes;
 import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.reactivestreams.Stream;
+import io.vlingo.reactivestreams.sink.ConsumerSink;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.EntryBundle;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.StateAdapter;
@@ -38,9 +40,9 @@ import io.vlingo.symbio.store.common.MockDispatcher;
 import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.common.event.TestEventAdapter;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.journal.EntityStream;
 import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalReader;
-import io.vlingo.symbio.store.journal.Stream;
 import io.vlingo.symbio.store.journal.StreamReader;
 
 public abstract class JDBCJournalActorTest extends BasePostgresJournalTest {
@@ -121,7 +123,7 @@ public abstract class JDBCJournalActorTest extends BasePostgresJournalTest {
         final Map<String, Dispatchable<Entry<String>, TextState>> dispatched = dispatcher.getDispatched();
         assertEquals(3, dispatched.size());
 
-        Stream<String> eventStream = streamReader.streamFor(streamName, 1).await();
+        EntityStream<String> eventStream = streamReader.streamFor(streamName, 1).await();
         Entity1 readEntity = entity1Adapter.fromRawState((TextState) eventStream.snapshot);
         assertEquals(entity.id, readEntity.id);
         assertEquals(entity.number, readEntity.number);
@@ -142,7 +144,7 @@ public abstract class JDBCJournalActorTest extends BasePostgresJournalTest {
         final Map<String, Dispatchable<Entry<String>, TextState>> dispatched = dispatcher.getDispatched();
         assertEquals(2, dispatched.size());
 
-        Stream<String> eventStream = streamReader.streamFor(streamName, 1).await();
+        EntityStream<String> eventStream = streamReader.streamFor(streamName, 1).await();
         Entity1 readEntity = entity1Adapter.fromRawState((TextState) eventStream.snapshot);
         assertEquals(entity.id, readEntity.id);
         assertEquals(entity.number, readEntity.number);
@@ -224,6 +226,36 @@ public abstract class JDBCJournalActorTest extends BasePostgresJournalTest {
         }
     }
 
+    private ConsumerSink<EntryBundle> sink;
+
+    private AtomicInteger totalSources = new AtomicInteger(0);
+
+    @Test
+    public void testThatJournalReaderStreams() {
+      final int limit = 200;
+
+      for (int count = 0; count < limit; ++count) {
+        journal.append("123-" + count, 1, new TestEvent("123-" + count, count), interest, object);
+      }
+
+      final AccessSafely access = AccessSafely.afterCompleting(limit);
+
+      access.writingWith("sourcesCounter", (state) -> { totalSources.incrementAndGet(); });
+      access.readingWith("sourcesCount", () -> totalSources.get());
+
+      final Stream all = journal.journalReader("test").andThenTo(reader -> reader.streamAll()).await();
+
+      final Consumer<EntryBundle> bundles = (bundle) -> access.writeUsing("sourcesCounter", 1);
+
+      sink = new ConsumerSink<>(bundles);
+
+      all.flowInto(sink, 50);
+
+      final int sourcesCount = access.readFromExpecting("sourcesCount", limit);
+
+      Assert.assertEquals(limit, totalSources.get());
+      Assert.assertEquals(totalSources.get(), sourcesCount);
+    }
 
     private TestEvent newEventForData(int number) {
           final TestEvent event = new TestEvent(String.valueOf(number), number);

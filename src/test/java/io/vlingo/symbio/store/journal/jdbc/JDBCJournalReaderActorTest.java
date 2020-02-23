@@ -9,7 +9,9 @@ package io.vlingo.symbio.store.journal.jdbc;
 
 import static io.vlingo.symbio.store.EntryReader.Beginning;
 import static io.vlingo.symbio.store.EntryReader.End;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNull;
 
 import java.util.List;
 import java.util.UUID;

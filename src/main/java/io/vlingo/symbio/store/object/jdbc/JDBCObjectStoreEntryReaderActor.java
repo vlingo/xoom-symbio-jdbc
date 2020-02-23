@@ -18,12 +18,16 @@ import java.util.List;
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
+import io.vlingo.reactivestreams.Stream;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.store.EntryReaderStream;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.gap.GapRetryReader;
 import io.vlingo.symbio.store.gap.GappedEntries;
+import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
 
 /**
@@ -32,6 +36,7 @@ import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
 public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStoreEntryReader<Entry<String>> {
 
   private final Connection connection;
+  private final EntryAdapterProvider entryAdapterProvider;
   private final JDBCObjectStoreEntryJournalQueries queries;
   private final String name;
 
@@ -50,6 +55,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
     this.queries = JDBCObjectStoreEntryJournalQueries.using(databaseType, connection);
     this.name = name;
     this.connection = connection;
+    this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.offset = 1L;
 
     this.connection.setAutoCommit(true);
@@ -202,6 +208,12 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
     logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve size, using -1L.");
 
     return completes().with(-1L);
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public Completes<Stream> streamAll() {
+    return completes().with(new EntryReaderStream<>(stage(), selfAs(JournalReader.class), entryAdapterProvider));
   }
 
   private List<Entry<String>> mapQueriedEntriesFrom(final ResultSet result) throws SQLException {

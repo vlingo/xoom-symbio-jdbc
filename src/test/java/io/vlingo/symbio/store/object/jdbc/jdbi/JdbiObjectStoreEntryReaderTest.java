@@ -7,24 +7,32 @@
 
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
-import io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStoreTest;
-import io.vlingo.symbio.store.object.jdbc.jpa.PersonEvents;
 import org.jdbi.v3.core.statement.SqlStatement;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.common.Outcome;
+import io.vlingo.reactivestreams.Stream;
+import io.vlingo.reactivestreams.sink.ConsumerSink;
 import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryBundle;
 import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.EntryReader;
@@ -34,8 +42,7 @@ import io.vlingo.symbio.store.common.MockDispatcher;
 import io.vlingo.symbio.store.object.ObjectStore;
 import io.vlingo.symbio.store.object.StateObjectMapper;
 import io.vlingo.symbio.store.object.StateSources;
-
-import static org.junit.Assert.*;
+import io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStoreTest;
 
 public abstract class JdbiObjectStoreEntryReaderTest {
   protected MockDispatcher<BaseEntry.TextEntry, State.TextState> dispatcher;
@@ -146,6 +153,40 @@ public abstract class JdbiObjectStoreEntryReaderTest {
       final Entry<String> entry = entryReader.readNext(String.valueOf(id)).await();
       assertEquals(id, Long.parseLong(entry.id()));
     }
+  }
+
+  private ConsumerSink<EntryBundle> sink;
+
+  private AtomicInteger totalSources = new AtomicInteger(0);
+
+  @Test
+  public void testThatJournalReaderStreams() {
+    final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
+    final AccessSafely access = persistInterest.afterCompleting(1);
+    final Person person = new Person("Jody Jones", 21, 1L);
+    final int totalEvents = 100;
+    final List<Source<Event>> events = new ArrayList<>(totalEvents);
+    for (int idx = 1; idx <= totalEvents; ++idx) {
+      final Event event = new Event("test-event-" + idx);
+      events.add(event);
+    }
+    objectStore.persist(StateSources.of(person, events), -1L, persistInterest);
+
+    access.writingWith("sourcesCounter", (state) -> { totalSources.incrementAndGet(); });
+    access.readingWith("sourcesCount", () -> totalSources.get());
+
+    final Stream all = entryReader.streamAll().await();
+
+    final Consumer<EntryBundle> bundles = (bundle) -> access.writeUsing("sourcesCounter", 1);
+
+    sink = new ConsumerSink<>(bundles);
+
+    all.flowInto(sink, 20);
+
+    final int sourcesCount = access.readFromExpecting("sourcesCount", totalEvents);
+
+    Assert.assertEquals(totalEvents, totalSources.get());
+    Assert.assertEquals(totalSources.get(), sourcesCount);
   }
 
   @Before

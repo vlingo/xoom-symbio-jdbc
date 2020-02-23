@@ -11,7 +11,7 @@ import org.junit.Test;
 import io.vlingo.actors.Definition;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.store.common.event.TestEvent;
-import io.vlingo.symbio.store.journal.Stream;
+import io.vlingo.symbio.store.journal.EntityStream;
 import io.vlingo.symbio.store.journal.StreamReader;
 import io.vlingo.symbio.store.journal.jdbc.JDBCStreamReaderActor.JDBCStreamReaderInstantiator;
 
@@ -35,7 +35,7 @@ public abstract class JDBCStreamReaderActorTest extends BasePostgresJournalTest 
 
     @Test
     public void testThatCanReadAllEventsFromJournal() throws Exception {
-        Stream<String> stream = eventStreamReader.streamFor(streamName).await();
+        EntityStream<String> stream = eventStreamReader.streamFor(streamName).await();
         assertEquals(TextState.Null, stream.snapshot);
         assertEquals(4, stream.streamVersion);
         assertEquals(stream.streamName, streamName);
@@ -49,7 +49,7 @@ public abstract class JDBCStreamReaderActorTest extends BasePostgresJournalTest 
         TestEvent snapshotState = new TestEvent(streamName, 2);
         insertSnapshot(2, snapshotState);
 
-        Stream<String> stream = eventStreamReader.streamFor(streamName, 1).await();
+        EntityStream<String> stream = eventStreamReader.streamFor(streamName, 1).await();
         assertEquals(2, stream.snapshot.dataVersion);
         assertEquals(snapshotState, gson.fromJson(stream.snapshot.data, TestEvent.class));
         assertEquals(4, stream.streamVersion);
@@ -66,7 +66,7 @@ public abstract class JDBCStreamReaderActorTest extends BasePostgresJournalTest 
         TestEvent snapshotState = new TestEvent(streamName, 1);
         insertSnapshot(1, snapshotState);
 
-        Stream<String> stream = eventStreamReader.streamFor(streamName, 4).await();
+        EntityStream<String> stream = eventStreamReader.streamFor(streamName, 4).await();
 
         assertEquals(TextState.Null, stream.snapshot);
         assertEquals(streamName, stream.streamName);

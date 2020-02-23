@@ -25,7 +25,7 @@ import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.journal.Stream;
+import io.vlingo.symbio.store.journal.EntityStream;
 import io.vlingo.symbio.store.journal.StreamReader;
 
 public class JDBCStreamReaderActor extends Actor implements StreamReader<String> {
@@ -40,19 +40,19 @@ public class JDBCStreamReaderActor extends Actor implements StreamReader<String>
     }
 
     @Override
-    public Completes<Stream<String>> streamFor(final String streamName) {
+    public Completes<EntityStream<String>> streamFor(final String streamName) {
         return streamFor(streamName, 1);
     }
 
     @Override
-    public Completes<Stream<String>> streamFor(final String streamName, final int fromStreamVersion) {
+    public Completes<EntityStream<String>> streamFor(final String streamName, final int fromStreamVersion) {
         try {
-            final Stream<String> steamStream = eventsFromOffset(streamName, fromStreamVersion);
+            final EntityStream<String> steamStream = eventsFromOffset(streamName, fromStreamVersion);
             connection.commit();
             return completes().with(steamStream);
         } catch (Exception e) {
             logger().error("vlingo-symbio-jdbc:journal-stream-reader-postrgres: " + e.getMessage(), e);
-            return completes().with(new Stream<>(streamName, 1, emptyList(), TextState.Null));
+            return completes().with(new EntityStream<>(streamName, 1, emptyList(), TextState.Null));
         }
     }
 
@@ -66,7 +66,7 @@ public class JDBCStreamReaderActor extends Actor implements StreamReader<String>
       super.stop();
     }
 
-    private Stream<String> eventsFromOffset(final String streamName, final int offset) throws Exception {
+    private EntityStream<String> eventsFromOffset(final String streamName, final int offset) throws Exception {
         final State<String> snapshot = latestSnapshotOf(streamName);
         final List<BaseEntry<String>> events = new ArrayList<>();
 
@@ -99,7 +99,7 @@ public class JDBCStreamReaderActor extends Actor implements StreamReader<String>
           }
         }
 
-        return new Stream<>(streamName, fullStreamVersion, events, referenceSnapshot);
+        return new EntityStream<>(streamName, fullStreamVersion, events, referenceSnapshot);
     }
 
     private State<String> latestSnapshotOf(final String streamName) throws Exception {

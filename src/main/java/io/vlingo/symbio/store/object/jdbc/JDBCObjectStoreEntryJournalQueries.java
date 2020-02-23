@@ -152,7 +152,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
     return MessageFormat.format(
             "SELECT E_ID,E_TYPE,E_TYPE_VERSION,E_DATA,E_METADATA_VALUE,E_METADATA_OP " +
                     "FROM " + EntryJournalTableName + " WHERE E_ID IN (" + placeholders.toString() + ") ORDER BY E_ID",
-            arrayIds);
+            (Object[]) arrayIds);
   }
 
   /**
