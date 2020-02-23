@@ -7,15 +7,7 @@
 
 package io.vlingo.symbio.store.journal.jdbc;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-
 import com.google.gson.Gson;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
@@ -31,6 +23,13 @@ import io.vlingo.symbio.store.gap.GapRetryReader;
 import io.vlingo.symbio.store.gap.GappedEntries;
 import io.vlingo.symbio.store.journal.JournalReader;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 public class JDBCJournalReaderActor extends Actor implements JournalReader<TextEntry> {
     private final Connection connection;
     private final EntryAdapterProvider entryAdapterProvider;
@@ -39,7 +38,7 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
     private final String name;
     private final JDBCQueries queries;
 
-    private GapRetryReader<String, TextEntry> reader = null;
+    private GapRetryReader<TextEntry> reader = null;
 
     private long offset;
 
@@ -80,7 +79,7 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
                 return completes().with(entry);
             } else {
                 List<Long> gapIds = reader().detectGaps(null, offset);
-                GappedEntries<String, TextEntry> gappedEntries = new GappedEntries<>(new ArrayList<>(), gapIds, completesEventually());
+                GappedEntries<TextEntry> gappedEntries = new GappedEntries<>(new ArrayList<>(), gapIds, completesEventually());
                 reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
 
                 ++offset;
@@ -106,7 +105,7 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
             final List<TextEntry> entries = entriesFromResultSet(resultSet);
             List<Long> gapIds = reader().detectGaps(entries, offset, maximumEntries);
             if (!gapIds.isEmpty()) {
-                GappedEntries<String, TextEntry> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+                GappedEntries<TextEntry> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
                 reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
 
                 // Move offset with maximumEntries regardless of filled up gaps
@@ -204,7 +203,7 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
         return entries;
     }
 
-    private GapRetryReader<String, TextEntry> reader() {
+    private GapRetryReader<TextEntry> reader() {
         if (reader == null) {
             reader = new GapRetryReader<>(stage(), scheduler());
         }

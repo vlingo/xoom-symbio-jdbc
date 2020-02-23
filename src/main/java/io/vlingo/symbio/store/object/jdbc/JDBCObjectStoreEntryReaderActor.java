@@ -7,14 +7,6 @@
 
 package io.vlingo.symbio.store.object.jdbc;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
@@ -30,6 +22,14 @@ import io.vlingo.symbio.store.gap.GappedEntries;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * An {@code ObjectStoreEntryReader} for JDBC.
  */
@@ -43,7 +43,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
   private final PreparedStatement entryQuery;
   private final PreparedStatement entriesQuery;
 
-  private GapRetryReader<String, Entry<String>> reader = null;
+  private GapRetryReader<Entry<String>> reader = null;
 
   private final PreparedStatement queryLastEntryId;
   private final PreparedStatement querySize;
@@ -72,7 +72,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
     restoreCurrentOffset();
   }
 
-  private GapRetryReader<String, Entry<String>> reader() {
+  private GapRetryReader<Entry<String>> reader() {
     if (reader == null) {
       reader = new GapRetryReader<>(stage(), scheduler());
     }
@@ -107,7 +107,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
         if (!gapIds.isEmpty()) {
           // gaps have been detected
           List<Entry<String>> entries = entry == null ? new ArrayList<>() : Collections.singletonList(entry);
-          GappedEntries<String, Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+          GappedEntries<Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
           reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
 
           ++offset;
@@ -141,7 +141,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
         final List<Entry<String>> entries = mapQueriedEntriesFrom(result);
         List<Long> gapIds = reader().detectGaps(entries, offset, maximumEntries);
         if (!gapIds.isEmpty()) {
-          GappedEntries<String, Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+          GappedEntries<Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
           reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
 
           // Move offset with maximumEntries regardless of filled up gaps
