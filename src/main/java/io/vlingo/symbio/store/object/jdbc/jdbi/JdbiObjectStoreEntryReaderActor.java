@@ -7,15 +7,6 @@
 
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
-
-import org.jdbi.v3.core.mapper.RowMapper;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
@@ -29,6 +20,10 @@ import io.vlingo.symbio.store.gap.GapRetryReader;
 import io.vlingo.symbio.store.gap.GappedEntries;
 import io.vlingo.symbio.store.object.ObjectStoreEntryReader;
 import io.vlingo.symbio.store.object.StateObjectMapper;
+import org.jdbi.v3.core.mapper.RowMapper;
+
+import java.sql.SQLException;
+import java.util.*;
 
 /**
  * An {@code ObjectStoreEntryReader} for Jdbi.
@@ -38,7 +33,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
   private final EntryAdapterProvider entryAdapterProvider;
   private final JdbiOnDatabase jdbi;
   private final String name;
-  private GapRetryReader<String, Entry<String>> reader = null;
+  private GapRetryReader<Entry<String>> reader = null;
   private final QueryExpression queryLastEntryId;
   private final QueryExpression querySize;
 
@@ -84,7 +79,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
       if (!gapIds.isEmpty()) {
         // gaps have been detected
         List<Entry<String>> entries = entry.isPresent() ? Collections.singletonList(entry.get()) : new ArrayList<>();
-        GappedEntries<String, Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+        GappedEntries<Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
         reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
 
         ++offset;
@@ -115,7 +110,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
       final List<Entry<String>> entries = (List) jdbi.handle().createQuery(expression.query).mapTo(expression.type).list();
       List<Long> gapIds = reader().detectGaps(entries, offset, maximumEntries);
       if (!gapIds.isEmpty()) {
-        GappedEntries<String, Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+        GappedEntries<Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
         reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
 
         // Move offset with maximumEntries regardless of filled up gaps
@@ -183,7 +178,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
     return completes().with(new EntryReaderStream<>(stage(), selfAs(EntryReader.class), entryAdapterProvider));
   }
 
-  private GapRetryReader<String, Entry<String>> reader() {
+  private GapRetryReader<Entry<String>> reader() {
     if (reader == null) {
       reader = new GapRetryReader<>(stage(), scheduler());
     }
