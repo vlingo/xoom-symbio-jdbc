@@ -11,7 +11,9 @@ import java.sql.Blob;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import io.vlingo.actors.Actor;
@@ -25,6 +27,8 @@ import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.EntryReaderStream;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.gap.GapRetryReader;
+import io.vlingo.symbio.store.gap.GappedEntries;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 
@@ -35,10 +39,13 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
   private final EntryAdapterProvider entryAdapterProvider;
   private final String name;
   private final PreparedStatement queryBatch;
+  private final String queryIds;
   private final PreparedStatement queryCount;
   private final PreparedStatement queryOne;
   private final PreparedStatement queryLatestOffset;
   private final PreparedStatement updateCurrentOffset;
+
+  private GapRetryReader<T> reader = null;
 
   public HSQLDBStateStoreEntryReaderActor(final Advice advice, final String name) throws Exception {
     this.advice = advice;
@@ -48,11 +55,12 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
 
     try {
-    this.queryBatch = configuration.connection.prepareStatement(this.advice.queryEntryBatchExpression);
-    this.queryCount = configuration.connection.prepareStatement(this.advice.queryCount);
-    this.queryLatestOffset = configuration.connection.prepareStatement(this.advice.queryLatestOffset);
-    this.queryOne = configuration.connection.prepareStatement(this.advice.queryEntryExpression);
-    this.updateCurrentOffset = configuration.connection.prepareStatement(this.advice.queryUpdateCurrentOffset);
+      this.queryBatch = configuration.connection.prepareStatement(this.advice.queryEntryBatchExpression);
+      this.queryIds = this.advice.queryEntryIdsExpression;
+      this.queryCount = configuration.connection.prepareStatement(this.advice.queryCount);
+      this.queryLatestOffset = configuration.connection.prepareStatement(this.advice.queryLatestOffset);
+      this.queryOne = configuration.connection.prepareStatement(this.advice.queryEntryExpression);
+      this.updateCurrentOffset = configuration.connection.prepareStatement(this.advice.queryUpdateCurrentOffset);
     } catch (Exception e) {
       System.out.println(e.getMessage());
       e.printStackTrace();
@@ -77,9 +85,29 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Completes<T> readNext() {
-    return completes().with((T) queryNext());
+    try {
+      queryOne.clearParameters();
+      queryOne.setLong(1, currentId);
+      try (final ResultSet result = queryOne.executeQuery()) {
+        if (result.first()) {
+          final T entry = entryFrom(result);
+
+          ++currentId;
+          return completes().with(entry);
+        } else {
+          List<Long> gapIds = reader().detectGaps(null, currentId);
+          GappedEntries<T> gappedEntries = new GappedEntries<>(new ArrayList<>(), gapIds, completesEventually());
+          reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
+
+          ++currentId;
+          return completes();
+        }
+      }
+    } catch (Exception e) {
+      logger().error("Unable to read next entry for " + name + " because: " + e.getMessage(), e);
+      return completes().with(null);
+    }
   }
 
   @Override
@@ -89,9 +117,30 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public Completes<List<T>> readNext(final int maximumEntries) {
-    return completes().with((List<T>) queryNext(maximumEntries));
+    try {
+      queryBatch.clearParameters();
+      queryBatch.setLong(1, currentId);
+      queryBatch.setInt(2, maximumEntries);
+      try (final ResultSet result = queryBatch.executeQuery()) {
+        final List<T> entries = mapQueriedEntriesFrom(result);
+        List<Long> gapIds = reader().detectGaps(entries, currentId, maximumEntries);
+        if (!gapIds.isEmpty()) {
+          GappedEntries<T> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+          reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
+
+          // Move offset with maximumEntries regardless of filled up gaps
+          currentId += maximumEntries;
+          return completes();
+        } else {
+          currentId += maximumEntries;
+          return completes().with(entries);
+        }
+      }
+    } catch (Exception e) {
+      logger().error("Unable to read next " + maximumEntries + " entries for " + name + " because: " + e.getMessage(), e);
+      return completes().with(new ArrayList<>());
+    }
   }
 
   @Override
@@ -148,46 +197,9 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
     return completes().with(new EntryReaderStream<>(stage(), selfAs(JournalReader.class), entryAdapterProvider));
   }
 
-  private Entry<?> queryNext() {
-    try {
-      queryOne.clearParameters();
-      queryOne.setLong(1, currentId);
-      try (final ResultSet result = queryOne.executeQuery()) {
-        if (result.first()) {
-          final long id = result.getLong(1);
-          final Entry<?> entry = entryFrom(result, id);
-          currentId = id + 1L;
-          return entry;
-        }
-      }
-    } catch (Exception e) {
-      logger().error("Unable to read next entry for " + name + " because: " + e.getMessage(), e);
-    }
-    return null;
-  }
-
-  private List<Entry<?>> queryNext(final int maximumEntries) {
-    try {
-      queryBatch.clearParameters();
-      queryBatch.setLong(1, currentId);
-      queryBatch.setInt(2, maximumEntries);
-      try (final ResultSet result = queryBatch.executeQuery()) {
-        final List<Entry<?>> entries = new ArrayList<>(maximumEntries);
-        while (result.next()) {
-          final long id = result.getLong(1);
-          final Entry<?> entry = entryFrom(result, id);
-          currentId = id + 1L;
-          entries.add(entry);
-        }
-        return entries;
-      }
-    } catch (Exception e) {
-      logger().error("Unable to read next " + maximumEntries + " entries for " + name + " because: " + e.getMessage(), e);
-    }
-    return new ArrayList<>(0);
-  }
-
-  private Entry<?> entryFrom(final ResultSet result, final long id) throws Exception {
+  @SuppressWarnings("unchecked")
+  private T entryFrom(final ResultSet result) throws Exception {
+    final long id = result.getLong(1);
     final String type = result.getString(2);
     final int typeVersion = result.getInt(3);
     final String metadataValue = result.getString(5);
@@ -196,9 +208,9 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
     final Metadata metadata = Metadata.with(metadataValue, metadataOperation);
 
     if (configuration.format.isBinary()) {
-      return new BinaryEntry(String.valueOf(id), typed(type), typeVersion, binaryDataFrom(result, 4), metadata);
+      return (T) new BinaryEntry(String.valueOf(id), typed(type), typeVersion, binaryDataFrom(result, 4), metadata);
     } else {
-      return new TextEntry(String.valueOf(id), typed(type), typeVersion, textDataFrom(result, 4), metadata);
+      return (T) new TextEntry(String.valueOf(id), typed(type), typeVersion, textDataFrom(result, 4), metadata);
     }
   }
 
@@ -217,6 +229,43 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
     return Class.forName(typeName);
   }
 
+  private GapRetryReader<T> reader() {
+    if (reader == null) {
+      reader = new GapRetryReader<>(stage(), scheduler());
+    }
+
+    return reader;
+  }
+
+  private String queryByIds(String queryTemplate, int idsCount) {
+    String[] placeholderList = new String[idsCount];
+    Arrays.fill(placeholderList, "?");
+    String placeholders = String.join(", ", placeholderList);
+
+    return MessageFormat.format(queryTemplate, placeholders);
+  }
+
+  private PreparedStatement prepareQueryByIdsStatement(String query, List<Long> ids) throws SQLException {
+    PreparedStatement statement = configuration.connection.prepareStatement(query);
+    for (int i = 0; i < ids.size(); i++) {
+      // parameter index starts from 1
+      statement.setLong(i + 1, ids.get(i));
+    }
+
+    return statement;
+  }
+
+  private List<T> readIds(List<Long> ids) {
+    String query = queryByIds(queryIds, ids.size());
+    try (PreparedStatement statement = prepareQueryByIdsStatement(query, ids);
+         ResultSet result = statement.executeQuery()) {
+      return mapQueriedEntriesFrom(result);
+    } catch (Exception e) {
+      logger().error("vlingo/symbio-jdbc PostgresSQL error: " + e.getMessage(), e);
+      return new ArrayList<>();
+    }
+  }
+
   private long retrieveLatestOffset() {
       try {
           queryBatch.clearParameters();
@@ -231,6 +280,16 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Actor 
       }
 
       return 0;
+  }
+
+  private List<T> mapQueriedEntriesFrom(final ResultSet result) throws Exception {
+    final List<T> entries = new ArrayList<>();
+    while (result.next()) {
+      final T entry = entryFrom(result);
+      entries.add(entry);
+    }
+
+    return entries;
   }
 
   private void updateCurrentOffset() {
