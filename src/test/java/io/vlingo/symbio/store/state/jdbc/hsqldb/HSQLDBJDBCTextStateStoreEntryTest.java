@@ -81,7 +81,7 @@ public class HSQLDBJDBCTextStateStoreEntryTest {
       .readingWith("allCount", () -> readEntries.size());
 
     store.entryReader("test")
-      .andThenTo(reader -> reader.readNext(3))
+      .andThenTo(reader -> reader.readNext(5)) // read more entries; check gap prevention
       .andThenConsume((List<Entry<?>> all) -> {
         accessReadEntries.writeUsing("all", all);
       });

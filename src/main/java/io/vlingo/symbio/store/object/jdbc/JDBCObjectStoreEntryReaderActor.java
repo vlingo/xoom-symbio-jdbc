@@ -244,17 +244,20 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
     return new TextEntry(id, Entry.typed(entryType), eventTypeVersion, entryData, Metadata.with(entryMetadata, entryMetadataOp));
   }
 
-  private List<Entry<String>> readIds(List<Long> ids) {
-    try {
-      PreparedStatement statement = queries.statementForEntriesQuery(ids.size());
-      for (int i = 0; i < ids.size(); i++) {
-        // parameter index starts from 1
-        statement.setLong(i + 1, ids.get(i));
-      }
+  private PreparedStatement prepareQueryByIdsStatement(List<Long> ids) throws SQLException {
+    PreparedStatement statement = queries.statementForEntriesQuery(ids.size());
+    for (int i = 0; i < ids.size(); i++) {
+      // parameter index starts from 1
+      statement.setLong(i + 1, ids.get(i));
+    }
 
-      try (final ResultSet result = statement.executeQuery()) {
-        return mapQueriedEntriesFrom(result);
-      }
+    return statement;
+  }
+
+  private List<Entry<String>> readIds(List<Long> ids) {
+    try (final PreparedStatement statement = prepareQueryByIdsStatement(ids);
+         final ResultSet result = statement.executeQuery()) {
+      return mapQueriedEntriesFrom(result);
     } catch (Exception e) {
       logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read ids because: " + e.getMessage(), e);
       return new ArrayList<>();
