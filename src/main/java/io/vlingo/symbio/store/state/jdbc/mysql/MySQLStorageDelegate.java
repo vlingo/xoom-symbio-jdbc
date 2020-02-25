@@ -58,6 +58,7 @@ public class MySQLStorageDelegate extends JDBCStorageDelegate<Object> implements
                     Configuration.cloneOf(configuration),
                     DbStateStoreEntryReaderActor.class,
                     namedEntry(SQL_QUERY_ENTRY_BATCH),
+                    namedEntry(SQL_QUERY_ENTRY_IDS),
                     namedEntry(SQL_QUERY_ENTRY),
                     namedEntry(QUERY_COUNT),
                     namedEntryOffsets(QUERY_LATEST_OFFSET),
