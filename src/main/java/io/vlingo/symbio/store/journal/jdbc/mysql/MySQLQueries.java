@@ -7,11 +7,11 @@
 
 package io.vlingo.symbio.store.journal.jdbc.mysql;
 
-import io.vlingo.symbio.store.journal.jdbc.JDBCQueries;
-
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+
+import io.vlingo.symbio.store.journal.jdbc.JDBCQueries;
 
 public class MySQLQueries extends JDBCQueries {
     public static final String TABLE_VLINGO_SYMBIO_JOURNAL_DISPATCHABLES = "vlingo_symbio_journal_dispatchables";
@@ -124,17 +124,17 @@ public class MySQLQueries extends JDBCQueries {
                     " WHERE D_ORIGINATOR_ID = ? ORDER BY D_CREATED_ON";
 
     private static final String SELECT_ENTRY =
-            "SELECT E_ID, E_ENTRY_DATA, E_ENTRY_TYPE, E_ENTRY_TYPE_VERSION, E_ENTRY_METADATA " +
+            "SELECT E_ID, E_ENTRY_DATA, E_ENTRY_TYPE, E_ENTRY_TYPE_VERSION, E_ENTRY_METADATA, E_STREAM_VERSION " +
                     "FROM " + TABLE_VLINGO_SYMBIO_JOURNAL + " " +
                     "WHERE E_ID = ?";
 
     private static final String SELECT_ENTRY_BATCH =
-            "SELECT E_ID, E_ENTRY_DATA, E_ENTRY_TYPE, E_ENTRY_TYPE_VERSION, E_ENTRY_METADATA " +
+            "SELECT E_ID, E_ENTRY_DATA, E_ENTRY_TYPE, E_ENTRY_TYPE_VERSION, E_ENTRY_METADATA, E_STREAM_VERSION " +
                     "FROM " + TABLE_VLINGO_SYMBIO_JOURNAL + " " +
                     "WHERE E_ID BETWEEN ? AND ? ORDER BY E_ID";
 
     private static final String SELECT_ENTRY_IDS =
-            "SELECT E_ID, E_ENTRY_DATA, E_ENTRY_TYPE, E_ENTRY_TYPE_VERSION, E_ENTRY_METADATA " +
+            "SELECT E_ID, E_ENTRY_DATA, E_ENTRY_TYPE, E_ENTRY_TYPE_VERSION, E_ENTRY_METADATA, E_STREAM_VERSION " +
                     "FROM " + TABLE_VLINGO_SYMBIO_JOURNAL + " " +
                     "WHERE E_ID IN ({0}) ORDER BY E_ID";
 

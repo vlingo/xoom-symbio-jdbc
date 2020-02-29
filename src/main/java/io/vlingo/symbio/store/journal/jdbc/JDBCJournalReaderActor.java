@@ -7,7 +7,15 @@
 
 package io.vlingo.symbio.store.journal.jdbc;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.google.gson.Gson;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.common.Completes;
@@ -22,13 +30,6 @@ import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.gap.GapRetryReader;
 import io.vlingo.symbio.store.gap.GappedEntries;
 import io.vlingo.symbio.store.journal.JournalReader;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
 
 public class JDBCJournalReaderActor extends Actor implements JournalReader<TextEntry> {
     private final Connection connection;
@@ -186,11 +187,12 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
         final String entryType = resultSet.getString(3);
         final int eventTypeVersion = resultSet.getInt(4);
         final String entryMetadata = resultSet.getString(5);
+        final int entryVerion = resultSet.getInt(6); // from E_STREAM_VERSION
 
         final Class<?> classOfEvent = Class.forName(entryType);
         final Metadata eventMetadataDeserialized = gson.fromJson(entryMetadata, Metadata.class);
 
-        return new BaseEntry.TextEntry(String.valueOf(id), classOfEvent, eventTypeVersion, entryData, eventMetadataDeserialized);
+        return new BaseEntry.TextEntry(String.valueOf(id), classOfEvent, eventTypeVersion, entryData, entryVerion, eventMetadataDeserialized);
     }
 
     private List<TextEntry> entriesFromResultSet(ResultSet resultSet) throws SQLException, ClassNotFoundException {

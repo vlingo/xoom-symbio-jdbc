@@ -7,17 +7,6 @@
 
 package io.vlingo.symbio.store.journal.jdbc;
 
-import io.vlingo.actors.Logger;
-import io.vlingo.common.serialization.JsonSerialization;
-import io.vlingo.symbio.BaseEntry;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.DatabaseType;
-import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.dispatch.DispatcherControl;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -28,6 +17,17 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+
+import io.vlingo.actors.Logger;
+import io.vlingo.common.serialization.JsonSerialization;
+import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.common.jdbc.DatabaseType;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
 
 public class JDBCDispatcherControlDelegate implements DispatcherControl.DispatcherControlDelegate<Entry<String>, State.TextState> {
     static final String DISPATCHEABLE_ENTRIES_DELIMITER = "|";
@@ -146,10 +146,11 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
         final String entryType = resultSet.getString(3);
         final int eventTypeVersion = resultSet.getInt(4);
         final String entryMetadata = resultSet.getString(5);
+        final int entryVerion = resultSet.getInt(6); // from E_STREAM_VERSION
 
         final Class<?> classOfEvent = Class.forName(entryType);
 
         final Metadata metadata = JsonSerialization.deserialized(entryMetadata, Metadata.class);
-        return new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, metadata);
+        return new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, entryVerion, metadata);
     }
 }

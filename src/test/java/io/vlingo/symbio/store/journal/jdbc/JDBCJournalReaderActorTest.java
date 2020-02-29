@@ -12,6 +12,7 @@ import static io.vlingo.symbio.store.EntryReader.End;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.util.List;
 import java.util.UUID;
@@ -126,6 +127,23 @@ public abstract class JDBCJournalReaderActorTest extends BasePostgresJournalTest
 
         until.completesWithin(50);
         assertOffsetIs(readerName, lastOffset + 1);
+    }
+
+    @Test
+    public void testThatDataVersionsGreaterThanZero() throws Exception {
+        JournalReader<TextEntry> journalReader = journalReader();
+
+        insertEvent(1);
+        insertEvent(2);
+
+        final TextEntry entry1 = journalReader.readNext().await();
+        assertTrue(entry1.entryVersion() > 0);
+
+        final TextEntry entry2 = journalReader.readNext().await();
+        assertTrue(entry2.entryVersion() > 0);
+
+        // gap prevention check for one event
+        assertNull(journalReader.readNext().await());
     }
 
     @SuppressWarnings("unchecked")
