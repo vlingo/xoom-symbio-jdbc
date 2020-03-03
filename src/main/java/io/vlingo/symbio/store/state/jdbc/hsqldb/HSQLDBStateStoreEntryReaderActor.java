@@ -30,13 +30,14 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Abstra
     final int typeVersion = result.getInt(3);
     final String metadataValue = result.getString(5);
     final String metadataOperation = result.getString(6);
+    final int entryVersion = result.getInt(7); // from E_ENTRY_VERSION
 
     final Metadata metadata = Metadata.with(metadataValue, metadataOperation);
 
     if (getConfiguration().format.isBinary()) {
-      return (T) new BinaryEntry(String.valueOf(id), typed(type), typeVersion, binaryDataFrom(result, 4), metadata);
+      return (T) new BinaryEntry(String.valueOf(id), typed(type), typeVersion, binaryDataFrom(result, 4), entryVersion, metadata);
     } else {
-      return (T) new TextEntry(String.valueOf(id), typed(type), typeVersion, textDataFrom(result, 4), metadata);
+      return (T) new TextEntry(String.valueOf(id), typed(type), typeVersion, textDataFrom(result, 4), entryVersion, metadata);
     }
   }
 
