@@ -17,6 +17,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.List;
 import java.util.UUID;
 
+import io.vlingo.symbio.Entry;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -47,8 +48,14 @@ public abstract class JDBCJournalReaderActorTest extends BasePostgresJournalTest
         insertEvent(1);
         insertEvent(2);
 
-        assertEquals(1, parse(journalReader.readNext().await()).number);
-        assertEquals(2, parse(journalReader.readNext().await()).number);
+
+        Entry<String> entry1 = journalReader.readNext().await();
+        assertEquals(1, parse(entry1).number);
+        assertTrue(entry1.entryVersion() > 0);
+
+        Entry<String> entry2 = journalReader.readNext().await();
+        assertEquals(2, parse(entry2).number);
+        assertTrue(entry2.entryVersion() > 0);
 
         // gap prevention check for one event
         assertNull(journalReader.readNext().await());
@@ -64,8 +71,14 @@ public abstract class JDBCJournalReaderActorTest extends BasePostgresJournalTest
         insertOffset(offset, readerName);
         JournalReader<TextEntry> journalReader = journalReader();
 
-        assertEquals(3, parse(journalReader.readNext().await()).number);
-        assertEquals(4, parse(journalReader.readNext().await()).number);
+        Entry<String> entry1 = journalReader.readNext().await();
+        assertEquals(3, parse(entry1).number);
+        assertTrue(entry1.entryVersion() > 0);
+
+        Entry<String> entry2 = journalReader.readNext().await();
+        assertEquals(4, parse(entry2).number);
+        assertTrue(entry2.entryVersion() > 0);
+
         assertNotEquals(offset, lastOffset);
     }
 
@@ -79,14 +92,22 @@ public abstract class JDBCJournalReaderActorTest extends BasePostgresJournalTest
         JournalReader<TextEntry> journalReader = journalReader();
         List<TextEntry> events = journalReader.readNext(2).await();
         assertEquals(2, events.size());
+
         assertEquals(1, parse(events.get(0)).number);
+        assertTrue(events.get(0).entryVersion() > 0);
+
         assertEquals(2, parse(events.get(1)).number);
+        assertTrue(events.get(1).entryVersion() > 0);
 
         // gap prevention check for multiple entries
         events = journalReader.readNext(5).await();
         assertEquals(2, events.size());
+
         assertEquals(3, parse(events.get(0)).number);
+        assertTrue(events.get(0).entryVersion() > 0);
+
         assertEquals(4, parse(events.get(1)).number);
+        assertTrue(events.get(1).entryVersion() > 0);
     }
 
     @Test
@@ -103,6 +124,7 @@ public abstract class JDBCJournalReaderActorTest extends BasePostgresJournalTest
         assertOffsetIs(readerName, 1);
         TextEntry event = journalReader.readNext().await();
         assertEquals(1, parse(event).number);
+        assertTrue(event.entryVersion() > 0);
     }
 
     @Test
