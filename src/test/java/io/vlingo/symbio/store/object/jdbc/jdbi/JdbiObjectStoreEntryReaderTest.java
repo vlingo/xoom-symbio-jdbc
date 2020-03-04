@@ -54,6 +54,8 @@ public abstract class JdbiObjectStoreEntryReaderTest {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person = new Person("Jody Jones", 21, 1L);
+    person.incrementVersion();
+    final long entryVersion = person.version();
     final Event event = new Event("test-event");
     objectStore.persist(StateSources.of(person, event), -1L, persistInterest);
     final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
@@ -61,7 +63,7 @@ public abstract class JdbiObjectStoreEntryReaderTest {
 
     final Entry<String> entry = entryReader.readNext().await();
     assertNotNull(entry);
-    assertTrue(entry.entryVersion() > 0);
+    assertEquals(entryVersion, entry.entryVersion());
 
     // Check gap prevention for one entry
     final Entry<String> empty = entryReader.readNext().await();
@@ -73,6 +75,7 @@ public abstract class JdbiObjectStoreEntryReaderTest {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person = new Person("Jody Jones", 21, 1L);
+    person.incrementVersion();
     final int totalEvents = 100;
     final List<Source<Event>> events = new ArrayList<>(totalEvents);
     for (int idx = 1; idx <= totalEvents; ++idx) {
@@ -115,6 +118,7 @@ public abstract class JdbiObjectStoreEntryReaderTest {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person = new Person("Jody Jones", 21, 1L);
+    person.incrementVersion();
     final int totalEvents = 100;
     final List<Source<Event>> events = new ArrayList<>(totalEvents);
     for (int idx = 1; idx <= totalEvents; ++idx) {
@@ -138,6 +142,7 @@ public abstract class JdbiObjectStoreEntryReaderTest {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person = new Person("Jody Jones", 21, 1L);
+    person.incrementVersion();
     final int totalEvents = 100;
     final List<Source<Event>> events = new ArrayList<>(totalEvents);
     for (int idx = 1; idx <= totalEvents; ++idx) {
