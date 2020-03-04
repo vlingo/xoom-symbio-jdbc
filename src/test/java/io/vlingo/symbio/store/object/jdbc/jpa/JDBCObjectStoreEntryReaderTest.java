@@ -41,6 +41,7 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
         assertEquals(Result.Success, outcome.andThen(success -> success).get());
 
         final Entry<String> entry = entryReader.readNext().await();
+        assertTrue(entry.entryVersion() > 0);
         assertNotNull(entry);
 
         // Check gap prevention for one entry
@@ -70,6 +71,7 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
             assertEquals(5, entries.size());
             for (final Entry<String> entry : entries) {
                 assertEquals(count++, Long.parseLong(entry.id()));
+                assertTrue(entry.entryVersion() > 0);
             }
         }
 
@@ -109,6 +111,7 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
         for (long count = 1; count <= totalEvents; ) {
             final Entry<String> entry = entryReader.readNext(String.valueOf(count)).await();
             assertEquals(count, Long.parseLong(entry.id()));
+            assertTrue(entry.entryVersion() > 0);
             count += 2;
         }
     }
@@ -133,6 +136,7 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
             final int id = random.nextInt(totalEvents) + 1; // nextInt() returns 0 - 24
             final Entry<String> entry = entryReader.readNext(String.valueOf(id)).await();
             assertEquals(id, Long.parseLong(entry.id()));
+            assertTrue(entry.entryVersion() > 0);
         }
     }
 

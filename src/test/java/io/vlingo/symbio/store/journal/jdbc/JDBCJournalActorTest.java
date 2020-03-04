@@ -8,8 +8,7 @@
 package io.vlingo.symbio.store.journal.jdbc;
 
 import static java.util.Arrays.asList;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -82,6 +81,8 @@ public abstract class JDBCJournalActorTest extends BasePostgresJournalTest {
         assertEquals(1, dispatched.size());
 
         Entry<String> entry = journalReader.readNext().await();
+        assertNotNull(entry);
+        assertTrue(entry.entryVersion() > 0);
         TestEvent event = gson.fromJson(entry.entryData(), TestEvent.class);
         assertEquals(appendedEvent, event);
     }
@@ -99,10 +100,14 @@ public abstract class JDBCJournalActorTest extends BasePostgresJournalTest {
 
         List<TextEntry> eventStream = journalReader.readNext(2).await();
         Entry<String> entry1 = eventStream.get(0);
+        assertNotNull(entry1);
+        assertTrue(entry1.entryVersion() > 0);
         TestEvent event1 = gson.fromJson(entry1.entryData(), TestEvent.class);
         assertEquals(appendedEvent1, event1);
 
         Entry<String> entry2 = eventStream.get(1);
+        assertNotNull(entry2);
+        assertTrue(entry2.entryVersion() > 0);
         TestEvent event2 = gson.fromJson(entry2.entryData(), TestEvent.class);
         assertEquals(appendedEvent2, event2);
     }
