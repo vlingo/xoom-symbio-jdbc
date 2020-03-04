@@ -252,9 +252,9 @@ public abstract class JdbiOnDatabase {
                                 queries.insertEntriesQuery(
                                         new String[] {
                                                 ":entry.type", ":entry.typeVersion", ":entry.entryData",
-                                                ":entry.metadata.value", ":entry.metadata.operation" }),
+                                                ":entry.metadata.value", ":entry.metadata.operation", ":entry.entryVersion"}),
                                 "(unused)",
-                                (update,object) -> update.bindMethods(object)),
+                                (update, object) -> update.bindMethods(object)),
                         textEntryMapper());
 
         return persistentObjectMapper;

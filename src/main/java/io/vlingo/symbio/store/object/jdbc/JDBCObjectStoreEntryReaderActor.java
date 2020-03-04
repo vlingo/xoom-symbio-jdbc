@@ -233,15 +233,16 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
   }
 
   private Entry<String> mapEntryRowFrom(final ResultSet result) throws SQLException {
-    // E_ID,E_TYPE,E_TYPE_VERSION,E_DATA,E_METADATA_VALUE,E_METADATA_OP
+    // E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP, E_ENTRY_VERSION
     final String id = result.getString(1);
     final String entryType = result.getString(2);
     final int eventTypeVersion = result.getInt(3);
     final String entryData = result.getString(4);
     final String entryMetadata = result.getString(5);
     final String entryMetadataOp = result.getString(6);
+    final int entryVersion = result.getInt(7); // from E_ENTRY_VERSION
 
-    return new TextEntry(id, Entry.typed(entryType), eventTypeVersion, entryData, Metadata.with(entryMetadata, entryMetadataOp));
+    return new TextEntry(id, Entry.typed(entryType), eventTypeVersion, entryData, entryVersion, Metadata.with(entryMetadata, entryMetadataOp));
   }
 
   private PreparedStatement prepareQueryByIdsStatement(List<Long> ids) throws SQLException {

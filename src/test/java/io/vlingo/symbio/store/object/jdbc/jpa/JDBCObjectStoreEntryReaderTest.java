@@ -35,12 +35,15 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
         final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
         final AccessSafely access = persistInterest.afterCompleting(1);
         final Person person = new Person(nextPersonId(), 21, "Jody Jones");
+        person.incrementVersion();
+        final long entryVersion = person.version();
         final PersonAdded event = new PersonAdded(person);
         objectStore.persist(StateSources.of(person, event), -1L, persistInterest);
         final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
         assertEquals(Result.Success, outcome.andThen(success -> success).get());
 
         final Entry<String> entry = entryReader.readNext().await();
+        assertEquals(entryVersion, entry.entryVersion());
         assertNotNull(entry);
 
         // Check gap prevention for one entry
@@ -53,6 +56,7 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
         final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
         final AccessSafely access = persistInterest.afterCompleting(1);
         final Person person = new Person(nextPersonId(), 21, "Jody Jones");
+        person.incrementVersion();
         final int totalEvents = 100;
 
         final List<Source<PersonAdded>> events = new ArrayList<>(totalEvents);
@@ -70,6 +74,7 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
             assertEquals(5, entries.size());
             for (final Entry<String> entry : entries) {
                 assertEquals(count++, Long.parseLong(entry.id()));
+                assertTrue(entry.entryVersion() > 0);
             }
         }
 
@@ -96,6 +101,7 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
         final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
         final AccessSafely access = persistInterest.afterCompleting(1);
         Person person = new Person(nextPersonId(), 21, "Jody Jones");
+        person.incrementVersion();
         final int totalEvents = 20;
         final List<Source<PersonAdded>> events = new ArrayList<>(totalEvents);
         for (int idx = 1; idx <= totalEvents; ++idx) {
@@ -109,6 +115,7 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
         for (long count = 1; count <= totalEvents; ) {
             final Entry<String> entry = entryReader.readNext(String.valueOf(count)).await();
             assertEquals(count, Long.parseLong(entry.id()));
+            assertTrue(entry.entryVersion() > 0);
             count += 2;
         }
     }
@@ -118,6 +125,7 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
         final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
         final AccessSafely access = persistInterest.afterCompleting(1);
         Person person = new Person(nextPersonId(), 21, "Jody Jones");
+        person.incrementVersion();
         final int totalEvents = 25;
         final List<Source<PersonAdded>> events = new ArrayList<>(totalEvents);
         for (int idx = 1; idx <= totalEvents; ++idx) {
@@ -133,6 +141,7 @@ public abstract class JDBCObjectStoreEntryReaderTest extends JPAObjectStoreTest 
             final int id = random.nextInt(totalEvents) + 1; // nextInt() returns 0 - 24
             final Entry<String> entry = entryReader.readNext(String.valueOf(id)).await();
             assertEquals(id, Long.parseLong(entry.id()));
+            assertTrue(entry.entryVersion() > 0);
         }
     }
 

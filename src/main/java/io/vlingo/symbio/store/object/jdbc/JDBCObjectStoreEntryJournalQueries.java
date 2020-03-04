@@ -45,6 +45,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
   private static final int EntryEntryData = 2;
   private static final int EntryMetadataValue = 3;
   private static final int EntryMetadataOperation = 4;
+  private static final int EntryVersion = 5;
 
   public final Connection connection;
 
@@ -90,7 +91,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
    */
   public String entryQuery() {
     return MessageFormat.format(
-            "SELECT E_ID,E_TYPE,E_TYPE_VERSION,E_DATA,E_METADATA_VALUE,E_METADATA_OP " +
+            "SELECT E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP, E_ENTRY_VERSION  " +
             "FROM {0} WHERE E_ID >= ? ORDER BY E_ID LIMIT 1",
             EntryJournalTableName);
   }
@@ -102,7 +103,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
    */
   public String entryQuery(final long id) {
     return MessageFormat.format(
-            "SELECT E_ID,E_TYPE,E_TYPE_VERSION,E_DATA,E_METADATA_VALUE,E_METADATA_OP " +
+            "SELECT E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP, E_ENTRY_VERSION " +
             "FROM {0} WHERE E_ID >= {1} ORDER BY E_ID LIMIT 1",
             EntryJournalTableName,
             id);
@@ -115,7 +116,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
    */
   public String entriesQuery(final String[] placeholders) {
     return MessageFormat.format(
-            "SELECT E_ID,E_TYPE,E_TYPE_VERSION,E_DATA,E_METADATA_VALUE,E_METADATA_OP " +
+            "SELECT E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP, E_ENTRY_VERSION " +
             "FROM {0} WHERE E_ID BETWEEN {1} AND {2} ORDER BY E_ID",
             EntryJournalTableName,
             placeholders[0],
@@ -130,7 +131,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
    */
   public String entriesQuery(final long id, final int count) {
     return MessageFormat.format(
-            "SELECT E_ID,E_TYPE,E_TYPE_VERSION,E_DATA,E_METADATA_VALUE,E_METADATA_OP " +
+            "SELECT E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP, E_ENTRY_VERSION " +
             "FROM {0} WHERE E_ID BETWEEN {1} AND {2} ORDER BY E_ID",
             EntryJournalTableName,
             id,
@@ -150,7 +151,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
     }
 
     return MessageFormat.format(
-            "SELECT E_ID,E_TYPE,E_TYPE_VERSION,E_DATA,E_METADATA_VALUE,E_METADATA_OP " +
+            "SELECT E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP, E_ENTRY_VERSION " +
                     "FROM " + EntryJournalTableName + " WHERE E_ID IN (" + placeholders.toString() + ") ORDER BY E_ID",
             (Object[]) arrayIds);
   }
@@ -167,7 +168,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
     }
 
     return MessageFormat.format(
-            "SELECT E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP " +
+            "SELECT E_ID, E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP, E_ENTRY_VERSION " +
                     "FROM {0} WHERE E_ID IN ({1}) ORDER BY E_ID",
             EntryJournalTableName,
             inQuery.toString());
@@ -208,10 +209,10 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
   public String insertEntriesQuery(final String[] placeholders) {
     return MessageFormat.format(
             "INSERT INTO " + EntryJournalTableName
-            + "(E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP) "
-            + "VALUES ({0}, {1}, {2}, {3}, {4})",
+            + "(E_TYPE, E_TYPE_VERSION, E_DATA, E_METADATA_VALUE, E_METADATA_OP, E_ENTRY_VERSION) "
+            + "VALUES ({0}, {1}, {2}, {3}, {4}, {5})",
             placeholders[EntryType], placeholders[EntryTypeVersion], placeholders[EntryEntryData],
-            placeholders[EntryMetadataValue], placeholders[EntryMetadataOperation]);
+            placeholders[EntryMetadataValue], placeholders[EntryMetadataOperation], placeholders[EntryVersion]);
   }
 
   /**
@@ -315,7 +316,7 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
     connection
       .createStatement()
       .execute("CREATE TABLE IF NOT EXISTS " + EntryJournalTableName +
-               " (E_ID BIGINT GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1) PRIMARY KEY, E_TYPE VARCHAR(1024), E_TYPE_VERSION INTEGER, E_DATA VARCHAR(8000), E_METADATA_VALUE VARCHAR(8000) NULL, E_METADATA_OP VARCHAR(128) NULL)");
+               " (E_ID BIGINT GENERATED ALWAYS AS IDENTITY(START WITH 1 INCREMENT BY 1) PRIMARY KEY, E_ENTRY_VERSION INTEGER NOT NULL, E_TYPE VARCHAR(1024), E_TYPE_VERSION INTEGER, E_DATA VARCHAR(8000), E_METADATA_VALUE VARCHAR(8000) NULL, E_METADATA_OP VARCHAR(128) NULL)");
   }
 
   /**

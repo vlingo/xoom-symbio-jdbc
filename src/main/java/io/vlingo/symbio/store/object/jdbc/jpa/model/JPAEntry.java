@@ -124,6 +124,12 @@ public class JPAEntry implements Entry<String> {
     return entryData;
   }
 
+  /* @see io.vlingo.symbio.Entry#entryVersion() */
+  @Override
+  public int entryVersion() {
+    return entryVersion;
+  }
+
   /* @see io.vlingo.symbio.Entry#metadata() */
   @Override
   public Metadata metadata() {
@@ -179,6 +185,7 @@ public class JPAEntry implements Entry<String> {
       .comparing((JPAEntry e) -> e.id)
       .thenComparing(e -> e.entryTimestamp)
       .thenComparing(e -> e.entryData)
+      .thenComparing(e -> e.entryVersion)
       .thenComparing(e -> e.type)
       .thenComparingInt(e -> e.typeVersion)
       .thenComparing(e -> e.metadataValue)

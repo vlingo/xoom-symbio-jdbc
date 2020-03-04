@@ -561,6 +561,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     }
     cached.preparedStatement.setString(4, entry.metadata().value);
     cached.preparedStatement.setString(5, entry.metadata().operation);
+    cached.preparedStatement.setInt(6, entry.entryVersion());
   }
 
   private <S> void prepareForWrite(final CachedStatement<T> cached, final State<S> state) throws Exception {

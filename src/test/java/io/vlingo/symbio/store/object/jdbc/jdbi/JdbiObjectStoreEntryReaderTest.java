@@ -7,10 +7,6 @@
 
 package io.vlingo.symbio.store.object.jdbc.jdbi;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -44,6 +40,8 @@ import io.vlingo.symbio.store.object.StateObjectMapper;
 import io.vlingo.symbio.store.object.StateSources;
 import io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStoreTest;
 
+import static org.junit.Assert.*;
+
 public abstract class JdbiObjectStoreEntryReaderTest {
   protected MockDispatcher<BaseEntry.TextEntry, State.TextState> dispatcher;
   protected EntryReader<Entry<String>> entryReader;
@@ -56,6 +54,8 @@ public abstract class JdbiObjectStoreEntryReaderTest {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person = new Person("Jody Jones", 21, 1L);
+    person.incrementVersion();
+    final long entryVersion = person.version();
     final Event event = new Event("test-event");
     objectStore.persist(StateSources.of(person, event), -1L, persistInterest);
     final Outcome<StorageException, Result> outcome = access.readFrom("outcome");
@@ -63,6 +63,7 @@ public abstract class JdbiObjectStoreEntryReaderTest {
 
     final Entry<String> entry = entryReader.readNext().await();
     assertNotNull(entry);
+    assertEquals(entryVersion, entry.entryVersion());
 
     // Check gap prevention for one entry
     final Entry<String> empty = entryReader.readNext().await();
@@ -74,6 +75,7 @@ public abstract class JdbiObjectStoreEntryReaderTest {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person = new Person("Jody Jones", 21, 1L);
+    person.incrementVersion();
     final int totalEvents = 100;
     final List<Source<Event>> events = new ArrayList<>(totalEvents);
     for (int idx = 1; idx <= totalEvents; ++idx) {
@@ -89,6 +91,7 @@ public abstract class JdbiObjectStoreEntryReaderTest {
       assertEquals(10, entries.size());
       for (final Entry<String> entry : entries) {
         assertEquals(count++, Long.parseLong(entry.id()));
+        assertTrue(entry.entryVersion() > 0);
       }
     }
 
@@ -115,6 +118,7 @@ public abstract class JdbiObjectStoreEntryReaderTest {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person = new Person("Jody Jones", 21, 1L);
+    person.incrementVersion();
     final int totalEvents = 100;
     final List<Source<Event>> events = new ArrayList<>(totalEvents);
     for (int idx = 1; idx <= totalEvents; ++idx) {
@@ -128,6 +132,7 @@ public abstract class JdbiObjectStoreEntryReaderTest {
     for (long count = 1; count <= totalEvents; ) {
       final Entry<String> entry = entryReader.readNext(String.valueOf(count)).await();
       assertEquals(count, Long.parseLong(entry.id()));
+      assertTrue(entry.entryVersion() > 0);
       count += 10;
     }
   }
@@ -137,6 +142,7 @@ public abstract class JdbiObjectStoreEntryReaderTest {
     final TestPersistResultInterest persistInterest = new TestPersistResultInterest();
     final AccessSafely access = persistInterest.afterCompleting(1);
     final Person person = new Person("Jody Jones", 21, 1L);
+    person.incrementVersion();
     final int totalEvents = 100;
     final List<Source<Event>> events = new ArrayList<>(totalEvents);
     for (int idx = 1; idx <= totalEvents; ++idx) {
@@ -152,6 +158,7 @@ public abstract class JdbiObjectStoreEntryReaderTest {
       final int id = random.nextInt(100) + 1; // nextInt() returns 0 - 99
       final Entry<String> entry = entryReader.readNext(String.valueOf(id)).await();
       assertEquals(id, Long.parseLong(entry.id()));
+      assertTrue(entry.entryVersion() > 0);
     }
   }
 

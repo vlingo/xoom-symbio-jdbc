@@ -96,7 +96,8 @@ public interface MySQLQueries {
 
     String SQL_CREATE_ENTRY_STORE =
             "CREATE TABLE {0} (\n" +
-                    "   e_id SERIAL PRIMARY KEY," +
+                    "   e_id SERIAL PRIMARY KEY,\n" +
+                    "   e_entry_version INT NOT NULL,\n" +
                     "   e_type VARCHAR(256) NOT NULL,\n" +
                     "   e_type_version INT NOT NULL,\n" +
                     "   e_data {1} NOT NULL,\n" +
@@ -116,13 +117,13 @@ public interface MySQLQueries {
 
     String SQL_APPEND_ENTRY =
             "INSERT INTO {0} \n" +
-                    "(e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op) \n" +
-                    "VALUES (DEFAULT, ?, ?, ?, ?, ?)";
+                    "(e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op, e_entry_version) \n" +
+                    "VALUES (DEFAULT, ?, ?, ?, ?, ?, ?)";
 
     String SQL_APPEND_ENTRY_IDENTITY = "SELECT LAST_INSERT_ID()";
 
     String SQL_QUERY_ENTRY_BATCH =
-            "SELECT e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op FROM " +
+            "SELECT e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op, e_entry_version FROM " +
                     " {0} WHERE E_ID >= ? " +
                     "ORDER BY e_id LIMIT ?";
 
@@ -130,12 +131,12 @@ public interface MySQLQueries {
      * This query will be interpolated in two steps. It is not known how many ids we need in advance.
      */
     String SQL_QUERY_ENTRY_IDS =
-            "SELECT e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op FROM " +
+            "SELECT e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op, e_entry_version FROM " +
                     "{0} WHERE E_ID IN ('{'0'}') " +
                     "ORDER BY e_id";
 
     String SQL_QUERY_ENTRY =
-            "SELECT e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op FROM " +
+            "SELECT e_id, e_type, e_type_version, e_data, e_metadata_value, e_metadata_op, e_entry_version FROM " +
                     " {0} WHERE e_id = ? ";
 
     String QUERY_LATEST_OFFSET =

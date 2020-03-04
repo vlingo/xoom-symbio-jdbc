@@ -31,6 +31,7 @@ public class TextEntryMapper implements RowMapper<Entry> {
                     Entry.typed(rs.getString("E_TYPE")),
                     rs.getInt("E_TYPE_VERSION"),
                     rs.getString("E_DATA"),
+                    rs.getInt("E_ENTRY_VERSION"),
                     Metadata.with(rs.getString("E_METADATA_VALUE"), rs.getString("E_METADATA_OP")));
 
     return new PersistentEntry(entry);

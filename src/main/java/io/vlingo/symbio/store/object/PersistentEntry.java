@@ -45,6 +45,11 @@ public class PersistentEntry extends StateObject implements Entry {
   }
 
   @Override
+  public int entryVersion() {
+    return entry.entryVersion();
+  }
+
+  @Override
   public Object entryData() {
     return entry.entryData();
   }

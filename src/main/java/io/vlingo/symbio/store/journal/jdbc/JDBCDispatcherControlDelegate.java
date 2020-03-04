@@ -146,11 +146,11 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
         final String entryType = resultSet.getString(3);
         final int eventTypeVersion = resultSet.getInt(4);
         final String entryMetadata = resultSet.getString(5);
-        final int entryVerion = resultSet.getInt(6); // from E_STREAM_VERSION
+        final int entryVersion = resultSet.getInt(6); // from E_STREAM_VERSION
 
         final Class<?> classOfEvent = Class.forName(entryType);
 
         final Metadata metadata = JsonSerialization.deserialized(entryMetadata, Metadata.class);
-        return new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, entryVerion, metadata);
+        return new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, entryVersion, metadata);
     }
 }
