@@ -7,12 +7,6 @@
 
 package io.vlingo.symbio.store.journal.jdbc;
 
-import io.vlingo.common.Tuple2;
-import io.vlingo.symbio.store.common.jdbc.DatabaseType;
-import io.vlingo.symbio.store.journal.jdbc.mysql.MySQLQueries;
-import io.vlingo.symbio.store.journal.jdbc.postgres.PostgresQueries;
-import io.vlingo.symbio.store.journal.jdbc.postgres.yugabyte.YugaByteQueries;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -21,6 +15,12 @@ import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+
+import io.vlingo.common.Tuple2;
+import io.vlingo.symbio.store.common.jdbc.DatabaseType;
+import io.vlingo.symbio.store.journal.jdbc.mysql.MySQLQueries;
+import io.vlingo.symbio.store.journal.jdbc.postgres.PostgresQueries;
+import io.vlingo.symbio.store.journal.jdbc.postgres.yugabyte.YugaByteQueries;
 
 public abstract class JDBCQueries {
     protected final Connection connection;
@@ -289,9 +289,9 @@ public abstract class JDBCQueries {
 
     /**
      * Prepare always a new {@link PreparedStatement} which contains SELECT query of entries based on ids.
-     * @param ids
+     * @param ids the {@code List<Long>} of identities to use in the query
      * @return a {@link PreparedStatement} which needs to be closed due to variable size of ids.
-     * @throws SQLException
+     * @throws SQLException if the statement creation fails
      */
     public PreparedStatement prepareNewSelectEntriesByIdsQuery(List<Long> ids) throws SQLException {
         String[] placeholderList = new String[ids.size()];

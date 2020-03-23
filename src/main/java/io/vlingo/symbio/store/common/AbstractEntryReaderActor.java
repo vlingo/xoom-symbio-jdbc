@@ -7,6 +7,14 @@
 
 package io.vlingo.symbio.store.common;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.common.Completes;
 import io.vlingo.reactivestreams.Stream;
@@ -18,14 +26,6 @@ import io.vlingo.symbio.store.gap.GapRetryReader;
 import io.vlingo.symbio.store.gap.GappedEntries;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
-
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
     private final Advice advice;
@@ -66,10 +66,10 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
     }
 
     /**
-     * Read one entry from {@link ResultSet}
-     * @param result
-     * @return
-     * @throws Exception
+     * Read one entry from the {@link ResultSet}.
+     * @param result the ResultSet from which to read
+     * @return T
+     * @throws Exception if the read fails
      */
     protected abstract T entryFrom(final ResultSet result) throws Exception;
 
