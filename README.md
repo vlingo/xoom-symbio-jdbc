@@ -2,7 +2,9 @@
 
 [![Javadocs](http://javadoc.io/badge/io.vlingo/vlingo-symbio-jdbc.svg?color=brightgreen)](http://javadoc.io/doc/io.vlingo/vlingo-symbio-jdbc) [![Build Status](https://travis-ci.org/vlingo/vlingo-symbio-jdbc.svg?branch=master)](https://travis-ci.org/vlingo/vlingo-symbio-jdbc) [ ![Download](https://api.bintray.com/packages/vlingo/vlingo-platform-java/vlingo-symbio-jdbc/images/download.svg) ](https://bintray.com/vlingo/vlingo-platform-java/vlingo-symbio-jdbc/_latestVersion) [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/vlingo-platform-java/symbio)
 
-The vlingo/PLATFORM implementation of vlingo/symbio for JDBC.
+The VLINGO/PLATFORM implementation of VLINGO/SYMBIO for JDBC.
+
+Docs: https://docs.vlingo.io/vlingo-symbio
 
 ### State Storage
 The `StateStore` is a simple object storage mechanism that can be run against a number of persistence engines.
@@ -20,7 +22,7 @@ Adding additional JDBC storage delegates is a straightforward process requiring 
 We welcome you to add support for your favorite database!
 
 ## Docker and Bouncing the Server Volume
-Postrgres must be run for some tests. See the `pgbounce.sh`. This shell script can be used to bounce the Postgres volume named in `docker-compose.yml`:
+Postrgres and MySQL must be run for some tests. See the `pgbounce.sh`. This shell script can be used to bounce the Postgres (and MySQL) volume named in `docker-compose.yml`:
 
   `vlingo-symbio-jdbc-postgres`
 
@@ -42,13 +44,13 @@ Run the server using the following, which both stops the current instance and th
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>1.2.9</version>
+      <version>1.3.0</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio-jdbc</artifactId>
-      <version>1.2.9</version>
+      <version>1.3.0</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -56,8 +58,8 @@ Run the server using the following, which both stops the current instance and th
 
 ```gradle
 dependencies {
-    compile 'io.vlingo:vlingo-symbio:1.2.9'
-    compile 'io.vlingo:vlingo-symbio-jdbc:1.2.9'
+    compile 'io.vlingo:vlingo-symbio:1.3.0'
+    compile 'io.vlingo:vlingo-symbio-jdbc:1.3.0'
 }
 
 repositories {
