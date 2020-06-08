@@ -130,7 +130,7 @@ public class JDBCStateStoreStream<RS> implements Stream {
         final List<StateBundle> next = new ArrayList<>();
 
         while (count++ < flowElementsRate) {
-          if (!resultSet.next()) {
+          if (resultSet.isClosed() || !resultSet.next()) {
             done = true;
             break;
           }
