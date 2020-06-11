@@ -44,7 +44,7 @@ public class MockResultInterest
   public AtomicReference<Object> stateHolder = new AtomicReference<>();
   public AtomicReference<Metadata> metadataHolder = new AtomicReference<>();
   public ConcurrentLinkedQueue<Exception> errorCauses = new ConcurrentLinkedQueue<>();
-  public CopyOnWriteArrayList<StoreData<?>> readAllState = new CopyOnWriteArrayList<>();
+  public CopyOnWriteArrayList<StoreData<?>> readAllStates = new CopyOnWriteArrayList<>();
   public AtomicInteger totalWrites = new AtomicInteger(0);
 
   public MockResultInterest() {
@@ -139,7 +139,7 @@ public class MockResultInterest
         }
       })
       .writingWith("readAllStates", (StoreData<?> data) -> {
-        readAllState.add(data);
+        readAllStates.add(data);
         metadataHolder.set(data.metadata);
         if (data.errorCauses != null) {
           errorCauses.add(data.errorCauses);
@@ -161,7 +161,7 @@ public class MockResultInterest
       .readingWith("writeTextResultedIn", () -> writeTextResultedIn.get())
       .readingWith("writeStoreData", () -> stateHolder.get())
       .readingWith("readStoreData", () -> stateHolder.get())
-      .readingWith("readAllStates", () -> readAllState);
+      .readingWith("readAllStates", () -> readAllStates);
 
     return access;
   }
