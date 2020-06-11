@@ -11,6 +11,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -21,6 +22,7 @@ import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
+import io.vlingo.common.Outcome;
 import io.vlingo.common.Success;
 import io.vlingo.reactivestreams.Stream;
 import io.vlingo.symbio.BaseEntry;
@@ -51,6 +53,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   private final Map<String,StateStoreEntryReader<?>> entryReaders;
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
+  private final ReadAllResultCollector readAllResultCollector;
 
   public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate) {
     this((List<Dispatcher<Dispatchable<Entry<?>, State<String>>>>) null, delegate, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
@@ -76,6 +79,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
 
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
+    this.readAllResultCollector = new ReadAllResultCollector();
 
     if (dispatchers!=null){
       this.dispatchers = dispatchers;
@@ -169,6 +173,19 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
               " readText() missing ResultInterest for: " +
               (id == null ? "unknown id" : id));
     }
+  }
+
+  @Override
+  public void readAll(final Collection<TypedStateBundle> bundles, final ReadResultInterest interest, final Object object) {
+    readAllResultCollector.prepare();
+
+    for (final TypedStateBundle bundle : bundles) {
+      read(bundle.id, bundle.type, readAllResultCollector, null);
+    }
+
+    final Outcome<StorageException, Result> outcome = readAllResultCollector.readResultOutcome(bundles.size());
+
+    interest.readResultedIn(outcome, readAllResultCollector.readResultBundles(), object);
   }
 
   @Override

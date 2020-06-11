@@ -13,6 +13,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -42,9 +43,11 @@ import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
 import io.vlingo.symbio.store.state.Entity1;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
 import io.vlingo.symbio.store.state.MockResultInterest;
+import io.vlingo.symbio.store.state.MockResultInterest.StoreData;
 import io.vlingo.symbio.store.state.MockTextDispatcher;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
+import io.vlingo.symbio.store.state.StateStore.TypedStateBundle;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor.JDBCStateStoreInstantiator;
 
@@ -126,6 +129,45 @@ public abstract class JDBCStateStoreActorTest {
     assertEquals("456", state456.id);
     final State<?> state567 = accessDispatcher2.readFrom("dispatchedState", dispatchId("567"));
     assertEquals("567", state567.id);
+  }
+
+  @Test
+  public void testThatReadAllReadsAll() {
+    final AccessSafely accessWrites = interest.afterCompleting(6);
+
+    final Entity1 entity1 = new Entity1("123", 1);
+    store.write(entity1.id, entity1, 1, interest);
+    final Entity1 entity2 = new Entity1("234", 2);
+    store.write(entity2.id, entity2, 1, interest);
+    final Entity1 entity3 = new Entity1("345", 3);
+    store.write(entity3.id, entity3, 1, interest);
+
+    final int totalWrites = accessWrites.readFrom("totalWrites");
+
+    assertEquals(3, totalWrites);
+
+    final AccessSafely accessReads = interest.afterCompleting(3);
+
+    final List<TypedStateBundle> bundles =
+            Arrays.asList(
+                    new TypedStateBundle(entity1.id, Entity1.class),
+                    new TypedStateBundle(entity2.id, Entity1.class),
+                    new TypedStateBundle(entity3.id, Entity1.class));
+
+    store.readAll(bundles, interest, null);
+
+    final List<StoreData<?>> allStates = accessReads.readFrom("readAllStates");
+
+    assertEquals(3, allStates.size());
+    final Entity1 state123 = allStates.get(0).typedState();
+    assertEquals("123", state123.id);
+    assertEquals(1, state123.value);
+    final Entity1 state234 = allStates.get(1).typedState();
+    assertEquals("234", state234.id);
+    assertEquals(2, state234.value);
+    final Entity1 state345 = allStates.get(2).typedState();
+    assertEquals("345", state345.id);
+    assertEquals(3, state345.value);
   }
 
   @Test

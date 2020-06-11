@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import com.google.gson.Gson;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Address;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
@@ -407,5 +408,43 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
 
     private String getDispatchId(final String streamName, final int streamVersion) {
         return streamName + ":" + streamVersion + ":" + dispatchablesIdentityGenerator.generate().toString();
+    }
+
+    public static class JDBCJournalActorInstantiator implements ActorInstantiator<JDBCJournalActor> {
+      private static final long serialVersionUID = 1L;
+
+      private final List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers;
+      private final Configuration configuration;
+      private final long checkConfirmationExpirationInterval;
+      private final long confirmationExpiration;
+
+      public JDBCJournalActorInstantiator(
+              final List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers,
+              final Configuration configuration,
+              final long checkConfirmationExpirationInterval,
+              final long confirmationExpiration) {
+
+        this.dispatchers = dispatchers;
+        this.configuration = configuration;
+        this.checkConfirmationExpirationInterval = checkConfirmationExpirationInterval;
+        this.confirmationExpiration = confirmationExpiration;
+      }
+
+      public JDBCJournalActorInstantiator(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration) {
+        this(Arrays.asList(dispatcher), configuration, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
+      }
+
+      public JDBCJournalActorInstantiator(final Configuration configuration) throws Exception {
+        this((List<Dispatcher<Dispatchable<Entry<String>, TextState>>>) null, configuration, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
+      }
+
+      @Override
+      public JDBCJournalActor instantiate() {
+        try {
+          return new JDBCJournalActor(dispatchers, configuration, checkConfirmationExpirationInterval, confirmationExpiration);
+        } catch (Exception e) {
+          throw new IllegalStateException("Could not instantiate JDBCJournalActor because: " + e.getMessage(), e);
+        }
+      }
     }
 }
