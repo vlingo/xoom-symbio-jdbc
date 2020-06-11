@@ -290,48 +290,28 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
 
   @SuppressWarnings("unchecked")
   public <R> R readAllExpressionFor(final String storeName) throws Exception {
-    final String storeNameKey = "ALL:"+storeName;
-
-    final CachedStatement<T> maybeCached = readStatements.get(storeNameKey);
-
-    if (maybeCached == null) {
-      final String select = readAllExpression(storeName);
-      final PreparedStatement preparedStatement =
-              connection.prepareStatement(
-                      select,
-                      ResultSet.TYPE_SCROLL_INSENSITIVE,
-                      ResultSet.CONCUR_READ_ONLY);
-      final CachedStatement<T> cached = new CachedStatement<>(preparedStatement, null);
-      readStatements.put(storeNameKey, cached);
-      prepareForReadAll(cached);
-      return (R) preparedStatement;
-    }
-
-    prepareForReadAll(maybeCached);
-
-    return (R) maybeCached.preparedStatement;
+    
+    final String select = readAllExpression(storeName);
+    final PreparedStatement preparedStatement =
+            connection.prepareStatement(
+                    select,
+                    ResultSet.TYPE_SCROLL_INSENSITIVE,
+                    ResultSet.CONCUR_READ_ONLY);
+    preparedStatement.clearParameters();
+    return (R) preparedStatement;
   }
 
   @SuppressWarnings("unchecked")
   public <R> R readExpressionFor(final String storeName, final String id) throws Exception {
-    final CachedStatement<T> maybeCached = readStatements.get(storeName);
-
-    if (maybeCached == null) {
+	 
       final String select = readExpression(storeName, id);
       final PreparedStatement preparedStatement =
               connection.prepareStatement(
                       select,
                       ResultSet.TYPE_SCROLL_INSENSITIVE,
                       ResultSet.CONCUR_READ_ONLY);
-      final CachedStatement<T> cached = new CachedStatement<>(preparedStatement, null);
-      readStatements.put(storeName, cached);
-      prepareForRead(cached, id);
+      preparedStatement.setString(1, id);
       return (R) preparedStatement;
-    }
-
-    prepareForRead(maybeCached, id);
-
-    return (R) maybeCached.preparedStatement;
   }
 
   @SuppressWarnings("unchecked")
@@ -541,14 +521,14 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     }
   }
 
-  private void prepareForReadAll(final CachedStatement<T> cached) throws Exception {
-    cached.preparedStatement.clearParameters();
-  }
-
-  private void prepareForRead(final CachedStatement<T> cached, final String id) throws Exception {
-    cached.preparedStatement.clearParameters();
-    cached.preparedStatement.setString(1, id);
-  }
+//  private void prepareForReadAll(final CachedStatement<T> cached) throws Exception {
+//    cached.preparedStatement.clearParameters();
+//  }
+//
+//  private void prepareForRead(final CachedStatement<T> cached, final String id) throws Exception {
+//    cached.preparedStatement.clearParameters();
+//    cached.preparedStatement.setString(1, id);
+//  }
 
   private <E> void prepareForAppend(final CachedStatement<T> cached, final Entry<E> entry) throws Exception {
     cached.preparedStatement.clearParameters();
