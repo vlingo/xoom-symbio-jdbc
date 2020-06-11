@@ -297,7 +297,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
                     select,
                     ResultSet.TYPE_SCROLL_INSENSITIVE,
                     ResultSet.CONCUR_READ_ONLY);
-    preparedStatement.clearParameters();
     return (R) preparedStatement;
   }
 
@@ -520,15 +519,6 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
       }
     }
   }
-
-//  private void prepareForReadAll(final CachedStatement<T> cached) throws Exception {
-//    cached.preparedStatement.clearParameters();
-//  }
-//
-//  private void prepareForRead(final CachedStatement<T> cached, final String id) throws Exception {
-//    cached.preparedStatement.clearParameters();
-//    cached.preparedStatement.setString(1, id);
-//  }
 
   private <E> void prepareForAppend(final CachedStatement<T> cached, final Entry<E> entry) throws Exception {
     cached.preparedStatement.clearParameters();
