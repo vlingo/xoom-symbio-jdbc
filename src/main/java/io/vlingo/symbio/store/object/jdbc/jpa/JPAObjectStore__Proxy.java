@@ -7,7 +7,6 @@ import io.vlingo.actors.DeadLetter;
 import io.vlingo.actors.LocalMessage;
 import io.vlingo.actors.Mailbox;
 import io.vlingo.actors.Returns;
-import io.vlingo.common.BasicCompletes;
 import io.vlingo.common.Completes;
 import io.vlingo.common.SerializableConsumer;
 import io.vlingo.symbio.Entry;
@@ -78,7 +77,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
   public Completes<EntryReader<? extends Entry<?>>> entryReader(final String arg0) {
     if (!actor.isStopped()) {
       final SerializableConsumer<ObjectStore> consumer = (actor) -> actor.entryReader(arg0);
-      final Completes<EntryReader<? extends Entry<?>>> completes = new BasicCompletes<>(actor.scheduler());
+      final Completes<EntryReader<? extends Entry<?>>> completes = Completes.using(actor.completesId(), actor.scheduler());
       if (mailbox.isPreallocated()) { mailbox.send(actor, ObjectStore.class, consumer, Returns.value(completes), entryReaderRepresentation4); }
       else { mailbox.send(new LocalMessage<ObjectStore>(actor, ObjectStore.class, consumer, Returns.value(completes), entryReaderRepresentation4)); }
       return completes;
