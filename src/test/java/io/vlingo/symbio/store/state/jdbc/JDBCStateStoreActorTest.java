@@ -413,9 +413,10 @@ public abstract class JDBCStateStoreActorTest {
     StateAdapterProvider.instance(world).registerAdapter(Entity1.class, new Entity1StateAdapter());
     // NOTE: No adapter registered for Entity2.class because it will use the default
 
+    JDBCEntriesWriter entriesWriter = world.stage().actorFor(JDBCEntriesWriter.class, JDBCEntriesWriterActor.class, delegate, Arrays.asList(dispatcher));
     final ActorInstantiator<?> instantiator = new JDBCStateStoreInstantiator();
-    instantiator.set("dispatcher", dispatcher);
     instantiator.set("delegate", delegate);
+    instantiator.set("entriesWriter", entriesWriter);
 
     store = world.actorFor(
             StateStore.class,
