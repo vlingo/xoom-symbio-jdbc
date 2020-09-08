@@ -14,6 +14,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import io.vlingo.symbio.store.state.jdbc.JDBCEntriesWriter;
+import io.vlingo.symbio.store.state.jdbc.JDBCEntriesWriterActor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,7 +59,7 @@ public class HSQLDBJDBCTextStateStoreEntryTest {
   @Test
   public void testThatSourcesAppendAsEntries() {
     final AccessSafely accessInterest1 = interest.afterCompleting(3);
-    dispatcher.afterCompleting(0);
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(2 * 3);
 
     final Entity1 entity1 = new Entity1("123", 1);
     final Event1 event1 = new Event1();
@@ -71,6 +73,7 @@ public class HSQLDBJDBCTextStateStoreEntryTest {
     final Event3 event3 = new Event3();
     store.write(entity3.id, entity3, 1, Arrays.asList(event3), interest);
 
+    assertEquals(3, (int) accessDispatcher.readFrom("dispatchedStateCount"));
     assertEquals(3, (int) accessInterest1.readFrom("textWriteAccumulatedSourcesCount"));
 
     final List<TextEntry> readEntries = new ArrayList<>();
@@ -112,9 +115,11 @@ public class HSQLDBJDBCTextStateStoreEntryTest {
     stateAdapterProvider.registerAdapter(Entity1.class, new Entity1StateAdapter());
     // NOTE: No adapter registered for Entity2.class because it will use the default
 
+    JDBCEntriesWriter entriesWriter = world.stage().actorFor(JDBCEntriesWriter.class, JDBCEntriesWriterActor.class, delegate.copy(), Arrays.asList(dispatcher));
+
     final ActorInstantiator<?> instantiator = new JDBCStateStoreInstantiator();
-    instantiator.set("dispatcher", dispatcher);
     instantiator.set("delegate", delegate);
+    instantiator.set("entriesWriter", entriesWriter);
 
     store = world.actorFor(
             StateStore.class,

@@ -48,6 +48,7 @@ public abstract class JDBCTextStateStoreEntryTest {
 
     @Test
     public void testThatSourcesAppendAsEntries() {
+        final AccessSafely accessDispatcher = dispatcher.afterCompleting(2 * 3);
         final AccessSafely accessInterest1 = interest.afterCompleting(3);
         dispatcher.afterCompleting(0);
 
@@ -60,6 +61,7 @@ public abstract class JDBCTextStateStoreEntryTest {
         final Entity1 entity3 = new Entity1("345", 3);
         store.write(entity3.id, entity3, 1, Arrays.asList(new TestEvents.Event3()), interest);
 
+        assertEquals(3, (int) accessDispatcher.readFrom("dispatchedStateCount"));
         assertEquals(3, (int) accessInterest1.readFrom("textWriteAccumulatedSourcesCount"));
 
         final List<BaseEntry.TextEntry> readEntries = new ArrayList<>();
@@ -100,9 +102,11 @@ public abstract class JDBCTextStateStoreEntryTest {
         stateAdapterProvider.registerAdapter(Entity1.class, new Entity1.Entity1StateAdapter());
         // NOTE: No adapter registered for Entity2.class because it will use the default
 
+        JDBCEntriesWriter entriesWriter = world.stage().actorFor(JDBCEntriesWriter.class, JDBCEntriesWriterActor.class, delegate.copy(), Arrays.asList(dispatcher));
+
         final ActorInstantiator<?> instantiator = new JDBCStateStoreInstantiator();
-        instantiator.set("dispatcher", dispatcher);
         instantiator.set("delegate", delegate);
+        instantiator.set("entriesWriter", entriesWriter);
 
         store = world.actorFor(
                 StateStore.class,
