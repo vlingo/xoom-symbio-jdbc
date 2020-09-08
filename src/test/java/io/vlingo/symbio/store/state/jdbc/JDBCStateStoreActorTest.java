@@ -172,34 +172,36 @@ public abstract class JDBCStateStoreActorTest {
 
   @Test
   public void testThatReadErrorIsReported() {
-    final AccessSafely accessInterest1 = interest.afterCompleting(3);
+    final AccessSafely accessInterest1 = interest.afterCompleting(2);
     final AccessSafely accessDispatcher = dispatcher.afterCompleting(2);
 
     final Entity1 entity = new Entity1("123", 1);
     store.write(entity.id, entity, 1, interest);
-    assertEquals(1, (int)accessDispatcher.readFrom("dispatchedStateCount"));
+    assertEquals(1, (int) accessDispatcher.readFrom("dispatchedStateCount"));
+    assertEquals(1, (int) accessInterest1.readFrom("confirmDispatchedResultedIn"));
 
+    final AccessSafely accessInterest2 = interest.afterCompleting(1);
     store.read(null, Entity1.class, interest);
 
-    assertEquals(1, (int) accessInterest1.readFrom("errorCausesCount"));
-    final Exception cause1 = accessInterest1.readFrom("errorCauses");
+    assertEquals(1, (int) accessInterest2.readFrom("errorCausesCount"));
+    final Exception cause1 = accessInterest2.readFrom("errorCauses");
     assertEquals("The id is null.", cause1.getMessage());
-    Result result1 = accessInterest1.readFrom("textReadResult");
+    Result result1 = accessInterest2.readFrom("textReadResult");
     assertTrue(result1.isError());
-    assertNull(accessInterest1.readFrom("stateHolder"));
+    assertNull(accessInterest2.readFrom("stateHolder"));
 
     interest = new MockResultInterest();
-    final AccessSafely accessInterest2 = interest.afterCompleting(1);
+    final AccessSafely accessInterest3 = interest.afterCompleting(1);
     dispatcher.afterCompleting(1);
 
     store.read(entity.id, null, interest);  // includes read
 
-    assertEquals(1, (int) accessInterest2.readFrom("errorCausesCount"));
-    final Exception cause2 = accessInterest2.readFrom("errorCauses");
+    assertEquals(1, (int) accessInterest3.readFrom("errorCausesCount"));
+    final Exception cause2 = accessInterest3.readFrom("errorCauses");
     assertEquals("The type is null.", cause2.getMessage());
-    Result result2 = accessInterest2.readFrom("textReadResult");
+    Result result2 = accessInterest3.readFrom("textReadResult");
     assertTrue(result2.isError());
-    final Object objectState = accessInterest2.readFrom("stateHolder");
+    final Object objectState = accessInterest3.readFrom("stateHolder");
     assertNull(objectState);
   }
 
