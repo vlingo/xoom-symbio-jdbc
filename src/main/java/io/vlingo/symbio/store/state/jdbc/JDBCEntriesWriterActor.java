@@ -87,6 +87,7 @@ public class JDBCEntriesWriterActor extends Actor implements JDBCEntriesWriter {
 
 	@Override
 	public void stop() {
+		delegate.close();
 		if (dispatcherControl != null) {
 			dispatcherControl.stop();
 		}

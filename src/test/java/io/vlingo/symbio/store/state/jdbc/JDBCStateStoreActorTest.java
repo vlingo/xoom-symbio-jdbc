@@ -254,10 +254,13 @@ public abstract class JDBCStateStoreActorTest {
 
   @Test
   public void testThatAllOfTypeStreams() {
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(2 * 200);
     for (int count = 1; count <= 200; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
       store.write(entity1.id, entity1, 1, interest);
     }
+
+    assertEquals(200, (int) accessDispatcher.readFrom("dispatchedStateCount"));
 
     final Stream all = store.streamAllOf(Entity1.class).await();
 
@@ -276,10 +279,13 @@ public abstract class JDBCStateStoreActorTest {
 
   @Test
   public void testThatAllOfTypeStreamsUntilStop() {
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(2 * 100);
     for (int count = 1; count <= 100; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
       store.write(entity1.id, entity1, 1, interest);
     }
+
+    assertEquals(100, (int) accessDispatcher.readFrom("dispatchedStateCount"));
 
     final Stream all = store.streamAllOf(Entity1.class).await();
 
@@ -311,10 +317,13 @@ public abstract class JDBCStateStoreActorTest {
 
   @Test
   public void testThatAllOfTypeStreamsAdjusting() {
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(2 * 100);
     for (int count = 1; count <= 100; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
       store.write(entity1.id, entity1, count, interest);
     }
+
+    assertEquals(100, (int) accessDispatcher.readFrom("dispatchedStateCount"));
 
     final Stream all = store.streamAllOf(Entity1.class).await();
 
@@ -339,10 +348,13 @@ public abstract class JDBCStateStoreActorTest {
 
   @Test
   public void testThatSomeOfTypeStreamsAllFound() {
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(2 * 50);
     for (int count = 1; count <= 50; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
       store.write(entity1.id, entity1, 1, interest);
     }
+
+    assertEquals(50, (int) accessDispatcher.readFrom("dispatchedStateCount"));
 
     final QueryExpression query = QueryExpression.using(Entity1.class, someOfTypeStreams(Entity1.class));
 
@@ -365,10 +377,13 @@ public abstract class JDBCStateStoreActorTest {
 
   @Test
   public void testThatSomeOfTypeStreamsFromList() {
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(2 * 50);
     for (int count = 1; count <= 50; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
       store.write(entity1.id, entity1, 1, interest);
     }
+
+    assertEquals(50, (int) accessDispatcher.readFrom("dispatchedStateCount"));
 
     final ListQueryExpression query =
             ListQueryExpression.using(
