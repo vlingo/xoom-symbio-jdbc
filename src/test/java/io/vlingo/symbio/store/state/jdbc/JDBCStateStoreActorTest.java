@@ -173,10 +173,12 @@ public abstract class JDBCStateStoreActorTest {
   @Test
   public void testThatReadErrorIsReported() {
     final AccessSafely accessInterest1 = interest.afterCompleting(3);
-    dispatcher.afterCompleting(2);
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(2);
 
     final Entity1 entity = new Entity1("123", 1);
     store.write(entity.id, entity, 1, interest);
+    assertEquals(1, (int)accessDispatcher.readFrom("dispatchedStateCount"));
+
     store.read(null, Entity1.class, interest);
 
     assertEquals(1, (int) accessInterest1.readFrom("errorCausesCount"));
@@ -428,7 +430,7 @@ public abstract class JDBCStateStoreActorTest {
     StateAdapterProvider.instance(world).registerAdapter(Entity1.class, new Entity1StateAdapter());
     // NOTE: No adapter registered for Entity2.class because it will use the default
 
-    JDBCEntriesWriter entriesWriter = world.stage().actorFor(JDBCEntriesWriter.class, JDBCEntriesWriterActor.class, delegate, Arrays.asList(dispatcher));
+    JDBCEntriesWriter entriesWriter = world.stage().actorFor(JDBCEntriesWriter.class, JDBCEntriesWriterActor.class, delegate.copy(), Arrays.asList(dispatcher));
     final ActorInstantiator<?> instantiator = new JDBCStateStoreInstantiator();
     instantiator.set("delegate", delegate);
     instantiator.set("entriesWriter", entriesWriter);

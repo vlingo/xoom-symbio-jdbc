@@ -53,7 +53,7 @@ public class JDBCEntriesWriterActor extends Actor implements JDBCEntriesWriter {
 					DispatcherControl.class,
 					Definition.has(
 							DispatcherControlActor.class,
-							new DispatcherControl.DispatcherControlInstantiator(dispatchers, (JDBCStorageDelegate)delegate.copy(),
+							new DispatcherControl.DispatcherControlInstantiator(dispatchers, delegate,
 									checkConfirmationExpirationInterval, confirmationExpiration)));
 		} else {
 			this.dispatchers = null;
