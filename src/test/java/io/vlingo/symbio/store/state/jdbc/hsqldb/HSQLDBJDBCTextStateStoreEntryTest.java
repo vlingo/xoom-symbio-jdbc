@@ -14,6 +14,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
+import io.vlingo.symbio.store.state.jdbc.JDBCEntriesInstantWriter;
+import io.vlingo.symbio.store.state.jdbc.JDBCEntriesWriter;
+import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -112,9 +120,16 @@ public class HSQLDBJDBCTextStateStoreEntryTest {
     stateAdapterProvider.registerAdapter(Entity1.class, new Entity1StateAdapter());
     // NOTE: No adapter registered for Entity2.class because it will use the default
 
+    DispatcherControl dispatcherControl = world.stage().actorFor(DispatcherControl.class,
+            Definition.has(DispatcherControlActor.class,
+                    new DispatcherControl.DispatcherControlInstantiator(typed(dispatcher), typed(delegate),
+                            StateStore.DefaultCheckConfirmationExpirationInterval, StateStore.DefaultConfirmationExpiration)));
+
+    JDBCEntriesWriter entriesWriter = new JDBCEntriesInstantWriter(typed(delegate), Arrays.asList(typed(dispatcher)), dispatcherControl);
+
     final ActorInstantiator<?> instantiator = new JDBCStateStoreInstantiator();
-    instantiator.set("dispatcher", dispatcher);
     instantiator.set("delegate", delegate);
+    instantiator.set("entriesWriter", entriesWriter);
 
     store = world.actorFor(
             StateStore.class,
@@ -132,5 +147,13 @@ public class HSQLDBJDBCTextStateStoreEntryTest {
   private TestConfiguration testConfiguration(final DataFormat format) throws Exception {
     System.out.println("Starting: HSQLDBJDBCTextStateStoreEntryActorTest: testConfiguration(): " + databaseName);
     return HSQLDBConfigurationProvider.testConfiguration(format, databaseName);
+  }
+
+  private Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>> typed(Dispatcher dispatcher) {
+    return dispatcher;
+  }
+
+  private JDBCStorageDelegate typed(StorageDelegate delegate) {
+    return (JDBCStorageDelegate)delegate;
   }
 }

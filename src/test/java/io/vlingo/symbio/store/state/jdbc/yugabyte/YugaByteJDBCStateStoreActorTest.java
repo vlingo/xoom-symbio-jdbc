@@ -7,6 +7,7 @@
 
 package io.vlingo.symbio.store.state.jdbc.yugabyte;
 
+import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 import org.junit.Ignore;
 
 import io.vlingo.symbio.store.DataFormat;
@@ -18,7 +19,7 @@ import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
 @Ignore
 public class YugaByteJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
     @Override
-    protected StateStore.StorageDelegate delegate() throws Exception {
+    protected JDBCStorageDelegate<Object> delegate() throws Exception {
         System.out.println("Starting: YugaByteJDBCTextStateStoreActorTest: delegate()");
         return new YugaByteStorageDelegate(configuration, world.defaultLogger());
     }

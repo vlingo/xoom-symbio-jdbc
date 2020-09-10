@@ -48,60 +48,23 @@ import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 
 public class JDBCStateStoreActor extends Actor implements StateStore {
   private final JDBCStorageDelegate<TextState> delegate;
-  private final List<Dispatcher<Dispatchable<Entry<?>, State<String>>>> dispatchers;
-  private final DispatcherControl dispatcherControl;
+  private final JDBCEntriesWriter entriesWriter;
   private final Map<String,StateStoreEntryReader<?>> entryReaders;
   private final EntryAdapterProvider entryAdapterProvider;
   private final StateAdapterProvider stateAdapterProvider;
   private final ReadAllResultCollector readAllResultCollector;
 
-  public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate) {
-    this((List<Dispatcher<Dispatchable<Entry<?>, State<String>>>>) null, delegate, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
-  }
-
-  public JDBCStateStoreActor(final List<Dispatcher<Dispatchable<Entry<?>, State<String>>>> dispatchers, final JDBCStorageDelegate<TextState> delegate) {
-    this(dispatchers, delegate, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
-  }
-
-//  public JDBCStateStoreActor(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate) {
-//    this(Arrays.asList(dispatcher), delegate, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
-//  }
-
-  @SuppressWarnings({ "unchecked", "rawtypes" })
   public JDBCStateStoreActor(
-          final List<Dispatcher<Dispatchable<Entry<?>, State<String>>>> dispatchers,
           final JDBCStorageDelegate<TextState> delegate,
-          final long checkConfirmationExpirationInterval,
-          final long confirmationExpiration) {
+          final JDBCEntriesWriter entriesWriter) {
     this.delegate = delegate;
-
+    this.entriesWriter = entriesWriter;
     this.entryReaders = new HashMap<>();
 
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
     this.readAllResultCollector = new ReadAllResultCollector();
-
-    if (dispatchers!=null){
-      this.dispatchers = dispatchers;
-      this.dispatcherControl = stage().actorFor(
-        DispatcherControl.class,
-        Definition.has(
-          DispatcherControlActor.class,
-          new DispatcherControlInstantiator(dispatchers, (JDBCStorageDelegate) delegate.copy(), checkConfirmationExpirationInterval, confirmationExpiration))
-      );
-    } else {
-      this.dispatchers = null;
-      this.dispatcherControl = null;
-    }
   }
-
-//  public JDBCStateStoreActor(
-//          final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher,
-//          final JDBCStorageDelegate<TextState> delegate,
-//          final long checkConfirmationExpirationInterval,
-//          final long confirmationExpiration) {
-//    this(dispatcher == null ? null : Arrays.asList(dispatcher), delegate, checkConfirmationExpirationInterval, confirmationExpiration);
-//  }
 
   @Override
   public void stop() {
@@ -109,9 +72,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
       reader.close();
     }
     delegate.close();
-    if (dispatcherControl != null) {
-      dispatcherControl.stop();
-    }
+    entriesWriter.stop();
     super.stop();
   }
 
@@ -255,97 +216,54 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
                   stateAdapterProvider.asRaw(id, state, stateVersion) :
                   stateAdapterProvider.asRaw(id, state, stateVersion, metadata);
 
-          delegate.beginWrite();
-          final PreparedStatement writeStatement = delegate.writeExpressionFor(storeName, raw);
-          writeStatement.execute();
-          final String dispatchId = storeName + ":" + id;
-          final List<Entry<?>> entries = appendEntries(sources, stateVersion, metadata);
-
-          final Dispatchable<Entry<?>, State<String>> dispatchable = buildDispatchable(dispatchId, raw, entries);
-          final PreparedStatement dispatchableStatement = delegate.dispatchableWriteExpressionFor(dispatchable);
-          dispatchableStatement.execute();
-
-          delegate.complete();
-
-          dispatch(dispatchable);
-
-          interest.writeResultedIn(Success.of(Result.Success), id, state, stateVersion, sources, object);
+          final List<Entry<?>> entries = buildEntries(sources, stateVersion, metadata);
+          entriesWriter.appendEntries(storeName, entries, raw, outcome -> interest.writeResultedIn(outcome, id, state, stateVersion, sources, object));
         } catch (final Exception e) {
           logger().error(getClass().getSimpleName() + " writeText() error because: " + e.getMessage(), e);
-          delegate.fail();
           interest.writeResultedIn(Failure.of(new StorageException(Result.Error, e.getMessage(), e)), id, state, stateVersion, sources, object);
         }
       }
     } else {
       logger().warn(
               getClass().getSimpleName() +
-              " writeText() missing ResultInterest for: " +
-              (state == null ? "unknown id" : id));
+                      " writeText() missing ResultInterest for: " +
+                      (state == null ? "unknown id" : id));
     }
   }
 
-  @SuppressWarnings("rawtypes")
-  private <C> List<Entry<?>> appendEntries(final List<Source<C>> sources, final int stateVersion, final Metadata metadata) {
+  private <C> List<Entry<?>> buildEntries(final List<Source<C>> sources, final int stateVersion, final Metadata metadata) {
     if (sources.isEmpty()) return Collections.emptyList();
+
     try {
-      final List<Entry<?>> adapted = entryAdapterProvider.asEntries(sources, stateVersion, metadata);
-      for (final Entry<?> entry : adapted) {
-        long id = -1L;
-        final PreparedStatement appendStatement = delegate.appendExpressionFor(entry);
-        final int count = appendStatement.executeUpdate();
-        if (count == 1) {
-          final PreparedStatement queryLastIdentityStatement = delegate.appendIdentityExpression();
-          try (final ResultSet result = queryLastIdentityStatement.executeQuery()) {
-            if (result.next()) {
-              id = result.getLong(1);
-              ((BaseEntry) entry).__internal__setId(Long.toString(id));
-            }
-          }
-        }
-        if (id == -1L) {
-          final String message = "Could not retrieve entry id.";
-          logger().error(message);
-          throw new IllegalStateException(message);
-        }
-      }
-      return adapted;
+      return entryAdapterProvider.asEntries(sources, stateVersion, metadata);
     } catch (final Exception e) {
-      final String message = "Failed to append entry because: " + e.getMessage();
+      final String message = "Failed to adapt entry because: " + e.getMessage();
       logger().error(message, e);
       throw new IllegalStateException(message, e);
     }
   }
 
-  private void dispatch(final Dispatchable<Entry<?>, State<String>> dispatchable) {
-    if (this.dispatchers != null) {
-      dispatchers.forEach(d -> d.dispatch(dispatchable));
-    }
-  }
-
-  private Dispatchable<Entry<?>, State<String>> buildDispatchable(final String dispatchId, final State<String> state, final List<Entry<?>> entries) {
-    return new Dispatchable<>(dispatchId, LocalDateTime.now(), state.asTextState(), entries);
-  }
-
   public static class JDBCStateStoreInstantiator implements ActorInstantiator<JDBCStateStoreActor> {
     private static final long serialVersionUID = -1976058842295214942L;
 
-    private List<Dispatcher<Dispatchable<Entry<?>, State<String>>>> dispatchers;
     private JDBCStorageDelegate<TextState> delegate;
+    private JDBCEntriesWriter entriesWriter;
 
-    public JDBCStateStoreInstantiator(final List<Dispatcher<Dispatchable<Entry<?>, State<String>>>> dispatchers, final JDBCStorageDelegate<TextState> delegate) {
-      this.dispatchers = dispatchers;
+    public JDBCStateStoreInstantiator() {
+
+    }
+
+    public JDBCStateStoreInstantiator(final JDBCStorageDelegate<TextState> delegate, JDBCEntriesWriter entriesWriter) {
       this.delegate = delegate;
+      this.entriesWriter = entriesWriter;
     }
-
-    public JDBCStateStoreInstantiator(final Dispatcher<Dispatchable<Entry<?>, State<String>>> dispatcher, final JDBCStorageDelegate<TextState> delegate) {
-      this(Arrays.asList(dispatcher), delegate);
-    }
-
-    public JDBCStateStoreInstantiator() { }
 
     @Override
     public JDBCStateStoreActor instantiate() {
-      return new JDBCStateStoreActor(dispatchers, delegate);
+      JDBCStateStoreActor instance = new JDBCStateStoreActor(delegate, entriesWriter);
+      entriesWriter.setLogger(instance.logger());
+
+      return instance;
     }
 
     @Override
@@ -357,15 +275,12 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public void set(final String name, final Object value) {
       switch (name) {
-      case "dispatchers":
-        this.dispatchers = (List<Dispatcher<Dispatchable<Entry<?>, State<String>>>>) value;
-        break;
-      case "dispatcher":
-        this.dispatchers = Arrays.asList((Dispatcher<Dispatchable<Entry<?>, State<String>>>) value);
-        break;
-      case "delegate":
-        this.delegate = (JDBCStorageDelegate) value;
-        break;
+        case "delegate":
+          this.delegate = (JDBCStorageDelegate) value;
+          break;
+        case "entriesWriter":
+          this.entriesWriter = (JDBCEntriesWriter) value;
+          break;
       }
     }
   }

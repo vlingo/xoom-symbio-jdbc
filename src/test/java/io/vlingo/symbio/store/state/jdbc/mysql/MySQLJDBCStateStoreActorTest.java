@@ -12,10 +12,11 @@ import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.mysql.MySQLConfigurationProvider;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
+import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 
 public class MySQLJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
     @Override
-    protected StateStore.StorageDelegate delegate() throws Exception {
+    protected JDBCStorageDelegate<Object> delegate() throws Exception {
         System.out.println("Starting: MySQLJDBCTextStateStoreActorTest: delegate()");
         return new MySQLStorageDelegate(configuration, world.defaultLogger());
     }

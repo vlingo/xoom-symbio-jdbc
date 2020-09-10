@@ -18,6 +18,11 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import io.vlingo.symbio.*;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -29,10 +34,6 @@ import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.reactivestreams.Stream;
 import io.vlingo.reactivestreams.sink.ConsumerSink;
-import io.vlingo.symbio.EntryAdapterProvider;
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.StateAdapterProvider;
-import io.vlingo.symbio.StateBundle;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.ListQueryExpression;
 import io.vlingo.symbio.store.QueryExpression;
@@ -53,7 +54,7 @@ import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor.JDBCStateStoreInsta
 
 public abstract class JDBCStateStoreActorTest {
   protected TestConfiguration configuration;
-  protected StorageDelegate delegate;
+  protected JDBCStorageDelegate<?> delegate;
   protected MockTextDispatcher dispatcher;
   protected String entity1StoreName;
   protected MockResultInterest interest;
@@ -394,6 +395,7 @@ public abstract class JDBCStateStoreActorTest {
   }
 
   @Before
+  @SuppressWarnings("unchecked")
   public void setUp() throws Exception {
     world = World.startWithDefaults("test-store");
 
@@ -413,9 +415,15 @@ public abstract class JDBCStateStoreActorTest {
     StateAdapterProvider.instance(world).registerAdapter(Entity1.class, new Entity1StateAdapter());
     // NOTE: No adapter registered for Entity2.class because it will use the default
 
+    DispatcherControl dispatcherControl = world.stage().actorFor(DispatcherControl.class,
+            Definition.has(DispatcherControlActor.class,
+                    new DispatcherControl.DispatcherControlInstantiator(typed(dispatcher), typed(delegate),
+                            StateStore.DefaultCheckConfirmationExpirationInterval, StateStore.DefaultConfirmationExpiration)));
+
+    JDBCEntriesWriter entriesWriter = new JDBCEntriesInstantWriter(typed(delegate), Arrays.asList(typed(dispatcher)), dispatcherControl);
     final ActorInstantiator<?> instantiator = new JDBCStateStoreInstantiator();
-    instantiator.set("dispatcher", dispatcher);
     instantiator.set("delegate", delegate);
+    instantiator.set("entriesWriter", entriesWriter);
 
     store = world.actorFor(
             StateStore.class,
@@ -430,16 +438,24 @@ public abstract class JDBCStateStoreActorTest {
     delegate.close();
   }
 
-  protected abstract StorageDelegate delegate() throws Exception;
+  protected abstract JDBCStorageDelegate<?> delegate() throws Exception;
+
   protected abstract TestConfiguration testConfiguration(final DataFormat format) throws Exception;
   protected abstract String someOfTypeStreams(final Class<?> type);
   protected abstract String someOfTypeStreamsWithParameters(final Class<?> type);
-
   protected String tableName(final Class<?> type) {
     return ("tbl_"+StateTypeStateStoreMap.storeNameFrom(type)).toLowerCase();
   }
 
   private String dispatchId(final String entityId) {
     return entity1StoreName + ":" + entityId;
+  }
+
+  private Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>> typed(Dispatcher dispatcher) {
+    return dispatcher;
+  }
+
+  private JDBCStorageDelegate typed(StorageDelegate delegate) {
+    return (JDBCStorageDelegate)delegate;
   }
 }
