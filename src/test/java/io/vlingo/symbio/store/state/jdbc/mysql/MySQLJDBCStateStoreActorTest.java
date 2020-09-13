@@ -7,12 +7,20 @@
 
 package io.vlingo.symbio.store.state.jdbc.mysql;
 
+import io.vlingo.actors.World;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.mysql.MySQLConfigurationProvider;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
-import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
+import io.vlingo.symbio.store.state.jdbc.*;
+
+import java.util.Arrays;
+import java.util.List;
 
 public class MySQLJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
     @Override
@@ -35,5 +43,14 @@ public class MySQLJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
     @Override
     protected String someOfTypeStreamsWithParameters(final Class<?> type) {
       return "select * from " + tableName(type) + " where s_id between ? and ?";
+    }
+
+    @Override
+    protected StateStore stateStoreFrom(World world,
+                                        JDBCStorageDelegate<State.TextState> delegate,
+                                        List<Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>>> dispatchers,
+                                        DispatcherControl dispatcherControl) {
+        JDBCEntriesWriter entriesWriter = new JDBCEntriesInstantWriter(delegate, dispatchers, dispatcherControl);
+        return world.actorFor(StateStore.class, JDBCStateStoreActor.class, delegate, entriesWriter);
     }
 }

@@ -7,46 +7,26 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Definition;
-import io.vlingo.common.Completes;
-import io.vlingo.common.Failure;
-import io.vlingo.common.Outcome;
-import io.vlingo.common.Success;
+import io.vlingo.common.*;
 import io.vlingo.reactivestreams.Stream;
-import io.vlingo.symbio.BaseEntry;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.EntryAdapterProvider;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.Source;
-import io.vlingo.symbio.State;
+import io.vlingo.symbio.*;
 import io.vlingo.symbio.State.TextState;
-import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.QueryExpression;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
-import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.dispatch.Dispatcher;
-import io.vlingo.symbio.store.dispatch.DispatcherControl;
-import io.vlingo.symbio.store.dispatch.DispatcherControl.DispatcherControlInstantiator;
-import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 
-public class JDBCStateStoreActor extends Actor implements StateStore {
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.*;
+
+public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<Object> {
   private final JDBCStorageDelegate<TextState> delegate;
   private final JDBCEntriesWriter entriesWriter;
   private final Map<String,StateStoreEntryReader<?>> entryReaders;
@@ -54,16 +34,28 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
   private final StateAdapterProvider stateAdapterProvider;
   private final ReadAllResultCollector readAllResultCollector;
 
-  public JDBCStateStoreActor(
-          final JDBCStorageDelegate<TextState> delegate,
-          final JDBCEntriesWriter entriesWriter) {
+  public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesInstantWriter entriesWriter) {
     this.delegate = delegate;
     this.entriesWriter = entriesWriter;
+    this.entriesWriter.setLogger(logger());
     this.entryReaders = new HashMap<>();
 
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
     this.readAllResultCollector = new ReadAllResultCollector();
+  }
+
+  public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesBatchWriter entriesWriter, int timeBetweenFlushWrites) {
+    this.delegate = delegate;
+    this.entriesWriter = entriesWriter;
+    this.entriesWriter.setLogger(logger());
+    this.entryReaders = new HashMap<>();
+
+    this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
+    this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
+    this.readAllResultCollector = new ReadAllResultCollector();
+
+    stage().scheduler().schedule(selfAs(Scheduled.class), null, 5, timeBetweenFlushWrites);
   }
 
   @Override
@@ -231,6 +223,11 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
     }
   }
 
+  @Override
+  public void intervalSignal(Scheduled<Object> scheduled, Object o) {
+    entriesWriter.flush();
+  }
+
   private <C> List<Entry<?>> buildEntries(final List<Source<C>> sources, final int stateVersion, final Metadata metadata) {
     if (sources.isEmpty()) return Collections.emptyList();
 
@@ -240,48 +237,6 @@ public class JDBCStateStoreActor extends Actor implements StateStore {
       final String message = "Failed to adapt entry because: " + e.getMessage();
       logger().error(message, e);
       throw new IllegalStateException(message, e);
-    }
-  }
-
-  public static class JDBCStateStoreInstantiator implements ActorInstantiator<JDBCStateStoreActor> {
-    private static final long serialVersionUID = -1976058842295214942L;
-
-    private JDBCStorageDelegate<TextState> delegate;
-    private JDBCEntriesWriter entriesWriter;
-
-    public JDBCStateStoreInstantiator() {
-
-    }
-
-    public JDBCStateStoreInstantiator(final JDBCStorageDelegate<TextState> delegate, JDBCEntriesWriter entriesWriter) {
-      this.delegate = delegate;
-      this.entriesWriter = entriesWriter;
-    }
-
-    @Override
-    public JDBCStateStoreActor instantiate() {
-      JDBCStateStoreActor instance = new JDBCStateStoreActor(delegate, entriesWriter);
-      entriesWriter.setLogger(instance.logger());
-
-      return instance;
-    }
-
-    @Override
-    public Class<JDBCStateStoreActor> type() {
-      return JDBCStateStoreActor.class;
-    }
-
-    @Override
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    public void set(final String name, final Object value) {
-      switch (name) {
-        case "delegate":
-          this.delegate = (JDBCStorageDelegate) value;
-          break;
-        case "entriesWriter":
-          this.entriesWriter = (JDBCEntriesWriter) value;
-          break;
-      }
     }
   }
 }

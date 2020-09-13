@@ -7,32 +7,13 @@
 
 package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
-import static org.junit.Assert.assertEquals;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
-
-import io.vlingo.symbio.State;
-import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.dispatch.Dispatcher;
-import io.vlingo.symbio.store.dispatch.DispatcherControl;
-import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
-import io.vlingo.symbio.store.state.jdbc.JDBCEntriesInstantWriter;
-import io.vlingo.symbio.store.state.jdbc.JDBCEntriesWriter;
-import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.TestEvents.Event1;
@@ -40,15 +21,27 @@ import io.vlingo.symbio.store.TestEvents.Event2;
 import io.vlingo.symbio.store.TestEvents.Event3;
 import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
 import io.vlingo.symbio.store.common.jdbc.hsqldb.HSQLDBConfigurationProvider;
-import io.vlingo.symbio.store.state.Entity1;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
+import io.vlingo.symbio.store.state.*;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
-import io.vlingo.symbio.store.state.MockResultInterest;
-import io.vlingo.symbio.store.state.MockTextDispatcher;
-import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
+import io.vlingo.symbio.store.state.jdbc.JDBCEntriesInstantWriter;
+import io.vlingo.symbio.store.state.jdbc.JDBCEntriesWriter;
 import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor;
-import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor.JDBCStateStoreInstantiator;
+import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
+import static org.junit.Assert.assertEquals;
 
 public class HSQLDBJDBCTextStateStoreEntryTest {
   private final String databaseName = UUID.randomUUID().toString();
@@ -126,14 +119,7 @@ public class HSQLDBJDBCTextStateStoreEntryTest {
                             StateStore.DefaultCheckConfirmationExpirationInterval, StateStore.DefaultConfirmationExpiration)));
 
     JDBCEntriesWriter entriesWriter = new JDBCEntriesInstantWriter(typed(delegate), Arrays.asList(typed(dispatcher)), dispatcherControl);
-
-    final ActorInstantiator<?> instantiator = new JDBCStateStoreInstantiator();
-    instantiator.set("delegate", delegate);
-    instantiator.set("entriesWriter", entriesWriter);
-
-    store = world.actorFor(
-            StateStore.class,
-            Definition.has(JDBCStateStoreActor.class, instantiator));
+    store = world.actorFor(StateStore.class, JDBCStateStoreActor.class, delegate, entriesWriter);
   }
 
   @After

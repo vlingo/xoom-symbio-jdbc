@@ -8,14 +8,21 @@
 package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
 import java.sql.Blob;
+import java.util.List;
 import java.util.UUID;
 
+import io.vlingo.actors.World;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
 import io.vlingo.symbio.store.common.jdbc.hsqldb.HSQLDBConfigurationProvider;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
-import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
+import io.vlingo.symbio.store.state.jdbc.*;
 
 public class HSQLDBJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
 
@@ -39,5 +46,14 @@ public class HSQLDBJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
   @Override
   protected String someOfTypeStreamsWithParameters(final Class<?> type) {
     return "select * from " + tableName(type) + " where cast(s_id as integer) >= ? and cast(s_id as integer) <= ?";
+  }
+
+  @Override
+  protected StateStore stateStoreFrom(World world,
+                                      JDBCStorageDelegate<State.TextState> delegate,
+                                      List<Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>>> dispatchers,
+                                      DispatcherControl dispatcherControl) {
+    JDBCEntriesWriter entriesWriter = new JDBCEntriesInstantWriter(delegate, dispatchers, dispatcherControl);
+    return world.actorFor(StateStore.class, JDBCStateStoreActor.class, delegate, entriesWriter);
   }
 }

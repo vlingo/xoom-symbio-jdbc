@@ -7,9 +7,32 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import io.vlingo.actors.Definition;
+import io.vlingo.actors.World;
+import io.vlingo.actors.testkit.AccessSafely;
+import io.vlingo.reactivestreams.Stream;
+import io.vlingo.reactivestreams.sink.ConsumerSink;
+import io.vlingo.symbio.*;
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.ListQueryExpression;
+import io.vlingo.symbio.store.QueryExpression;
+import io.vlingo.symbio.store.Result;
+import io.vlingo.symbio.store.common.event.TestEvent;
+import io.vlingo.symbio.store.common.event.TestEventAdapter;
+import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
+import io.vlingo.symbio.store.state.*;
+import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
+import io.vlingo.symbio.store.state.MockResultInterest.StoreData;
+import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
+import io.vlingo.symbio.store.state.StateStore.TypedStateBundle;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -18,39 +41,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import io.vlingo.symbio.*;
-import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.dispatch.Dispatcher;
-import io.vlingo.symbio.store.dispatch.DispatcherControl;
-import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
-import io.vlingo.actors.ActorInstantiator;
-import io.vlingo.actors.Definition;
-import io.vlingo.actors.World;
-import io.vlingo.actors.testkit.AccessSafely;
-import io.vlingo.reactivestreams.Stream;
-import io.vlingo.reactivestreams.sink.ConsumerSink;
-import io.vlingo.symbio.store.DataFormat;
-import io.vlingo.symbio.store.ListQueryExpression;
-import io.vlingo.symbio.store.QueryExpression;
-import io.vlingo.symbio.store.Result;
-import io.vlingo.symbio.store.common.event.TestEvent;
-import io.vlingo.symbio.store.common.event.TestEventAdapter;
-import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
-import io.vlingo.symbio.store.state.Entity1;
-import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
-import io.vlingo.symbio.store.state.MockResultInterest;
-import io.vlingo.symbio.store.state.MockResultInterest.StoreData;
-import io.vlingo.symbio.store.state.MockTextDispatcher;
-import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.state.StateStore.TypedStateBundle;
-import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
-import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor.JDBCStateStoreInstantiator;
+import static org.junit.Assert.*;
 
 public abstract class JDBCStateStoreActorTest {
   protected TestConfiguration configuration;
@@ -173,32 +164,36 @@ public abstract class JDBCStateStoreActorTest {
 
   @Test
   public void testThatReadErrorIsReported() {
-    final AccessSafely accessInterest1 = interest.afterCompleting(3);
-    dispatcher.afterCompleting(2);
+    final AccessSafely accessInterest1 = interest.afterCompleting(2);
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(2);
 
     final Entity1 entity = new Entity1("123", 1);
     store.write(entity.id, entity, 1, interest);
+    assertEquals(1, (int) accessDispatcher.readFrom("dispatchedStateCount"));
+    assertEquals(1, (int) accessInterest1.readFrom("confirmDispatchedResultedIn"));
+
+    final AccessSafely accessInterest2 = interest.afterCompleting(1);
     store.read(null, Entity1.class, interest);
 
-    assertEquals(1, (int) accessInterest1.readFrom("errorCausesCount"));
-    final Exception cause1 = accessInterest1.readFrom("errorCauses");
+    assertEquals(1, (int) accessInterest2.readFrom("errorCausesCount"));
+    final Exception cause1 = accessInterest2.readFrom("errorCauses");
     assertEquals("The id is null.", cause1.getMessage());
-    Result result1 = accessInterest1.readFrom("textReadResult");
+    Result result1 = accessInterest2.readFrom("textReadResult");
     assertTrue(result1.isError());
-    assertNull(accessInterest1.readFrom("stateHolder"));
+    assertNull(accessInterest2.readFrom("stateHolder"));
 
     interest = new MockResultInterest();
-    final AccessSafely accessInterest2 = interest.afterCompleting(1);
+    final AccessSafely accessInterest3 = interest.afterCompleting(1);
     dispatcher.afterCompleting(1);
 
     store.read(entity.id, null, interest);  // includes read
 
-    assertEquals(1, (int) accessInterest2.readFrom("errorCausesCount"));
-    final Exception cause2 = accessInterest2.readFrom("errorCauses");
+    assertEquals(1, (int) accessInterest3.readFrom("errorCausesCount"));
+    final Exception cause2 = accessInterest3.readFrom("errorCauses");
     assertEquals("The type is null.", cause2.getMessage());
-    Result result2 = accessInterest2.readFrom("textReadResult");
+    Result result2 = accessInterest3.readFrom("textReadResult");
     assertTrue(result2.isError());
-    final Object objectState = accessInterest2.readFrom("stateHolder");
+    final Object objectState = accessInterest3.readFrom("stateHolder");
     assertNull(objectState);
   }
 
@@ -255,13 +250,15 @@ public abstract class JDBCStateStoreActorTest {
 
   @Test
   public void testThatAllOfTypeStreams() {
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(2 * 200);
     for (int count = 1; count <= 200; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
       store.write(entity1.id, entity1, 1, interest);
     }
 
-    final Stream all = store.streamAllOf(Entity1.class).await();
+    assertEquals(200, (int) accessDispatcher.readFrom("dispatchedStateCount"));
 
+    final Stream all = store.streamAllOf(Entity1.class).await();
     final AccessSafely access = AccessSafely.afterCompleting(200);
 
     access.writingWith("stateCounter", (state) -> { totalStates.incrementAndGet(); });
@@ -312,13 +309,15 @@ public abstract class JDBCStateStoreActorTest {
 
   @Test
   public void testThatAllOfTypeStreamsAdjusting() {
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(2 * 100);
     for (int count = 1; count <= 100; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
       store.write(entity1.id, entity1, count, interest);
     }
 
-    final Stream all = store.streamAllOf(Entity1.class).await();
+    assertEquals(100, (int) accessDispatcher.readFrom("dispatchedStateCount"));
 
+    final Stream all = store.streamAllOf(Entity1.class).await();
     final AccessSafely access = AccessSafely.afterCompleting(100);
 
     access.writingWith("stateCounter", (state) -> { totalStates.incrementAndGet(); });
@@ -340,15 +339,16 @@ public abstract class JDBCStateStoreActorTest {
 
   @Test
   public void testThatSomeOfTypeStreamsAllFound() {
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(2 * 50);
     for (int count = 1; count <= 50; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
       store.write(entity1.id, entity1, 1, interest);
     }
 
+    assertEquals(50, (int) accessDispatcher.readFrom("dispatchedStateCount"));
+
     final QueryExpression query = QueryExpression.using(Entity1.class, someOfTypeStreams(Entity1.class));
-
     final Stream all = store.streamSomeUsing(query).await();
-
     final AccessSafely access = AccessSafely.afterCompleting(5);
 
     access.writingWith("stateCounter", (state) -> { totalStates.incrementAndGet(); });
@@ -366,10 +366,13 @@ public abstract class JDBCStateStoreActorTest {
 
   @Test
   public void testThatSomeOfTypeStreamsFromList() {
+    final AccessSafely accessDispatcher = dispatcher.afterCompleting(2 * 50);
     for (int count = 1; count <= 50; ++count) {
       final Entity1 entity1 = new Entity1("" + count, count);
       store.write(entity1.id, entity1, 1, interest);
     }
+
+    assertEquals(50, (int) accessDispatcher.readFrom("dispatchedStateCount"));
 
     final ListQueryExpression query =
             ListQueryExpression.using(
@@ -420,14 +423,7 @@ public abstract class JDBCStateStoreActorTest {
                     new DispatcherControl.DispatcherControlInstantiator(typed(dispatcher), typed(delegate),
                             StateStore.DefaultCheckConfirmationExpirationInterval, StateStore.DefaultConfirmationExpiration)));
 
-    JDBCEntriesWriter entriesWriter = new JDBCEntriesInstantWriter(typed(delegate), Arrays.asList(typed(dispatcher)), dispatcherControl);
-    final ActorInstantiator<?> instantiator = new JDBCStateStoreInstantiator();
-    instantiator.set("delegate", delegate);
-    instantiator.set("entriesWriter", entriesWriter);
-
-    store = world.actorFor(
-            StateStore.class,
-            Definition.has(JDBCStateStoreActor.class, instantiator));
+    store = stateStoreFrom(world, typed(delegate), Arrays.asList(typed(dispatcher)), dispatcherControl);
   }
 
   @After
@@ -439,6 +435,11 @@ public abstract class JDBCStateStoreActorTest {
   }
 
   protected abstract JDBCStorageDelegate<?> delegate() throws Exception;
+
+  protected abstract StateStore stateStoreFrom(World world,
+                                               JDBCStorageDelegate<State.TextState> delegate,
+                                               List<Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>>> dispatchers,
+                                               DispatcherControl dispatcherControl);
 
   protected abstract TestConfiguration testConfiguration(final DataFormat format) throws Exception;
   protected abstract String someOfTypeStreams(final Class<?> type);

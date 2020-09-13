@@ -7,35 +7,28 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
-import static org.junit.Assert.assertEquals;
+import io.vlingo.actors.Definition;
+import io.vlingo.actors.Logger;
+import io.vlingo.actors.World;
+import io.vlingo.actors.testkit.AccessSafely;
+import io.vlingo.symbio.*;
+import io.vlingo.symbio.store.DataFormat;
+import io.vlingo.symbio.store.TestEvents;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
+import io.vlingo.symbio.store.state.*;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import io.vlingo.symbio.*;
-import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.dispatch.Dispatcher;
-import io.vlingo.symbio.store.dispatch.DispatcherControl;
-import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import io.vlingo.actors.ActorInstantiator;
-import io.vlingo.actors.Definition;
-import io.vlingo.actors.Logger;
-import io.vlingo.actors.World;
-import io.vlingo.actors.testkit.AccessSafely;
-import io.vlingo.symbio.store.DataFormat;
-import io.vlingo.symbio.store.TestEvents;
-import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.state.Entity1;
-import io.vlingo.symbio.store.state.MockResultInterest;
-import io.vlingo.symbio.store.state.MockTextDispatcher;
-import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
-import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor.JDBCStateStoreInstantiator;
+import static org.junit.Assert.assertEquals;
 
 public abstract class JDBCTextStateStoreEntryTest {
     private Configuration.TestConfiguration configuration;
@@ -107,14 +100,7 @@ public abstract class JDBCTextStateStoreEntryTest {
                                 StateStore.DefaultCheckConfirmationExpirationInterval, StateStore.DefaultConfirmationExpiration)));
 
         JDBCEntriesWriter entriesWriter = new JDBCEntriesInstantWriter(typed(delegate), Arrays.asList(typed(dispatcher)), dispatcherControl);
-
-        final ActorInstantiator<?> instantiator = new JDBCStateStoreInstantiator();
-        instantiator.set("delegate", delegate);
-        instantiator.set("entriesWriter", entriesWriter);
-
-        store = world.actorFor(
-                StateStore.class,
-                Definition.has(JDBCStateStoreActor.class, instantiator));
+        store = world.actorFor(StateStore.class, JDBCStateStoreActor.class, delegate, entriesWriter);
     }
 
     @After

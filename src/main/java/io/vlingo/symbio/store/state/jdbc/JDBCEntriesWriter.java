@@ -20,6 +20,8 @@ import java.util.function.Consumer;
 public interface JDBCEntriesWriter {
 	void appendEntries(String storeName, List<Entry<?>> entries, State.TextState rawState, Consumer<Outcome<StorageException, Result>> postAppendAction);
 
+	void flush();
+
 	void stop();
 
 	void setLogger(Logger logger);
