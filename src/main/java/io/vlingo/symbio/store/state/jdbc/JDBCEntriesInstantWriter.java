@@ -61,7 +61,7 @@ public class JDBCEntriesInstantWriter implements JDBCEntriesWriter {
 			dispatch(dispatchable);
 			postAppendAction.accept(Success.of(Result.Success));
 		} catch (Exception e) {
-			logger.error(getClass().getSimpleName() + " writeText() error because: " + e.getMessage(), e);
+			logger.error(getClass().getSimpleName() + " appendEntries() error because: " + e.getMessage(), e);
 			delegate.fail();
 			postAppendAction.accept(Failure.of(new StorageException(Result.Error, e.getMessage(), e)));
 		}

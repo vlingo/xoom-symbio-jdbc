@@ -8,6 +8,7 @@
 package io.vlingo.symbio.store.state.jdbc;
 
 import io.vlingo.actors.Logger;
+import io.vlingo.common.Failure;
 import io.vlingo.common.Outcome;
 import io.vlingo.common.Success;
 import io.vlingo.symbio.BaseEntry;
@@ -23,6 +24,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -61,29 +63,30 @@ public class JDBCEntriesBatchWriter implements JDBCEntriesWriter {
 	public void flush() {
 		appendBatchedEntries();
 
-		try {
-			if (batchEntries.size() > 0) {
+		if (batchEntries.size() > 0) {
+			try {
 				delegate.beginWrite();
 
 				Map<String, List<State.TextState>> states = batchEntries.states();
 				for (Map.Entry<String, List<State.TextState>> storeStates : states.entrySet()) {
 					final PreparedStatement writeStatesStatement = delegate.writeExpressionFor(storeStates.getKey(), storeStates.getValue());
-					int[] writeStatesCount = writeStatesStatement.executeBatch();
+					writeStatesStatement.executeBatch();
 					writeStatesStatement.clearBatch();
 				}
 
 				List<Dispatchable<Entry<?>, State<String>>> dispatchables = batchEntries.collectDispatchables();
 				final PreparedStatement writeDispatchablesStatement = delegate.dispatchableWriteExpressionFor(dispatchables);
-				int[] writeDispatchablesCount = writeDispatchablesStatement.executeBatch();
+				writeDispatchablesStatement.executeBatch();
 				writeDispatchablesStatement.clearBatch();
 
 				delegate.complete();
 				batchEntries.completedWith(Success.of(Result.Success));
 				batchEntries.clear();
+			} catch (Exception e) {
+				logger.error(getClass().getSimpleName() + " appendEntries() failed because: " + e.getMessage(), e);
+				batchEntries.completedWith(Failure.of(new StorageException(Result.Error, e.getMessage(), e)));
+				delegate.fail();
 			}
-		} catch (Exception e) {
-			logger.error(getClass().getSimpleName() + " writeText() failed because: " + e.getMessage(), e);
-			delegate.fail();
 		}
 	}
 
@@ -105,8 +108,13 @@ public class JDBCEntriesBatchWriter implements JDBCEntriesWriter {
 			try {
 				PreparedStatement appendStatement = delegate.appendExpressionFor(allEntries);
 				final int[] countList = appendStatement.executeBatch();
-				ResultSet resultSet = appendStatement.getGeneratedKeys();
+				if (Arrays.stream(countList).anyMatch(id -> id == -1L)) {
+					final String message = "vlingo-symbio-jdbc: Failed append entries.";
+					logger.error(message);
+					throw new IllegalStateException(message);
+				}
 
+				ResultSet resultSet = appendStatement.getGeneratedKeys();
 				for (int i = 0; resultSet.next(); i++) {
 					long id = resultSet.getLong(1);
 					((BaseEntry) allEntries.get(i)).__internal__setId(Long.toString(id));
