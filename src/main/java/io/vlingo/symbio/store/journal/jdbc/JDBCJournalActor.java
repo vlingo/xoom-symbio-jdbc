@@ -7,212 +7,93 @@
 
 package io.vlingo.symbio.store.journal.jdbc;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
-import com.google.gson.Gson;
-
 import io.vlingo.actors.Actor;
-import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Address;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
-import io.vlingo.common.Success;
-import io.vlingo.common.Tuple2;
-import io.vlingo.common.identity.IdentityGenerator;
-import io.vlingo.symbio.BaseEntry;
+import io.vlingo.common.Outcome;
 import io.vlingo.symbio.BaseEntry.TextEntry;
-import io.vlingo.symbio.Entry;
-import io.vlingo.symbio.EntryAdapterProvider;
-import io.vlingo.symbio.Metadata;
-import io.vlingo.symbio.Source;
-import io.vlingo.symbio.State;
+import io.vlingo.symbio.*;
 import io.vlingo.symbio.State.TextState;
-import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
-import io.vlingo.symbio.store.dispatch.Dispatchable;
-import io.vlingo.symbio.store.dispatch.Dispatcher;
-import io.vlingo.symbio.store.dispatch.DispatcherControl;
-import io.vlingo.symbio.store.dispatch.DispatcherControl.DispatcherControlInstantiator;
-import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.StreamReader;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalReaderActor.JDBCJournalReaderInstantiator;
 import io.vlingo.symbio.store.journal.jdbc.JDBCStreamReaderActor.JDBCStreamReaderInstantiator;
 
+import java.util.*;
+import java.util.function.Consumer;
+
 public class JDBCJournalActor extends Actor implements Journal<String> {
+    private final JDBCJournalWriter journalWriter;
     private final EntryAdapterProvider entryAdapterProvider;
     private final StateAdapterProvider stateAdapterProvider;
     private final Configuration configuration;
-    private final Connection connection;
     private final DatabaseType databaseType;
-    private final Gson gson;
     private final Map<String, JournalReader<TextEntry>> journalReaders;
     private final Map<String, StreamReader<String>> streamReaders;
-    private final IdentityGenerator dispatchablesIdentityGenerator;
-    private final List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers;
-    private final DispatcherControl dispatcherControl;
 
-    private final JDBCQueries queries;
-
-    public JDBCJournalActor(final Configuration configuration) throws Exception {
-        this((List<Dispatcher<Dispatchable<Entry<String>, TextState>>>) null, configuration, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
-    }
-
-    public JDBCJournalActor(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration) throws Exception {
-        this(Arrays.asList(dispatcher), configuration, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
-    }
-
-    @SuppressWarnings({ "unchecked", "rawtypes" })
-    public JDBCJournalActor(
-            final List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers,
-            final Configuration configuration,
-            final long checkConfirmationExpirationInterval,
-            final long confirmationExpiration)
-    throws Exception {
+    public JDBCJournalActor(final JDBCJournalWriter journalWriter, final Configuration configuration) {
+        this.journalWriter = journalWriter;
         this.configuration = configuration;
-        this.connection = configuration.connection;
         this.databaseType = configuration.databaseType;
-        this.connection.setAutoCommit(false);
-        this.queries = JDBCQueries.queriesFor(configuration.connection);
-        this.queries.createTables();
-        this.gson = new Gson();
         this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
         this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
         this.journalReaders = new HashMap<>();
         this.streamReaders = new HashMap<>();
-
-        this.dispatchablesIdentityGenerator = new IdentityGenerator.RandomIdentityGenerator();
-
-        if (dispatchers != null) {
-            this.dispatchers = dispatchers;
-            final JDBCDispatcherControlDelegate dispatcherControlDelegate =
-                    new JDBCDispatcherControlDelegate(Configuration.cloneOf(configuration), stage().world().defaultLogger());
-            this.dispatcherControl = stage().actorFor(DispatcherControl.class,
-                    Definition.has(DispatcherControlActor.class,
-                            new DispatcherControlInstantiator(
-                                    dispatchers,
-                                    dispatcherControlDelegate,
-                                    checkConfirmationExpirationInterval,
-                                    confirmationExpiration)
-                    )
-            );
-        } else {
-            this.dispatchers = null;
-            this.dispatcherControl = null;
-        }
     }
-
-//    public JDBCJournalActor(
-//            final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher,
-//            final Configuration configuration,
-//            final long checkConfirmationExpirationInterval,
-//            final long confirmationExpiration)
-//    throws Exception {
-//      this(Arrays.asList(dispatcher), configuration, checkConfirmationExpirationInterval, confirmationExpiration);
-//    }
 
     @Override
     public void stop() {
-        if (dispatcherControl != null) {
-            dispatcherControl.stop();
-        }
-
-        try {
-            queries.close();
-        } catch (SQLException e) {
-            // ignore
-        }
-
+        journalWriter.stop();
         super.stop();
     }
 
     @Override
     public <S, ST> void append(final String streamName, final int streamVersion, final Source<S> source, final Metadata metadata,
                                final AppendResultInterest interest, final Object object) {
-        final Consumer<Exception> whenFailed = (e) -> appendResultedInFailure(streamName, streamVersion, source, null, interest, object, e);
+        final Consumer<Exception> whenFailed = ex -> appendResultedInFailure(streamName, streamVersion, source, null, interest, object, ex);
         final Entry<String> entry = asEntry(source, streamVersion, metadata, whenFailed);
-        insertEntry(streamName, streamVersion, entry, whenFailed);
-        final Dispatchable<Entry<String>, TextState> dispatchable = buildDispatchable(streamName, streamVersion, Collections.singletonList(entry), null);
-        insertDispatchable(dispatchable, whenFailed);
-
-        doCommit(whenFailed);
-        dispatch(dispatchable);
-        interest.appendResultedIn(Success.of(Result.Success), streamName, streamVersion, source, Optional.empty(), object);
+        final Consumer<Outcome<StorageException, Result>> postAppendAction = outcome -> interest.appendResultedIn(outcome, streamName, streamVersion, source,
+                Optional.empty(), object);
+        journalWriter.appendEntry(streamName, streamVersion, entry, Optional.empty(), postAppendAction);
     }
 
     @Override
     public <S, ST> void appendWith(final String streamName, final int streamVersion, final Source<S> source, final Metadata metadata, final ST snapshot,
                                    final AppendResultInterest interest, final Object object) {
-        final Consumer<Exception> whenFailed = (e) -> appendResultedInFailure(streamName, streamVersion, source, snapshot, interest, object, e);
+        final Consumer<Exception> whenFailed = ex -> appendResultedInFailure(streamName, streamVersion, source, snapshot, interest, object, ex);
         final Entry<String> entry = asEntry(source, streamVersion, metadata, whenFailed);
-        insertEntry(streamName, streamVersion, entry, whenFailed);
-        final Tuple2<Optional<ST>, Optional<TextState>> snapshotState = toState(streamName, snapshot, streamVersion);
-        snapshotState._2.ifPresent(state -> insertSnapshot(streamName, streamVersion, state, whenFailed));
-
-        final Dispatchable<Entry<String>, TextState> dispatchable = buildDispatchable(streamName, streamVersion,
-                Collections.singletonList(entry), snapshotState._2.orElse(null));
-        insertDispatchable(dispatchable, whenFailed);
-
-        doCommit(whenFailed);
-
-        dispatch(dispatchable);
-        interest.appendResultedIn(Success.of(Result.Success), streamName, streamVersion, source, snapshotState._1, object);
+        final Optional<TextState> snapshotState = toState(streamName, snapshot, streamVersion);
+        final Consumer<Outcome<StorageException, Result>> postAppendAction = outcome -> interest.appendResultedIn(outcome, streamName, streamVersion, source,
+                Optional.ofNullable(snapshot), object);
+        journalWriter.appendEntry(streamName, streamVersion, entry, snapshotState, postAppendAction);
     }
 
     @Override
     public <S, ST> void appendAll(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final Metadata metadata,
                                   final AppendResultInterest interest, final Object object) {
-        final Consumer<Exception> whenFailed = (e) -> appendAllResultedInFailure(streamName, fromStreamVersion, sources, null, interest, object, e);
+        final Consumer<Exception> whenFailed = e -> appendAllResultedInFailure(streamName, fromStreamVersion, sources, null, interest, object, e);
         final List<Entry<String>> entries = asEntries(sources, fromStreamVersion, metadata, whenFailed);
-        int version = fromStreamVersion;
-        for (final Entry<String> entry : entries) {
-            insertEntry(streamName, version++, entry, whenFailed);
-        }
-        final Dispatchable<Entry<String>, TextState> dispatchable = buildDispatchable(streamName, fromStreamVersion, entries, null);
-        insertDispatchable(dispatchable, whenFailed);
-
-        doCommit(whenFailed);
-
-        dispatch(dispatchable);
-        interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, Optional.empty(), object);
+        final Consumer<Outcome<StorageException, Result>> postAppendAction = outcome -> interest.appendAllResultedIn(outcome, streamName, fromStreamVersion, sources,
+                Optional.empty(), object);
+        journalWriter.appendEntries(streamName, fromStreamVersion, entries, Optional.empty(), postAppendAction);
     }
 
     @Override
     public <S, ST> void appendAllWith(final String streamName, final int fromStreamVersion, final List<Source<S>> sources, final Metadata metadata,
                                       final ST snapshot, final AppendResultInterest interest, final Object object) {
-        final Consumer<Exception> whenFailed = (e) -> appendAllResultedInFailure(streamName, fromStreamVersion, sources, snapshot, interest, object, e);
-        final List<Entry<String>> entries = asEntries(sources,fromStreamVersion, metadata, whenFailed);
-        int version = fromStreamVersion;
-        for (final Entry<String> entry : entries) {
-            insertEntry(streamName, version++, entry, whenFailed);
-        }
-        final Tuple2<Optional<ST>, Optional<TextState>> snapshotState = toState(streamName, snapshot, fromStreamVersion);
-        snapshotState._2.ifPresent(state -> insertSnapshot(streamName, fromStreamVersion, state, whenFailed));
-
-        final Dispatchable<Entry<String>, TextState> dispatchable = buildDispatchable(streamName, fromStreamVersion, entries, snapshotState._2.orElse(null));
-        insertDispatchable(dispatchable, whenFailed);
-
-        doCommit(whenFailed);
-        dispatch(dispatchable);
-
-        interest.appendAllResultedIn(Success.of(Result.Success), streamName, fromStreamVersion, sources, snapshotState._1, object);
+        final Consumer<Exception> whenFailed = e -> appendAllResultedInFailure(streamName, fromStreamVersion, sources, snapshot, interest, object, e);
+        final List<Entry<String>> entries = asEntries(sources, fromStreamVersion, metadata, whenFailed);
+        final Optional<TextState> snapshotState = toState(streamName, snapshot, fromStreamVersion);
+        final Consumer<Outcome<StorageException, Result>> postAppendAction = outcome -> interest.appendAllResultedIn(outcome, streamName, fromStreamVersion, sources,
+                Optional.ofNullable(snapshot), object);
+        journalWriter.appendEntries(streamName, fromStreamVersion, entries, snapshotState, postAppendAction);
     }
 
     @Override
@@ -237,133 +118,16 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
         return completes().with(reader);
     }
 
-    protected final void insertEntry(final String streamName, final int streamVersion, final Entry<String> entry, final Consumer<Exception> whenFailed) {
-        try {
-            final Tuple2<PreparedStatement, Optional<String>> insertEntry =
-                    queries.prepareInsertEntryQuery(
-                            streamName,
-                            streamVersion,
-                            entry.entryData(),
-                            entry.typeName(),
-                            entry.typeVersion(),
-                            gson.toJson(entry.metadata()));
-
-            if (insertEntry._1.executeUpdate() != 1) {
-                logger().error("vlingo-symbio-jdbc:journal-" + databaseType + ": Could not insert event " + entry.toString());
-                throw new IllegalStateException("vlingo-symbio-jdbc:journal-" + databaseType + ": Could not insert event");
-            }
-
-            if (insertEntry._2.isPresent()) {
-                ((BaseEntry<String>) entry).__internal__setId(String.valueOf(insertEntry._2.get()));
-            } else {
-                final long id = queries.generatedKeyFrom(insertEntry._1);
-                if (id > 0) {
-                    ((BaseEntry<String>) entry).__internal__setId(String.valueOf(id));
-                }
-            }
-        } catch (final SQLException e) {
-            whenFailed.accept(e);
-            logger().error("vlingo-symbio-jdbc:journal-" + databaseType +": Could not insert event " + entry.toString(), e);
-            throw new IllegalStateException(e);
-        }
-    }
-
-    protected final void insertSnapshot(final String streamName, final int streamVersion, final TextState snapshotState, final Consumer<Exception> whenFailed) {
-        try {
-            final Tuple2<PreparedStatement, Optional<String>> insertSnapshot =
-                    queries.prepareInsertSnapshotQuery(
-                            streamName,
-                            streamVersion,
-                            snapshotState.data,
-                            snapshotState.dataVersion,
-                            snapshotState.type,
-                            snapshotState.typeVersion,
-                            gson.toJson(snapshotState.metadata));
-
-            if (insertSnapshot._1.executeUpdate() != 1) {
-                logger().error("vlingo-symbio-jdbc:journal-" + databaseType + ": Could not insert snapshot with id " + snapshotState.id);
-                throw new IllegalStateException("vlingo-symbio-jdbc:journal-" + databaseType + ": Could not insert snapshot");
-            }
-        } catch (final SQLException e) {
-            whenFailed.accept(e);
-            logger().error("vlingo-symbio-jdbc:journal-" + databaseType + ": Could not insert event with id " + snapshotState.id, e);
-            throw new IllegalStateException(e);
-        }
-    }
-
-    protected final void insertDispatchable(final Dispatchable<Entry<String>, TextState> dispatchable, final Consumer<Exception> whenFailed) {
-        String dbType = configuration.databaseType.toString();
-
-        try {
-            final String entries = dispatchable.hasEntries() ?
-                    dispatchable.entries().stream().map(Entry::id).collect(Collectors.joining(JDBCDispatcherControlDelegate.DISPATCHEABLE_ENTRIES_DELIMITER)) :
-                    "";
-
-            final Tuple2<PreparedStatement, Optional<String>> insertDispatchable;
-
-            final String dispatchableId = dispatchable.id();
-
-            if (dispatchable.state().isPresent()) {
-                final State<String> state = dispatchable.typedState();
-
-                insertDispatchable =
-                        queries.prepareInsertDispatchableQuery(
-                                dispatchableId,
-                                configuration.originatorId,
-                                state.id,
-                                state.data,
-                                state.dataVersion,
-                                state.type,
-                                state.typeVersion,
-                                gson.toJson(state.metadata),
-                                entries);
-            } else {
-                insertDispatchable =
-                        queries.prepareInsertDispatchableQuery(
-                                dispatchableId,
-                                configuration.originatorId,
-                                null,
-                                null,
-                                0,
-                                null,
-                                0,
-                                null,
-                                entries);
-            }
-
-            if (insertDispatchable._1.executeUpdate() != 1) {
-                logger().error("vlingo-symbio-jdbc:journal-" + dbType + ": Could not insert dispatchable with id " + dispatchable.id());
-                throw new IllegalStateException("vlingo-symbio-jdbc:journal-" + dbType + ": Could not insert snapshot");
-            }
-        } catch (final SQLException e) {
-            whenFailed.accept(e);
-            logger().error("vlingo-symbio-jdbc:journal-" + dbType + ": Could not insert dispatchable with id " + dispatchable.id(), e);
-            throw new IllegalStateException(e);
-        }
-    }
-
     private <S, ST> void appendResultedInFailure(final String streamName, final int streamVersion, final Source<S> source, final ST snapshot,
-                                                 final AppendResultInterest interest, final Object object, final Exception e) {
-
-        interest.appendResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, streamVersion, source,
-                snapshot == null ? Optional.empty() : Optional.of(snapshot), object);
+                                                 final AppendResultInterest interest, final Object object, final Exception ex) {
+        interest.appendResultedIn(Failure.of(new StorageException(Result.Failure, ex.getMessage(), ex)), streamName, streamVersion, source,
+                Optional.ofNullable(snapshot), object);
     }
 
     private <S, ST> void appendAllResultedInFailure(final String streamName, final int streamVersion, final List<Source<S>> sources, final ST snapshot,
                                                     final AppendResultInterest interest, final Object object, final Exception e) {
-
         interest.appendAllResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), streamName, streamVersion, sources,
                 snapshot == null ? Optional.empty() : Optional.of(snapshot), object);
-    }
-
-    private void doCommit(final Consumer<Exception> whenFailed) {
-        try {
-            connection.commit();
-        } catch (final SQLException e) {
-            whenFailed.accept(e);
-            logger().error("vlingo-symbio-jdbc:journal-" + databaseType + ": Could not complete transaction", e);
-            throw new IllegalStateException(e);
-        }
     }
 
     private <S> List<Entry<String>> asEntries(final List<Source<S>> sources, final int fromStreamVersion, final Metadata metadata, final Consumer<Exception> whenFailed) {
@@ -385,66 +149,9 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
         }
     }
 
-    private <ST> Tuple2<Optional<ST>, Optional<TextState>> toState(final String streamName, final ST snapshot, final int streamVersion) {
-        if (snapshot != null) {
-            return Tuple2.from(Optional.of(snapshot), Optional.of(stateAdapterProvider.asRaw(streamName, snapshot, streamVersion)));
-        } else {
-            return Tuple2.from(Optional.empty(), Optional.empty());
-        }
-    }
-
-    private void dispatch(final Dispatchable<Entry<String>, TextState> dispatchable) {
-        if (dispatchers != null) {
-            //dispatch only if insert successful
-            this.dispatchers.forEach(d -> d.dispatch(dispatchable));
-        }
-    }
-
-    private Dispatchable<Entry<String>, TextState> buildDispatchable(final String streamName, final int streamVersion, final List<Entry<String>> entries,
-                                                                     final TextState snapshot) {
-        final String id = getDispatchId(streamName, streamVersion);
-        return new Dispatchable<>(id, LocalDateTime.now(), snapshot, entries);
-    }
-
-    private String getDispatchId(final String streamName, final int streamVersion) {
-        return streamName + ":" + streamVersion + ":" + dispatchablesIdentityGenerator.generate().toString();
-    }
-
-    public static class JDBCJournalActorInstantiator implements ActorInstantiator<JDBCJournalActor> {
-      private static final long serialVersionUID = 1L;
-
-      private final List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers;
-      private final Configuration configuration;
-      private final long checkConfirmationExpirationInterval;
-      private final long confirmationExpiration;
-
-      public JDBCJournalActorInstantiator(
-              final List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers,
-              final Configuration configuration,
-              final long checkConfirmationExpirationInterval,
-              final long confirmationExpiration) {
-
-        this.dispatchers = dispatchers;
-        this.configuration = configuration;
-        this.checkConfirmationExpirationInterval = checkConfirmationExpirationInterval;
-        this.confirmationExpiration = confirmationExpiration;
-      }
-
-      public JDBCJournalActorInstantiator(final Dispatcher<Dispatchable<Entry<String>, TextState>> dispatcher, final Configuration configuration) {
-        this(Arrays.asList(dispatcher), configuration, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
-      }
-
-      public JDBCJournalActorInstantiator(final Configuration configuration) throws Exception {
-        this((List<Dispatcher<Dispatchable<Entry<String>, TextState>>>) null, configuration, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
-      }
-
-      @Override
-      public JDBCJournalActor instantiate() {
-        try {
-          return new JDBCJournalActor(dispatchers, configuration, checkConfirmationExpirationInterval, confirmationExpiration);
-        } catch (Exception e) {
-          throw new IllegalStateException("Could not instantiate JDBCJournalActor because: " + e.getMessage(), e);
-        }
-      }
+    private <ST> Optional<TextState> toState(final String streamName, final ST snapshot, final int streamVersion) {
+        return snapshot == null
+                ? Optional.empty()
+                : Optional.of(stateAdapterProvider.asRaw(streamName, snapshot, streamVersion));
     }
 }

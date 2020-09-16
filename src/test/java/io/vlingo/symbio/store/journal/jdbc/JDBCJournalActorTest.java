@@ -10,14 +10,16 @@ package io.vlingo.symbio.store.journal.jdbc;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.*;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+import io.vlingo.actors.Definition;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
+import io.vlingo.symbio.store.state.StateStore;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -53,14 +55,27 @@ public abstract class JDBCJournalActorTest extends BasePostgresJournalTest {
     private JournalReader<TextEntry> journalReader;
     private StreamReader<String> streamReader;
 
+    private ConsumerSink<EntryBundle> sink;
+    private AtomicInteger totalSources = new AtomicInteger(0);
+
     @Before
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public void setUp() throws Exception {
         interest = new MockAppendResultInterest();
 
         dispatcher = new MockDispatcher<>();
+        final JDBCDispatcherControlDelegate dispatcherControlDelegate =
+                new JDBCDispatcherControlDelegate(Configuration.cloneOf(configuration), world.defaultLogger());
+        DispatcherControl dispatcherControl = world.stage().actorFor(DispatcherControl.class,
+                Definition.has(DispatcherControlActor.class,
+                        new DispatcherControl.DispatcherControlInstantiator(
+                                Collections.singletonList(typed(dispatcher)),
+                                dispatcherControlDelegate,
+                                StateStore.DefaultCheckConfirmationExpirationInterval,
+                                StateStore.DefaultConfirmationExpiration)));
 
-        journal =  world.stage().actorFor(Journal.class, JDBCJournalActor.class, dispatcher, configuration);
+        JDBCJournalWriter journalWriter = new JDBCJournalInstantWriter(configuration, Collections.singletonList(typed(dispatcher)), dispatcherControl);
+        journal =  world.stage().actorFor(Journal.class, JDBCJournalActor.class, journalWriter, configuration);
         EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
         StateAdapterProvider.instance(world).registerAdapter(Entity1.class, entity1Adapter);
 
@@ -231,79 +246,82 @@ public abstract class JDBCJournalActorTest extends BasePostgresJournalTest {
         }
     }
 
-    private ConsumerSink<EntryBundle> sink;
-
-    private AtomicInteger totalSources = new AtomicInteger(0);
-
     @Test
     public void testThatJournalReaderStreams() {
-      final int limit = 200;
+        final int limit = 200;
 
-      for (int count = 0; count < limit; ++count) {
-        journal.append("123-" + count, 1, new TestEvent("123-" + count, count), interest, object);
-      }
+        for (int count = 0; count < limit; ++count) {
+            journal.append("123-" + count, 1, new TestEvent("123-" + count, count), interest, object);
+        }
 
-      final AccessSafely access = AccessSafely.afterCompleting(limit);
+        final AccessSafely access = AccessSafely.afterCompleting(limit);
 
-      access.writingWith("sourcesCounter", (state) -> { totalSources.incrementAndGet(); });
-      access.readingWith("sourcesCount", () -> totalSources.get());
+        access.writingWith("sourcesCounter", (state) -> {
+            totalSources.incrementAndGet();
+        });
+        access.readingWith("sourcesCount", () -> totalSources.get());
 
-      final Stream all = journal.journalReader("test").andThenTo(reader -> reader.streamAll()).await();
+        final Stream all = journal.journalReader("test").andThenTo(reader -> reader.streamAll()).await();
 
-      final Consumer<EntryBundle> bundles = (bundle) -> access.writeUsing("sourcesCounter", 1);
+        final Consumer<EntryBundle> bundles = (bundle) -> access.writeUsing("sourcesCounter", 1);
 
-      sink = new ConsumerSink<>(bundles);
+        sink = new ConsumerSink<>(bundles);
 
-      all.flowInto(sink, 50);
+        all.flowInto(sink, 50);
 
-      final int sourcesCount = access.readFromExpecting("sourcesCount", limit);
+        final int sourcesCount = access.readFromExpecting("sourcesCount", limit);
 
-      Assert.assertEquals(limit, totalSources.get());
-      Assert.assertEquals(totalSources.get(), sourcesCount);
+        Assert.assertEquals(limit, totalSources.get());
+        Assert.assertEquals(totalSources.get(), sourcesCount);
     }
 
     private TestEvent newEventForData(int number) {
-          final TestEvent event = new TestEvent(String.valueOf(number), number);
-          return event;
-      }
+        final TestEvent event = new TestEvent(String.valueOf(number), number);
+        return event;
+    }
 
-      public static final class Entity1 {
+    public static final class Entity1 {
         public final String id;
         public final int number;
 
         public Entity1(final String id, final int number) {
-          this.id = id;
-          this.number = number;
+            this.id = id;
+            this.number = number;
         }
-      }
+    }
 
-      public static final class Entity1Adapter implements StateAdapter<Entity1,TextState> {
+    public static final class Entity1Adapter implements StateAdapter<Entity1, TextState> {
 
         @Override
         public int typeVersion() {
-          return 1;
+            return 1;
         }
 
         @Override
         public Entity1 fromRawState(TextState raw) {
-          return JsonSerialization.deserialized(raw.data, raw.typed());
+            return JsonSerialization.deserialized(raw.data, raw.typed());
         }
 
         @Override
         public <ST> ST fromRawState(final TextState raw, final Class<ST> stateType) {
-          return JsonSerialization.deserialized(raw.data, stateType);
+            return JsonSerialization.deserialized(raw.data, stateType);
         }
 
         @Override
         public TextState toRawState(Entity1 state, int stateVersion, Metadata metadata) {
-          final String serialization = JsonSerialization.serialized(state);
-          return new TextState(state.id, Entity1.class, typeVersion(), serialization, stateVersion, metadata);
+            final String serialization = JsonSerialization.serialized(state);
+            return new TextState(state.id, Entity1.class, typeVersion(), serialization, stateVersion, metadata);
         }
 
         @Override
         public TextState toRawState(final String id, final Entity1 state, final int stateVersion, final Metadata metadata) {
-          final String serialization = JsonSerialization.serialized(state);
-          return new TextState(id, Entity1.class, typeVersion(), serialization, stateVersion, metadata);
+            final String serialization = JsonSerialization.serialized(state);
+            return new TextState(id, Entity1.class, typeVersion(), serialization, stateVersion, metadata);
         }
-      }
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private Dispatcher<Dispatchable<Entry<String>, TextState>> typed(Dispatcher dispatcher) {
+        return dispatcher;
+    }
   }
