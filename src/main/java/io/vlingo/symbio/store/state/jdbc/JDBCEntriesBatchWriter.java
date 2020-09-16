@@ -147,7 +147,7 @@ public class JDBCEntriesBatchWriter implements JDBCEntriesWriter {
 		}
 
 		boolean capacityExceeded() {
-			return entries.size() > maxCapacity;
+			return entries.size() >= maxCapacity;
 		}
 
 		List<Dispatchable<Entry<?>, State<String>>> collectDispatchables() {
