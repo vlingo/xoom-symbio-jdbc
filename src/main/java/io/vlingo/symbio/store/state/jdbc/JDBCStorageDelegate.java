@@ -80,6 +80,12 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     return (A) cachedStatement.preparedStatement;
   }
 
+  public <A> A appendExpressionFor(final List<Entry<?>> entries) throws Exception {
+    final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendBatchEntriesStatement();
+    prepareForBatchAppend(cachedStatement, entries);
+    return (A) cachedStatement.preparedStatement;
+  }
+
   @SuppressWarnings("unchecked")
   public <A> A appendIdentityExpression() {
     final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendEntryIdentityStatement();
@@ -175,7 +181,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   }
 
   @SuppressWarnings("unchecked")
-  public <W, S> W dispatchableWriteExpressionFor(final Dispatchable<Entry<?>, State<S>> dispatchable) throws Exception{
+  public <W, S> W dispatchableWriteExpressionFor(final Dispatchable<Entry<?>, State<S>> dispatchable) throws Exception {
     final PreparedStatement preparedStatement = dispatchableCachedStatements.appendDispatchableStatement().preparedStatement;
 
     final State<S> state = dispatchable.typedState();
@@ -198,7 +204,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     final Tuple2<String, String> metadataObject = serialized(state.metadata.object);
     preparedStatement.setString(11, metadataObject._1);
     preparedStatement.setString(12, metadataObject._2);
-    if (dispatchable.entries() !=null && !dispatchable.entries().isEmpty()){
+    if (dispatchable.entries() !=null && !dispatchable.entries().isEmpty()) {
       preparedStatement.setString(13,
               dispatchable.entries()
                       .stream()
@@ -209,6 +215,16 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
        preparedStatement.setString(13, "");
     }
     return (W) preparedStatement;
+  }
+
+  public PreparedStatement dispatchableWriteExpressionFor(final List<Dispatchable<Entry<?>, State<String>>> dispatchables) throws Exception {
+    final PreparedStatement preparedStatement = dispatchableCachedStatements.appendDispatchableStatement().preparedStatement;
+    for (Dispatchable<Entry<?>, State<String>> dispatchable : dispatchables) {
+      dispatchableWriteExpressionFor(dispatchable);
+      preparedStatement.addBatch();
+    }
+
+    return preparedStatement;
   }
 
   @SuppressWarnings({ "unchecked" })
@@ -387,6 +403,21 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     return (W) maybeCached.preparedStatement;
   }
 
+  public <W> W writeExpressionFor(final String storeName, final List<? extends State<?>> states) throws Exception {
+    CachedStatement<T> maybeCached = writeStatements.get(storeName);
+
+    if (maybeCached == null) {
+      final String upsert = writeExpression(storeName);
+      final PreparedStatement preparedStatement = connection.prepareStatement(upsert);
+      maybeCached = new CachedStatement<>(preparedStatement, binaryDataTypeObject());
+      writeStatements.put(storeName, maybeCached);
+    }
+
+    prepareForBatchWrite(maybeCached, states);
+
+    return (W) maybeCached.preparedStatement;
+  }
+
   protected abstract byte[] binaryDataFrom(final ResultSet resultSet, final int columnIndex) throws Exception;
   protected abstract <D> D binaryDataTypeObject() throws Exception;
   protected abstract JDBCDispatchableCachedStatements<T> dispatchableCachedStatements();
@@ -534,6 +565,15 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     cached.preparedStatement.setInt(6, entry.entryVersion());
   }
 
+  private void prepareForBatchAppend(final CachedStatement<T> cached, final List<Entry<?>> entries) throws Exception {
+    for (Entry<?> entry : entries) {
+      prepareForAppend(cached, entry);
+      cached.preparedStatement.addBatch();
+    }
+
+    cached.preparedStatement.clearParameters();
+  }
+
   private <S> void prepareForWrite(final CachedStatement<T> cached, final State<S> state) throws Exception {
     cached.preparedStatement.clearParameters();
 
@@ -550,6 +590,13 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     cached.preparedStatement.setString(7, state.metadata.operation);
   }
 
+  private void prepareForBatchWrite(final CachedStatement<T> cached, final List<? extends State<?>> states) throws Exception {
+    for (State<?> state : states) {
+      prepareForWrite(cached, state);
+      cached.preparedStatement.addBatch();
+    }
+  }
+
   private Tuple2<String, String> serialized(final Object object) {
     if (object != null) {
       return Tuple2.from(JsonSerialization.serialized(object), object.getClass().getName());
@@ -563,5 +610,4 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
       return resultSet.next();
     }
   }
-
 }
