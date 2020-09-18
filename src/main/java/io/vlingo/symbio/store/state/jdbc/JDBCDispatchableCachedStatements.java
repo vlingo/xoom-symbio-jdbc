@@ -9,6 +9,7 @@ package io.vlingo.symbio.store.state.jdbc;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.Statement;
 
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.store.DataFormat;
@@ -18,6 +19,7 @@ public abstract class JDBCDispatchableCachedStatements<T> {
   private final CachedStatement<T> appendDispatchable;
   private final CachedStatement<T> queryEntry;
   private final CachedStatement<T> appendEntry;
+  private final CachedStatement<T> appendBatchEntries;
   private final CachedStatement<T> appendEntryIdentity;
   private final CachedStatement<T> deleteDispatchable;
   private final CachedStatement<T> queryAllDispatchables;
@@ -28,12 +30,13 @@ public abstract class JDBCDispatchableCachedStatements<T> {
           final DataFormat format,
           final T appendDataObject,
           final Logger logger) {
-    this.queryEntry = createStatement(queryEntryExpression(), appendDataObject, connection, logger);
-    this.appendEntry = createStatement(appendEntryExpression(), appendDataObject, connection, logger);
-    this.appendEntryIdentity = createStatement(appendEntryIdentityExpression(), null, connection, logger);
-    this.appendDispatchable = createStatement(appendDispatchableExpression(), appendDataObject, connection, logger);
-    this.deleteDispatchable = createStatement(deleteDispatchableExpression(), null, connection, logger);
-    this.queryAllDispatchables = prepareQuery(createStatement(selectDispatchableExpression(), null, connection, logger), originatorId, logger);
+    this.queryEntry = createStatement(queryEntryExpression(), appendDataObject, connection, false, logger);
+    this.appendEntry = createStatement(appendEntryExpression(), appendDataObject, connection, false, logger);
+    this.appendBatchEntries = createStatement(appendEntryExpression(), appendDataObject, connection, true, logger);
+    this.appendEntryIdentity = createStatement(appendEntryIdentityExpression(), null, connection, false, logger);
+    this.appendDispatchable = createStatement(appendDispatchableExpression(), appendDataObject, connection, false, logger);
+    this.deleteDispatchable = createStatement(deleteDispatchableExpression(), null, connection, false, logger);
+    this.queryAllDispatchables = prepareQuery(createStatement(selectDispatchableExpression(), null, connection, false, logger), originatorId, logger);
   }
 
   public final CachedStatement<T> appendDispatchableStatement() {
@@ -42,6 +45,10 @@ public abstract class JDBCDispatchableCachedStatements<T> {
 
   public final CachedStatement<T> appendEntryStatement() {
     return appendEntry;
+  }
+
+  public final CachedStatement<T> appendBatchEntriesStatement() {
+    return appendBatchEntries;
   }
 
   public final CachedStatement<T> appendEntryIdentityStatement() {
@@ -72,10 +79,13 @@ public abstract class JDBCDispatchableCachedStatements<T> {
           final String sql,
           final T data,
           final Connection connection,
+          boolean batchInsert,
           final Logger logger) {
 
     try {
-      final PreparedStatement preparedStatement = connection.prepareStatement(sql);
+      final PreparedStatement preparedStatement = batchInsert
+              ? connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS) // if batch insert return generated key
+              : connection.prepareStatement(sql);
       return new CachedStatement<T>(preparedStatement, data);
     } catch (Exception e) {
       final String message =

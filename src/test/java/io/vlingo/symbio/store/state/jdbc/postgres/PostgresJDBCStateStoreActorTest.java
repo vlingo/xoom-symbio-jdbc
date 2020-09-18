@@ -7,16 +7,25 @@
 
 package io.vlingo.symbio.store.state.jdbc.postgres;
 
+import io.vlingo.actors.World;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
 import io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider;
+import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
-import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
+import io.vlingo.symbio.store.state.jdbc.*;
+
+import java.util.List;
 
 public class PostgresJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
 
     @Override
-    protected StorageDelegate delegate() throws Exception {
+    protected JDBCStorageDelegate<Object> delegate() throws Exception {
         System.out.println("Starting: PostgresJDBCTextStateStoreActorTest: delegate()");
         return new PostgresStorageDelegate(configuration, world.defaultLogger());
     }
@@ -35,5 +44,14 @@ public class PostgresJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
     @Override
     protected String someOfTypeStreamsWithParameters(final Class<?> type) {
       return "select * from " + tableName(type) + " where cast(s_id as integer) >= ? and cast(s_id as integer) <= ?";
+    }
+
+    @Override
+    protected StateStore stateStoreFrom(World world,
+                                        JDBCStorageDelegate<State.TextState> delegate,
+                                        List<Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>>> dispatchers,
+                                        DispatcherControl dispatcherControl) {
+        JDBCEntriesWriter entriesWriter = new JDBCEntriesInstantWriter(delegate, dispatchers, dispatcherControl);
+        return world.actorFor(StateStore.class, JDBCStateStoreActor.class, delegate, entriesWriter);
     }
 }
