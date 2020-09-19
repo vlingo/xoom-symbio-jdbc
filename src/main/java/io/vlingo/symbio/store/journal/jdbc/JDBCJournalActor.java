@@ -13,6 +13,7 @@ import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Outcome;
+import io.vlingo.common.Scheduled;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.*;
 import io.vlingo.symbio.State.TextState;
@@ -29,7 +30,7 @@ import io.vlingo.symbio.store.journal.jdbc.JDBCStreamReaderActor.JDBCStreamReade
 import java.util.*;
 import java.util.function.Consumer;
 
-public class JDBCJournalActor extends Actor implements Journal<String> {
+public class JDBCJournalActor extends Actor implements Journal<String>, Scheduled<Object> {
     private final JDBCJournalWriter journalWriter;
     private final EntryAdapterProvider entryAdapterProvider;
     private final StateAdapterProvider stateAdapterProvider;
@@ -38,7 +39,7 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
     private final Map<String, JournalReader<TextEntry>> journalReaders;
     private final Map<String, StreamReader<String>> streamReaders;
 
-    public JDBCJournalActor(final JDBCJournalWriter journalWriter, final Configuration configuration) {
+    private JDBCJournalActor(final Configuration configuration, final JDBCJournalWriter journalWriter, Object object) throws Exception {
         this.journalWriter = journalWriter;
         this.configuration = configuration;
         this.databaseType = configuration.databaseType;
@@ -46,6 +47,20 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
         this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
         this.journalReaders = new HashMap<>();
         this.streamReaders = new HashMap<>();
+
+        configuration.connection.setAutoCommit(false);
+        JDBCQueries queries = JDBCQueries.queriesFor(configuration.connection);
+        queries.createTables();
+    }
+
+    public JDBCJournalActor(final Configuration configuration, final JDBCJournalInstantWriter journalWriter) throws Exception {
+        this(configuration, journalWriter, null);
+    }
+
+    public JDBCJournalActor(final Configuration configuration, final JDBCJournalBatchWriter journalWriter, int timeBetweenFlushWrites) throws Exception {
+        this(configuration, journalWriter, null);
+
+        stage().scheduler().schedule(selfAs(Scheduled.class), null, 5, timeBetweenFlushWrites);
     }
 
     @Override
@@ -94,6 +109,11 @@ public class JDBCJournalActor extends Actor implements Journal<String> {
         final Consumer<Outcome<StorageException, Result>> postAppendAction = outcome -> interest.appendAllResultedIn(outcome, streamName, fromStreamVersion, sources,
                 Optional.ofNullable(snapshot), object);
         journalWriter.appendEntries(streamName, fromStreamVersion, entries, snapshotState, postAppendAction);
+    }
+
+    @Override
+    public void intervalSignal(Scheduled<Object> scheduled, Object o) {
+        journalWriter.flush();
     }
 
     @Override

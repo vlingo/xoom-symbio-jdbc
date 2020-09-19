@@ -34,7 +34,8 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
   private final StateAdapterProvider stateAdapterProvider;
   private final ReadAllResultCollector readAllResultCollector;
 
-  public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesInstantWriter entriesWriter) {
+  private JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesWriter entriesWriter, Object object) {
+    // object parameter is necessary to differentiate between constructors
     this.delegate = delegate;
     this.entriesWriter = entriesWriter;
     this.entriesWriter.setLogger(logger());
@@ -45,26 +46,25 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
     this.readAllResultCollector = new ReadAllResultCollector();
   }
 
-  public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesBatchWriter entriesWriter, int timeBetweenFlushWrites) {
-    this.delegate = delegate;
-    this.entriesWriter = entriesWriter;
-    this.entriesWriter.setLogger(logger());
-    this.entryReaders = new HashMap<>();
+  public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesInstantWriter entriesWriter) {
+    this(delegate, entriesWriter, null);
+  }
 
-    this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
-    this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
-    this.readAllResultCollector = new ReadAllResultCollector();
+  public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesBatchWriter entriesWriter, int timeBetweenFlushWrites) {
+    this(delegate, entriesWriter, null);
 
     stage().scheduler().schedule(selfAs(Scheduled.class), null, 5, timeBetweenFlushWrites);
   }
 
   @Override
   public void stop() {
+    entriesWriter.stop();
+
     for (final StateStoreEntryReader<?> reader : entryReaders.values()) {
       reader.close();
     }
+
     delegate.close();
-    entriesWriter.stop();
     super.stop();
   }
 

@@ -61,9 +61,9 @@ public class JDBCEntriesBatchWriter implements JDBCEntriesWriter {
 
 	@Override
 	public void flush() {
-		appendBatchedEntries();
-
 		if (batchEntries.size() > 0) {
+			appendBatchedEntries();
+
 			try {
 				delegate.beginWrite();
 
@@ -92,9 +92,14 @@ public class JDBCEntriesBatchWriter implements JDBCEntriesWriter {
 
 	@Override
 	public void stop() {
+		// flush batched entries if any
+		flush();
+
 		if (dispatcherControl != null) {
 			dispatcherControl.stop();
 		}
+
+		// delegate is closed in JDBCStateStoreActor
 	}
 
 	@Override
@@ -171,9 +176,9 @@ public class JDBCEntriesBatchWriter implements JDBCEntriesWriter {
 							Collectors.mapping(batch -> batch.rawState, Collectors.toList())));
 		}
 
-		void completedWith(Outcome<StorageException, Result> of) {
+		void completedWith(Outcome<StorageException, Result> outcome) {
 			entries.stream()
-					.forEach(batch -> batch.postAppendAction.accept(of));
+					.forEach(batch -> batch.postAppendAction.accept(outcome));
 		}
 
 		void clear() {

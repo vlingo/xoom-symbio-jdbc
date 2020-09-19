@@ -58,7 +58,6 @@ public class JDBCJournalInstantWriter implements JDBCJournalWriter {
 
 		this.connection.setAutoCommit(false);
 		this.queries = JDBCQueries.queriesFor(configuration.connection);
-		this.queries.createTables();
 	}
 
 	@Override
@@ -87,6 +86,11 @@ public class JDBCJournalInstantWriter implements JDBCJournalWriter {
 		doCommit(postAppendAction);
 		dispatch(dispatchable);
 		postAppendAction.accept(Success.of(Result.Success));
+	}
+
+	@Override
+	public void flush() {
+		// No flush; this is an instant writer
 	}
 
 	@Override
@@ -229,7 +233,7 @@ public class JDBCJournalInstantWriter implements JDBCJournalWriter {
 			}
 
 			if (insertEntry._2.isPresent()) {
-				((BaseEntry<String>) entry).__internal__setId(String.valueOf(insertEntry._2.get()));
+				((BaseEntry<String>) entry).__internal__setId(insertEntry._2.get());
 			} else {
 				final long id = queries.generatedKeyFrom(insertEntry._1);
 				if (id > 0) {

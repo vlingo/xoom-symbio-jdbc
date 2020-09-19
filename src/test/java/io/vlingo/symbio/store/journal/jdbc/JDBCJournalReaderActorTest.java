@@ -27,7 +27,7 @@ import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalReaderActor.JDBCJournalReaderInstantiator;
 
-public abstract class JDBCJournalReaderActorTest extends BasePostgresJournalTest {
+public abstract class JDBCJournalReaderActorTest extends BaseJournalTest {
     private String readerName;
 
     @Before

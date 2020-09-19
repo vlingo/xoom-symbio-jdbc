@@ -15,7 +15,7 @@ import io.vlingo.symbio.store.journal.EntityStream;
 import io.vlingo.symbio.store.journal.StreamReader;
 import io.vlingo.symbio.store.journal.jdbc.JDBCStreamReaderActor.JDBCStreamReaderInstantiator;
 
-public abstract class JDBCStreamReaderActorTest extends BasePostgresJournalTest {
+public abstract class JDBCStreamReaderActorTest extends BaseJournalTest {
     private StreamReader<String> eventStreamReader;
 
     @Before

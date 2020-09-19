@@ -25,6 +25,8 @@ public interface JDBCJournalWriter {
 	void appendEntries(final String streamName, final int fromStreamVersion, final List<Entry<String>> entries, Optional<TextState> snapshotState,
 						  Consumer<Outcome<StorageException, Result>> postAppendAction);
 
+	void flush();
+
 	void stop();
 
 	void setLogger(Logger logger);

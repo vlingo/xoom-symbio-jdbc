@@ -15,6 +15,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import io.vlingo.actors.Definition;
+import io.vlingo.actors.World;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
@@ -46,7 +47,7 @@ import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.StreamReader;
 
-public abstract class JDBCJournalActorTest extends BasePostgresJournalTest {
+public abstract class JDBCJournalActorTest extends BaseJournalTest {
     private Entity1Adapter entity1Adapter = new Entity1Adapter();
     private Object object = new Object();
     private MockAppendResultInterest interest;
@@ -74,8 +75,7 @@ public abstract class JDBCJournalActorTest extends BasePostgresJournalTest {
                                 StateStore.DefaultCheckConfirmationExpirationInterval,
                                 StateStore.DefaultConfirmationExpiration)));
 
-        JDBCJournalWriter journalWriter = new JDBCJournalInstantWriter(configuration, Collections.singletonList(typed(dispatcher)), dispatcherControl);
-        journal =  world.stage().actorFor(Journal.class, JDBCJournalActor.class, journalWriter, configuration);
+        journal = journalFrom(world, configuration, Collections.singletonList(typed(dispatcher)), dispatcherControl);
         EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
         StateAdapterProvider.instance(world).registerAdapter(Entity1.class, entity1Adapter);
 
@@ -274,6 +274,11 @@ public abstract class JDBCJournalActorTest extends BasePostgresJournalTest {
         Assert.assertEquals(limit, totalSources.get());
         Assert.assertEquals(totalSources.get(), sourcesCount);
     }
+
+    protected abstract Journal<String> journalFrom(World world,
+                                                   Configuration configuration,
+                                                   List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers,
+                                                   DispatcherControl dispatcherControl) throws Exception;
 
     private TestEvent newEventForData(int number) {
         final TestEvent event = new TestEvent(String.valueOf(number), number);
