@@ -128,6 +128,25 @@ public abstract class JDBCJournalActorTest extends BaseJournalTest {
     }
 
     @Test
+    public void testThatInsertsABigListOfEvents() {
+        final int size = 250;
+        AccessSafely accessDispatcher = dispatcher.afterCompleting(size);
+
+        for (int  i = 1; i <= size; i++) {
+            TestEvent appendEvent = newEventForData(i);
+            journal.append(streamName, i, appendEvent, interest, object);
+        }
+
+        assertEquals(size, ((Map) accessDispatcher.readFrom("dispatched")).size());
+
+        final Map<String, Dispatchable<Entry<String>, TextState>> dispatched = dispatcher.getDispatched();
+        assertEquals(size, dispatched.size());
+
+        List<TextEntry> eventStream = journalReader.readNext(size).await();
+        assertEquals(size, eventStream.size());
+    }
+
+    @Test
     public void testThatInsertsANewEventWithASnapshot() {
         dispatcher.afterCompleting(3);
 
