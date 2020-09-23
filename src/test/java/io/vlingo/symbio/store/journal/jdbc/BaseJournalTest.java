@@ -30,7 +30,7 @@ import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 
-public abstract class BasePostgresJournalTest {
+public abstract class BaseJournalTest {
     protected Configuration configuration;
     protected World world;
     protected String aggregateRootId;
