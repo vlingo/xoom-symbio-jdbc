@@ -8,6 +8,7 @@
 package io.vlingo.symbio.store.journal.jdbc;
 
 import io.vlingo.actors.Actor;
+import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Address;
 import io.vlingo.actors.Definition;
 import io.vlingo.common.Completes;
@@ -173,5 +174,44 @@ public class JDBCJournalActor extends Actor implements Journal<String>, Schedule
         return snapshot == null
                 ? Optional.empty()
                 : Optional.of(stateAdapterProvider.asRaw(streamName, snapshot, streamVersion));
+    }
+
+    public static class JDBCJournalActorInstantiator implements ActorInstantiator<JDBCJournalActor> {
+        private static final long serialVersionUID = 2184177499416088762L;
+
+        private final Configuration configuration;
+        private final JDBCJournalWriter journalWriter;
+        private final Optional<Integer> timeBetweenFlushWrites;
+
+        public JDBCJournalActorInstantiator(final Configuration configuration, final JDBCJournalInstantWriter journalWriter) {
+            this.configuration = configuration;
+            this.journalWriter = journalWriter;
+            this.timeBetweenFlushWrites = Optional.empty();
+        }
+
+        public JDBCJournalActorInstantiator(final Configuration configuration, final JDBCJournalBatchWriter journalWriter, int timeBetweenFlushWrites) {
+            this.configuration = configuration;
+            this.journalWriter = journalWriter;
+            this.timeBetweenFlushWrites = Optional.of(timeBetweenFlushWrites);
+        }
+
+        @Override
+        public JDBCJournalActor instantiate() {
+            JDBCJournalActor instance;
+            try {
+                if (timeBetweenFlushWrites.isPresent()) {
+                    int time = timeBetweenFlushWrites.get();
+                    instance = new JDBCJournalActor(configuration, (JDBCJournalBatchWriter) journalWriter, time);
+                } else {
+                    instance = new JDBCJournalActor(configuration, (JDBCJournalInstantWriter) journalWriter);
+                }
+            } catch (Exception e) {
+                throw new IllegalStateException("Could not instantiate JDBCJournalActor because: " + e.getMessage(), e);
+            }
+
+            journalWriter.setLogger(instance.logger());
+
+            return instance;
+        }
     }
 }

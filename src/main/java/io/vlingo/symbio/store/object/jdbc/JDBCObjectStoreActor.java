@@ -67,10 +67,6 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
      this(delegate, dispatchers, DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
   }
 
-//  public JDBCObjectStoreActor(final JDBCObjectStoreDelegate delegate, final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher) {
-//     this(delegate, Arrays.asList(dispatcher), DefaultCheckConfirmationExpirationInterval, DefaultConfirmationExpiration);
-//  }
-
   @SuppressWarnings({ "unchecked", "rawtypes" })
   public JDBCObjectStoreActor(
           final JDBCObjectStoreDelegate delegate,
@@ -99,15 +95,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
                             confirmationExpiration)));
   }
 
-//  public JDBCObjectStoreActor(
-//          final JDBCObjectStoreDelegate delegate,
-//          final Dispatcher<Dispatchable<Entry<?>, State<?>>> dispatcher,
-//          final long checkConfirmationExpirationInterval,
-//          final long confirmationExpiration) {
-//    this(delegate, Arrays.asList(dispatcher), checkConfirmationExpirationInterval, confirmationExpiration);
-//  }
-
-  /*
+  /**
    * @see io.vlingo.symbio.store.object.ObjectStore#close()
    */
   @Override
