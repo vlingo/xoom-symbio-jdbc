@@ -239,4 +239,39 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
       throw new IllegalStateException(message, e);
     }
   }
+
+  public static class JDBCStateStoreInstantiator implements ActorInstantiator<JDBCStateStoreActor> {
+    private static final long serialVersionUID = 3336641838159321738L;
+
+    private final JDBCStorageDelegate<TextState> delegate;
+    private final JDBCEntriesWriter entriesWriter;
+    private Optional<Integer> timeBetweenFlushWrites;
+
+    public JDBCStateStoreInstantiator(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesInstantWriter entriesWriter) {
+      this.delegate = delegate;
+      this.entriesWriter = entriesWriter;
+      this.timeBetweenFlushWrites = Optional.empty();
+    }
+
+    public JDBCStateStoreInstantiator(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesBatchWriter entriesWriter, int timeBetweenFlushWrites) {
+      this.delegate = delegate;
+      this.entriesWriter = entriesWriter;
+      this.timeBetweenFlushWrites = Optional.of(timeBetweenFlushWrites);
+    }
+
+    @Override
+    public JDBCStateStoreActor instantiate() {
+      JDBCStateStoreActor instance;
+      if (timeBetweenFlushWrites.isPresent()) {
+        int time = timeBetweenFlushWrites.get();
+        instance = new JDBCStateStoreActor(delegate, (JDBCEntriesBatchWriter) entriesWriter, time);
+      } else {
+        instance = new JDBCStateStoreActor(delegate, (JDBCEntriesInstantWriter) entriesWriter);
+      }
+
+      entriesWriter.setLogger(instance.logger());
+
+      return instance;
+    }
+  }
 }
