@@ -7,13 +7,30 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Definition;
-import io.vlingo.common.*;
+import io.vlingo.common.Completes;
+import io.vlingo.common.Failure;
+import io.vlingo.common.Outcome;
+import io.vlingo.common.Scheduled;
+import io.vlingo.common.Success;
 import io.vlingo.reactivestreams.Stream;
-import io.vlingo.symbio.*;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State.TextState;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.EntryReader;
 import io.vlingo.symbio.store.QueryExpression;
 import io.vlingo.symbio.store.Result;
@@ -21,10 +38,6 @@ import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStoreEntryReader;
 import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
-
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.*;
 
 public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<Object> {
   private final JDBCStorageDelegate<TextState> delegate;
@@ -50,6 +63,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
     this(delegate, entriesWriter, null);
   }
 
+  @SuppressWarnings("unchecked")
   public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesBatchWriter entriesWriter, int timeBetweenFlushWrites) {
     this(delegate, entriesWriter, null);
 
