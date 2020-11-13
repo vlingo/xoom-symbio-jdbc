@@ -37,6 +37,7 @@ import io.vlingo.symbio.State.BinaryState;
 import io.vlingo.symbio.State.TextState;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.QueryExpression;
+import io.vlingo.symbio.store.StoredTypes;
 import io.vlingo.symbio.store.common.jdbc.CachedStatement;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
@@ -232,7 +233,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     final LocalDateTime createdAt = resultSet.getTimestamp(1).toLocalDateTime();
     final String dispatchId = resultSet.getString(2);
     final String id = resultSet.getString(3);
-    final Class<?> type = Class.forName(resultSet.getString(4));
+    final Class<?> type = StoredTypes.forName(resultSet.getString(4));
     final int typeVersion = resultSet.getInt(5);
     // 6 below
     final int dataVersion = resultSet.getInt(7);
@@ -242,7 +243,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     final String metadataObjectType = resultSet.getString(11);
 
     final Object object = metadataObject != null ?
-            JsonSerialization.deserialized(metadataObject, Class.forName(metadataObjectType)) : null;
+            JsonSerialization.deserialized(metadataObject, StoredTypes.forName(metadataObjectType)) : null;
 
     final Metadata metadata = Metadata.with(object, metadataValue, metadataOperation);
 
@@ -364,7 +365,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   @SuppressWarnings("unchecked")
   public <S, R> S stateFrom(final R result, final String id, final int columnOffset) throws Exception {
     final ResultSet resultSet = ((ResultSet) result);
-    final Class<?> type = Class.forName(resultSet.getString(1 + columnOffset));
+    final Class<?> type = StoredTypes.forName(resultSet.getString(1 + columnOffset));
     final int typeVersion = resultSet.getInt(2 + columnOffset);
     // 3 below
     final int dataVersion = resultSet.getInt(4 + columnOffset);

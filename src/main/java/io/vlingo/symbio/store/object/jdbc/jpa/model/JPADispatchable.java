@@ -30,6 +30,7 @@ import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.StoredTypes;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateTimeConverter;
 
@@ -188,7 +189,7 @@ public class JPADispatchable {
     if (jpaDispatchable.stateId != null && jpaDispatchable.stateData !=null ){
       final Class<?> stateType;
       try {
-        stateType = Class.forName(jpaDispatchable.stateType);
+        stateType = StoredTypes.forName(jpaDispatchable.stateType);
       } catch (final ClassNotFoundException e) {
         throw new IllegalStateException(e);
       }

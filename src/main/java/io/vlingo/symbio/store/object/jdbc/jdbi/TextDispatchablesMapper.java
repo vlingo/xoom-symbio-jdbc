@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
+import io.vlingo.symbio.store.StoredTypes;
 import org.jdbi.v3.core.mapper.RowMapper;
 import org.jdbi.v3.core.statement.StatementContext;
 
@@ -35,7 +36,7 @@ public class TextDispatchablesMapper implements RowMapper<Dispatchable<Entry<?>,
     final LocalDateTime createdAt = rs.getTimestamp("D_CREATED_AT").toLocalDateTime();
     final Class<?> stateType;
     try {
-      stateType = Class.forName(rs.getString("D_STATE_TYPE"));
+      stateType = StoredTypes.forName(rs.getString("D_STATE_TYPE"));
     } catch (final ClassNotFoundException e) {
       throw new IllegalStateException(e);
     }
