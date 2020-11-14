@@ -12,6 +12,7 @@ import io.vlingo.symbio.BaseEntry.BinaryEntry;
 import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.store.StoredTypes;
 import io.vlingo.symbio.store.common.AbstractEntryReaderActor;
 
 import java.sql.Blob;
@@ -53,7 +54,7 @@ public class HSQLDBStateStoreEntryReaderActor<T extends Entry<?>> extends Abstra
   }
 
   private Class<?> typed(final String typeName) throws Exception {
-    return Class.forName(typeName);
+    return StoredTypes.forName(typeName);
   }
 
 

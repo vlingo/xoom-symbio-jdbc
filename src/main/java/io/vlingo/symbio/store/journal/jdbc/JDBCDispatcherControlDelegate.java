@@ -24,6 +24,7 @@ import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
+import io.vlingo.symbio.store.StoredTypes;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
@@ -115,7 +116,7 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
         if (stateId != null && !stateId.isEmpty()) {
             final String data = resultSet.getString(4);
             final int dataVersion = resultSet.getInt(5);
-            final Class<?> type = Class.forName(resultSet.getString(6));
+            final Class<?> type = StoredTypes.forName(resultSet.getString(6));
             final int typeVersion = resultSet.getInt(7);
             final String metadataValue = resultSet.getString(8);
             final Metadata metadata = JsonSerialization.deserialized(metadataValue, Metadata.class);
@@ -148,7 +149,7 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
         final String entryMetadata = resultSet.getString(5);
         final int entryVersion = resultSet.getInt(6); // from E_STREAM_VERSION
 
-        final Class<?> classOfEvent = Class.forName(entryType);
+        final Class<?> classOfEvent = StoredTypes.forName(entryType);
 
         final Metadata metadata = JsonSerialization.deserialized(entryMetadata, Metadata.class);
         return new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, entryVersion, metadata);

@@ -20,6 +20,7 @@ import javax.persistence.Table;
 
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.store.StoredTypes;
 import io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter;
 /**
  * JPAEntry is an implementation of {@link Entry} that is designed
@@ -171,7 +172,7 @@ public class JPAEntry implements Entry<String> {
   @Override
   public <C> Class<C> typed() {
     try {
-      return (Class<C>) Class.forName(type);
+      return (Class<C>) StoredTypes.forName(type);
     } catch (final Exception e) {
       throw new IllegalStateException("Cannot get class for type: " + type);
     }

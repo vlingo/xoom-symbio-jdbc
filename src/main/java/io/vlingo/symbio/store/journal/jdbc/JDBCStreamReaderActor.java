@@ -24,6 +24,7 @@ import io.vlingo.symbio.BaseEntry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.State.TextState;
+import io.vlingo.symbio.store.StoredTypes;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.journal.EntityStream;
 import io.vlingo.symbio.store.journal.StreamReader;
@@ -92,7 +93,7 @@ public class JDBCStreamReaderActor extends Actor implements StreamReader<String>
               final int eventTypeVersion = resultSet.getInt(5);
               final String entryMetadata = resultSet.getString(6);
 
-              final Class<?> classOfEvent = Class.forName(entryType);
+              final Class<?> classOfEvent = StoredTypes.forName(entryType);
               final Metadata eventMetadataDeserialized = gson.fromJson(entryMetadata, Metadata.class);
 
               events.add(new BaseEntry.TextEntry(id, classOfEvent, eventTypeVersion, entryData, eventMetadataDeserialized));
@@ -111,7 +112,7 @@ public class JDBCStreamReaderActor extends Actor implements StreamReader<String>
               final int snapshotDataTypeVersion = resultSet.getInt(4);
               final String metadataJson = resultSet.getString(5);
 
-              final Class<?> snapshotDataTypeClass = Class.forName(snapshotDataType);
+              final Class<?> snapshotDataTypeClass = StoredTypes.forName(snapshotDataType);
               final Metadata eventMetadataDeserialized = gson.fromJson(metadataJson, Metadata.class);
 
               return new State.TextState(streamName, snapshotDataTypeClass, snapshotDataTypeVersion, snapshotData, snapshotDataVersion, eventMetadataDeserialized);

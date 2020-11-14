@@ -25,6 +25,7 @@ import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.EntryAdapterProvider;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.EntryReaderStream;
+import io.vlingo.symbio.store.StoredTypes;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.gap.GapRetryReader;
@@ -189,7 +190,7 @@ public class JDBCJournalReaderActor extends Actor implements JournalReader<TextE
         final String entryMetadata = resultSet.getString(5);
         final int entryVersion = resultSet.getInt(6); // from E_STREAM_VERSION
 
-        final Class<?> classOfEvent = Class.forName(entryType);
+        final Class<?> classOfEvent = StoredTypes.forName(entryType);
         final Metadata eventMetadataDeserialized = gson.fromJson(entryMetadata, Metadata.class);
 
         return new BaseEntry.TextEntry(String.valueOf(id), classOfEvent, eventTypeVersion, entryData, entryVersion, eventMetadataDeserialized);

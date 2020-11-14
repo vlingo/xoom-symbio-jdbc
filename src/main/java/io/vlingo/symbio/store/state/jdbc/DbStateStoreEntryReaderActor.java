@@ -13,6 +13,7 @@ import io.vlingo.symbio.BaseEntry.TextEntry;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.Metadata;
 import io.vlingo.symbio.store.EntryReader;
+import io.vlingo.symbio.store.StoredTypes;
 import io.vlingo.symbio.store.common.AbstractEntryReaderActor;
 
 import java.sql.Blob;
@@ -54,7 +55,7 @@ public class DbStateStoreEntryReaderActor<T extends Entry<?>> extends AbstractEn
   }
 
   private Class<?> typed(final String typeName) throws Exception {
-    return Class.forName(typeName);
+    return StoredTypes.forName(typeName);
   }
 
   public static class DbStateStoreEntryReaderInstantiator<T extends Entry<?>> implements ActorInstantiator<DbStateStoreEntryReaderActor<T>> {
