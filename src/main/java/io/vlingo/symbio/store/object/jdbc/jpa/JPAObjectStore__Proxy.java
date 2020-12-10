@@ -77,7 +77,7 @@ public class JPAObjectStore__Proxy implements io.vlingo.symbio.store.object.jdbc
   public Completes<EntryReader<? extends Entry<?>>> entryReader(final String arg0) {
     if (!actor.isStopped()) {
       final SerializableConsumer<ObjectStore> consumer = (actor) -> actor.entryReader(arg0);
-      final Completes<EntryReader<? extends Entry<?>>> completes = Completes.using(actor.completesId(), actor.scheduler());
+      final Completes<EntryReader<? extends Entry<?>>> completes = Completes.using(actor.scheduler());
       if (mailbox.isPreallocated()) { mailbox.send(actor, ObjectStore.class, consumer, Returns.value(completes), entryReaderRepresentation4); }
       else { mailbox.send(new LocalMessage<ObjectStore>(actor, ObjectStore.class, consumer, Returns.value(completes), entryReaderRepresentation4)); }
       return completes;
