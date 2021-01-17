@@ -7,6 +7,13 @@
 
 package io.vlingo.symbio.store.journal.jdbc;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Consumer;
+
 import io.vlingo.actors.Actor;
 import io.vlingo.actors.ActorInstantiator;
 import io.vlingo.actors.Address;
@@ -16,8 +23,12 @@ import io.vlingo.common.Failure;
 import io.vlingo.common.Outcome;
 import io.vlingo.common.Scheduled;
 import io.vlingo.symbio.BaseEntry.TextEntry;
-import io.vlingo.symbio.*;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.Metadata;
+import io.vlingo.symbio.Source;
 import io.vlingo.symbio.State.TextState;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.Result;
 import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
@@ -27,9 +38,6 @@ import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.StreamReader;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalReaderActor.JDBCJournalReaderInstantiator;
 import io.vlingo.symbio.store.journal.jdbc.JDBCStreamReaderActor.JDBCStreamReaderInstantiator;
-
-import java.util.*;
-import java.util.function.Consumer;
 
 public class JDBCJournalActor extends Actor implements Journal<String>, Scheduled<Object> {
     private final JDBCJournalWriter journalWriter;
@@ -58,6 +66,7 @@ public class JDBCJournalActor extends Actor implements Journal<String>, Schedule
         this(configuration, journalWriter, null);
     }
 
+    @SuppressWarnings("unchecked")
     public JDBCJournalActor(final Configuration configuration, final JDBCJournalBatchWriter journalWriter, int timeBetweenFlushWrites) throws Exception {
         this(configuration, journalWriter, null);
 

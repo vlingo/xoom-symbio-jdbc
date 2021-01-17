@@ -7,6 +7,8 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
+import java.util.List;
+
 import io.vlingo.actors.World;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -22,8 +24,6 @@ import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActorTest;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalInstantWriter;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalWriter;
 
-import java.util.List;
-
 public class PostgresJournalActorTest extends JDBCJournalActorTest {
     @Override
     protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
@@ -31,6 +31,7 @@ public class PostgresJournalActorTest extends JDBCJournalActorTest {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected Journal<String> journalFrom(World world, Configuration configuration, List<Dispatcher<Dispatchable<Entry<String>, State.TextState>>> dispatchers,
                                           DispatcherControl dispatcherControl) throws Exception {
         JDBCJournalWriter journalWriter = new JDBCJournalInstantWriter(configuration, dispatchers, dispatcherControl);

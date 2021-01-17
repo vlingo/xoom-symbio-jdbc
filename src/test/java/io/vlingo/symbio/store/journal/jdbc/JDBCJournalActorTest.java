@@ -8,23 +8,25 @@
 package io.vlingo.symbio.store.journal.jdbc;
 
 import static java.util.Arrays.asList;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import io.vlingo.actors.Definition;
-import io.vlingo.actors.World;
-import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.dispatch.Dispatcher;
-import io.vlingo.symbio.store.dispatch.DispatcherControl;
-import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
-import io.vlingo.symbio.store.state.StateStore;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import io.vlingo.actors.Definition;
+import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.common.Completes;
 import io.vlingo.common.serialization.JsonSerialization;
@@ -41,11 +43,16 @@ import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.common.MockDispatcher;
 import io.vlingo.symbio.store.common.event.TestEvent;
 import io.vlingo.symbio.store.common.event.TestEventAdapter;
+import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
+import io.vlingo.symbio.store.dispatch.Dispatcher;
+import io.vlingo.symbio.store.dispatch.DispatcherControl;
+import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
 import io.vlingo.symbio.store.journal.EntityStream;
 import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.StreamReader;
+import io.vlingo.symbio.store.state.StateStore;
 
 public abstract class JDBCJournalActorTest extends BaseJournalTest {
     private Entity1Adapter entity1Adapter = new Entity1Adapter();
@@ -137,7 +144,7 @@ public abstract class JDBCJournalActorTest extends BaseJournalTest {
             journal.append(streamName, i, appendEvent, interest, object);
         }
 
-        assertEquals(size, ((Map) accessDispatcher.readFrom("dispatched")).size());
+        assertEquals(size, ((Map<?, ?>) accessDispatcher.readFrom("dispatched")).size());
 
         final Map<String, Dispatchable<Entry<String>, TextState>> dispatched = dispatcher.getDispatched();
         assertEquals(size, dispatched.size());

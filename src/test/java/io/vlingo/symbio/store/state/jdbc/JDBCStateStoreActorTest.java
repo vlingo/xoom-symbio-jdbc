@@ -7,12 +7,32 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
 import io.vlingo.reactivestreams.Stream;
 import io.vlingo.reactivestreams.sink.ConsumerSink;
-import io.vlingo.symbio.*;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.StateAdapterProvider;
+import io.vlingo.symbio.StateBundle;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.ListQueryExpression;
 import io.vlingo.symbio.store.QueryExpression;
@@ -24,24 +44,15 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
-import io.vlingo.symbio.store.state.*;
+import io.vlingo.symbio.store.state.Entity1;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
+import io.vlingo.symbio.store.state.MockResultInterest;
 import io.vlingo.symbio.store.state.MockResultInterest.StoreData;
+import io.vlingo.symbio.store.state.MockTextDispatcher;
+import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
 import io.vlingo.symbio.store.state.StateStore.TypedStateBundle;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-
-import static org.junit.Assert.*;
+import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 
 public abstract class JDBCStateStoreActorTest {
   protected TestConfiguration configuration;
@@ -398,7 +409,7 @@ public abstract class JDBCStateStoreActorTest {
   }
 
   @Before
-  @SuppressWarnings("unchecked")
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   public void setUp() throws Exception {
     world = World.startWithDefaults("test-store");
 
@@ -452,10 +463,12 @@ public abstract class JDBCStateStoreActorTest {
     return entity1StoreName + ":" + entityId;
   }
 
+  @SuppressWarnings({ "unchecked", "rawtypes" })
   private Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>> typed(Dispatcher dispatcher) {
     return dispatcher;
   }
 
+  @SuppressWarnings("rawtypes")
   private JDBCStorageDelegate typed(StorageDelegate delegate) {
     return (JDBCStorageDelegate)delegate;
   }

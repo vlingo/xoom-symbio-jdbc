@@ -7,11 +7,25 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
+import static org.junit.Assert.assertEquals;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.Logger;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
-import io.vlingo.symbio.*;
+import io.vlingo.symbio.BaseEntry;
+import io.vlingo.symbio.Entry;
+import io.vlingo.symbio.EntryAdapterProvider;
+import io.vlingo.symbio.State;
+import io.vlingo.symbio.StateAdapterProvider;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.TestEvents;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
@@ -19,16 +33,11 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
-import io.vlingo.symbio.store.state.*;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import static org.junit.Assert.assertEquals;
+import io.vlingo.symbio.store.state.Entity1;
+import io.vlingo.symbio.store.state.MockResultInterest;
+import io.vlingo.symbio.store.state.MockTextDispatcher;
+import io.vlingo.symbio.store.state.StateStore;
+import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 
 public abstract class JDBCTextStateStoreEntryTest {
     private Configuration.TestConfiguration configuration;
@@ -76,6 +85,7 @@ public abstract class JDBCTextStateStoreEntryTest {
         assertEquals(new TestEvents.Event3(), entryAdapterProvider.asSource(readEntries.get(2)));
     }
 
+    @SuppressWarnings({ "rawtypes", "unchecked" })
     @Before
     public void setUp() throws Exception {
         world = World.startWithDefaults("test-store");
@@ -127,10 +137,12 @@ public abstract class JDBCTextStateStoreEntryTest {
      */
     protected abstract Configuration.TestConfiguration testConfiguration(final DataFormat format) throws Exception;
 
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>> typed(Dispatcher dispatcher) {
         return dispatcher;
     }
 
+    @SuppressWarnings("rawtypes")
     private JDBCStorageDelegate typed(StateStore.StorageDelegate delegate) {
         return (JDBCStorageDelegate)delegate;
     }

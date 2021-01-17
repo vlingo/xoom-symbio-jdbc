@@ -7,6 +7,12 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.function.Consumer;
+
 import io.vlingo.actors.Logger;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Outcome;
@@ -19,12 +25,6 @@ import io.vlingo.symbio.store.StorageException;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
-
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.function.Consumer;
 
 public class JDBCEntriesInstantWriter implements JDBCEntriesWriter {
 	private final JDBCStorageDelegate<State.TextState> delegate;
@@ -84,7 +84,8 @@ public class JDBCEntriesInstantWriter implements JDBCEntriesWriter {
 		this.logger = logger;
 	}
 
-	private void appendEntries(List<Entry<?>> entries) {
+	@SuppressWarnings("rawtypes")
+  private void appendEntries(List<Entry<?>> entries) {
 		try {
 			for (final Entry<?> entry : entries) {
 				long id = -1L;

@@ -7,6 +7,17 @@
 
 package io.vlingo.symbio.store.state.jdbc.hsqldb;
 
+import static org.junit.Assert.assertEquals;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
 import io.vlingo.actors.Definition;
 import io.vlingo.actors.World;
 import io.vlingo.actors.testkit.AccessSafely;
@@ -25,23 +36,17 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.dispatch.control.DispatcherControlActor;
-import io.vlingo.symbio.store.state.*;
+import io.vlingo.symbio.store.state.Entity1;
 import io.vlingo.symbio.store.state.Entity1.Entity1StateAdapter;
+import io.vlingo.symbio.store.state.MockResultInterest;
+import io.vlingo.symbio.store.state.MockTextDispatcher;
+import io.vlingo.symbio.store.state.StateStore;
 import io.vlingo.symbio.store.state.StateStore.StorageDelegate;
+import io.vlingo.symbio.store.state.StateTypeStateStoreMap;
 import io.vlingo.symbio.store.state.jdbc.JDBCEntriesInstantWriter;
 import io.vlingo.symbio.store.state.jdbc.JDBCEntriesWriter;
 import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
-
-import static org.junit.Assert.assertEquals;
 
 public class HSQLDBJDBCTextStateStoreEntryTest {
   private final String databaseName = UUID.randomUUID().toString();
@@ -94,6 +99,7 @@ public class HSQLDBJDBCTextStateStoreEntryTest {
   }
 
   @Before
+  @SuppressWarnings({ "rawtypes", "unchecked" })
   public void setUp() throws Exception {
     world = World.startWithDefaults("test-store");
 
@@ -135,10 +141,12 @@ public class HSQLDBJDBCTextStateStoreEntryTest {
     return HSQLDBConfigurationProvider.testConfiguration(format, databaseName);
   }
 
+  @SuppressWarnings({ "rawtypes", "unchecked" })
   private Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>> typed(Dispatcher dispatcher) {
     return dispatcher;
   }
 
+  @SuppressWarnings({ "rawtypes" })
   private JDBCStorageDelegate typed(StorageDelegate delegate) {
     return (JDBCStorageDelegate)delegate;
   }

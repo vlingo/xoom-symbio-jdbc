@@ -7,6 +7,8 @@
 
 package io.vlingo.symbio.store.state.jdbc.mysql;
 
+import java.util.List;
+
 import io.vlingo.actors.World;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -17,10 +19,11 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.jdbc.*;
-
-import java.util.Arrays;
-import java.util.List;
+import io.vlingo.symbio.store.state.jdbc.JDBCEntriesInstantWriter;
+import io.vlingo.symbio.store.state.jdbc.JDBCEntriesWriter;
+import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor;
+import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
+import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 
 public class MySQLJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
     @Override

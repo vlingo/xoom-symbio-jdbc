@@ -81,6 +81,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     return (A) cachedStatement.preparedStatement;
   }
 
+  @SuppressWarnings("unchecked")
   public <A> A appendExpressionFor(final List<Entry<?>> entries) throws Exception {
     final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendBatchEntriesStatement();
     prepareForBatchAppend(cachedStatement, entries);
@@ -307,7 +308,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
 
   @SuppressWarnings("unchecked")
   public <R> R readAllExpressionFor(final String storeName) throws Exception {
-    
+
     final String select = readAllExpression(storeName);
     final PreparedStatement preparedStatement =
             connection.prepareStatement(
@@ -319,7 +320,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
 
   @SuppressWarnings("unchecked")
   public <R> R readExpressionFor(final String storeName, final String id) throws Exception {
-	 
+
       final String select = readExpression(storeName, id);
       final PreparedStatement preparedStatement =
               connection.prepareStatement(
@@ -404,6 +405,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     return (W) maybeCached.preparedStatement;
   }
 
+  @SuppressWarnings("unchecked")
   public <W> W writeExpressionFor(final String storeName, final List<? extends State<?>> states) throws Exception {
     CachedStatement<T> maybeCached = writeStatements.get(storeName);
 

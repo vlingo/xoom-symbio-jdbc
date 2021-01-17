@@ -7,6 +7,8 @@
 
 package io.vlingo.symbio.store.journal.jdbc.postgres;
 
+import java.util.List;
+
 import io.vlingo.actors.World;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -17,9 +19,9 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.journal.Journal;
-import io.vlingo.symbio.store.journal.jdbc.*;
-
-import java.util.List;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActor;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActorTest;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalBatchWriter;
 
 public class PostgresBatchJournalActorTest extends JDBCJournalActorTest {
 	@Override
@@ -28,6 +30,7 @@ public class PostgresBatchJournalActorTest extends JDBCJournalActorTest {
 	}
 
 	@Override
+  @SuppressWarnings("unchecked")
 	protected Journal<String> journalFrom(World world, Configuration configuration, List<Dispatcher<Dispatchable<Entry<String>, State.TextState>>> dispatchers,
 										  DispatcherControl dispatcherControl) throws Exception {
 		JDBCJournalBatchWriter journalWriter = new JDBCJournalBatchWriter(configuration, dispatchers, dispatcherControl, 100);

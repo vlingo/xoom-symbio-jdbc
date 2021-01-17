@@ -7,6 +7,16 @@
 
 package io.vlingo.symbio.store.state.jdbc;
 
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
 import io.vlingo.actors.Logger;
 import io.vlingo.common.Failure;
 import io.vlingo.common.Outcome;
@@ -20,19 +30,10 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
-
 public class JDBCEntriesBatchWriter implements JDBCEntriesWriter {
 	private final JDBCStorageDelegate<State.TextState> delegate;
-	private final List<Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>>> dispatchers;
+	@SuppressWarnings("unused")
+  private final List<Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>>> dispatchers;
 	private final DispatcherControl dispatcherControl;
 	private final BatchEntries batchEntries;
 	private Logger logger;
@@ -107,7 +108,8 @@ public class JDBCEntriesBatchWriter implements JDBCEntriesWriter {
 		this.logger = logger;
 	}
 
-	private void appendBatchedEntries() {
+	@SuppressWarnings("rawtypes")
+  private void appendBatchedEntries() {
 		List<Entry<?>> allEntries = batchEntries.collectEntries();
 		if (allEntries.size() > 0) {
 			try {

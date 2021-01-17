@@ -7,6 +7,10 @@
 
 package io.vlingo.symbio.store.journal.jdbc.yugabyte;
 
+import java.util.List;
+
+import org.junit.Ignore;
+
 import io.vlingo.actors.World;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -21,9 +25,6 @@ import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActor;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActorTest;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalInstantWriter;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalWriter;
-import org.junit.Ignore;
-
-import java.util.List;
 
 @Ignore
 public class YugaByteJournalActorTest extends JDBCJournalActorTest {
@@ -33,6 +34,7 @@ public class YugaByteJournalActorTest extends JDBCJournalActorTest {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     protected Journal<String> journalFrom(World world, Configuration configuration, List<Dispatcher<Dispatchable<Entry<String>, State.TextState>>> dispatchers,
                                           DispatcherControl dispatcherControl) throws Exception {
         JDBCJournalWriter journalWriter = new JDBCJournalInstantWriter(configuration, dispatchers, dispatcherControl);
