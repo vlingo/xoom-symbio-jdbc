@@ -48,6 +48,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
         DispatcherControl.DispatcherControlDelegate<Entry<?>, State<?>> {
   private static final String DISPATCHEABLE_ENTRIES_DELIMITER = "|";
   protected final Connection connection;
+  protected final boolean createTables;
   protected final JDBCDispatchableCachedStatements<T> dispatchableCachedStatements;
   protected final DataFormat format;
   protected final Logger logger;
@@ -68,6 +69,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     this.originatorId = originatorId;
     this.logger = logger;
     this.mode = Mode.None;
+    this.createTables = createTables;
     if (createTables) createTables();
     this.dispatchableCachedStatements = dispatchableCachedStatements();
     this.readStatements = new HashMap<>();
@@ -299,6 +301,15 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     } catch (final Exception e) {
       logger.error(getClass().getSimpleName() + ": Rollback failed because: " + e.getMessage(), e);
     }
+  }
+
+  @Override
+  public void initialize() {
+    logger.info("============================================================");
+    logger.info("=============== CREATE TABLES: " + createTables);
+    logger.info("============================================================");
+    if (createTables) createTables();
+    logger.info("============================================================");
   }
 
   @Override
@@ -544,7 +555,9 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     for (final String storeName : StateTypeStateStoreMap.allStoreNames()) {
       final String tableName = tableNameFor(storeName);
       try {
+        logger.info("Checking for table: " + tableName);
         if (!tableExists(tableName)) {
+          logger.info("Creating missing table: " + tableName);
           createStateStoreTable(tableName);
         }
       } catch (final Exception e) {
