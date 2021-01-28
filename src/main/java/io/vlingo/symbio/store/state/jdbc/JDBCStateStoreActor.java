@@ -57,6 +57,8 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
     this.readAllResultCollector = new ReadAllResultCollector();
+
+    this.delegate.initialize();
   }
 
   public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesInstantWriter entriesWriter) {
