@@ -7,6 +7,8 @@
 
 package io.vlingo.symbio.store.state.jdbc.mysql;
 
+import java.util.List;
+
 import io.vlingo.actors.World;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -19,8 +21,6 @@ import io.vlingo.symbio.store.state.jdbc.JDBCEntriesWriter;
 import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 
-import java.util.List;
-
 public class MySQLJDBCBatchStateStoreActorTest extends MySQLJDBCStateStoreActorTest {
 	@Override
 	protected StateStore stateStoreFrom(World world,
@@ -28,6 +28,6 @@ public class MySQLJDBCBatchStateStoreActorTest extends MySQLJDBCStateStoreActorT
 										List<Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>>> dispatchers,
 										DispatcherControl dispatcherControl) {
 		JDBCEntriesWriter entriesWriter = new JDBCEntriesBatchWriter(delegate, dispatchers, dispatcherControl, 50);
-		return world.actorFor(StateStore.class, JDBCStateStoreActor.class, delegate, entriesWriter, 100);
+		return world.actorFor(StateStore.class, JDBCStateStoreActor.class, delegate, entriesWriter, 100, null);
 	}
 }

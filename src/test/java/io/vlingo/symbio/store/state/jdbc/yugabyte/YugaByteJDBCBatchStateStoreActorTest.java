@@ -7,6 +7,10 @@
 
 package io.vlingo.symbio.store.state.jdbc.yugabyte;
 
+import java.util.List;
+
+import org.junit.Ignore;
+
 import io.vlingo.actors.World;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -18,9 +22,6 @@ import io.vlingo.symbio.store.state.jdbc.JDBCEntriesBatchWriter;
 import io.vlingo.symbio.store.state.jdbc.JDBCEntriesWriter;
 import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
-import org.junit.Ignore;
-
-import java.util.List;
 
 @Ignore
 public class YugaByteJDBCBatchStateStoreActorTest extends YugaByteJDBCStateStoreActorTest {
@@ -30,6 +31,6 @@ public class YugaByteJDBCBatchStateStoreActorTest extends YugaByteJDBCStateStore
 										List<Dispatcher<Dispatchable<? extends Entry<?>, ? extends State<?>>>> dispatchers,
 										DispatcherControl dispatcherControl) {
 		JDBCEntriesWriter entriesWriter = new JDBCEntriesBatchWriter(delegate, dispatchers, dispatcherControl, 50);
-		return world.actorFor(StateStore.class, JDBCStateStoreActor.class, delegate, entriesWriter, 100);
+		return world.actorFor(StateStore.class, JDBCStateStoreActor.class, delegate, entriesWriter, 100, null);
 	}
 }
