@@ -47,7 +47,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
   private final StateAdapterProvider stateAdapterProvider;
   private final ReadAllResultCollector readAllResultCollector;
 
-  private JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesWriter entriesWriter, Object object) {
+  private JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesWriter entriesWriter, final InitializationPrimer primer) {
     // object parameter is necessary to differentiate between constructors
     this.delegate = delegate;
     this.entriesWriter = entriesWriter;
@@ -58,6 +58,10 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
     this.stateAdapterProvider = StateAdapterProvider.instance(stage().world());
     this.readAllResultCollector = new ReadAllResultCollector();
 
+    if (primer != null) {
+      primer.prime(selfAs(StateStore.class));
+    }
+
     this.delegate.initialize();
   }
 
@@ -66,8 +70,8 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
   }
 
   @SuppressWarnings("unchecked")
-  public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesBatchWriter entriesWriter, int timeBetweenFlushWrites) {
-    this(delegate, entriesWriter, null);
+  public JDBCStateStoreActor(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesBatchWriter entriesWriter, int timeBetweenFlushWrites, final InitializationPrimer primer) {
+    this(delegate, entriesWriter, primer);
 
     stage().scheduler().schedule(selfAs(Scheduled.class), null, 5, timeBetweenFlushWrites);
   }
@@ -261,18 +265,21 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
 
     private final JDBCStorageDelegate<TextState> delegate;
     private final JDBCEntriesWriter entriesWriter;
+    private final InitializationPrimer primer;
     private Optional<Integer> timeBetweenFlushWrites;
 
-    public JDBCStateStoreInstantiator(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesInstantWriter entriesWriter) {
+    public JDBCStateStoreInstantiator(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesInstantWriter entriesWriter, final InitializationPrimer primer) {
       this.delegate = delegate;
       this.entriesWriter = entriesWriter;
       this.timeBetweenFlushWrites = Optional.empty();
+      this.primer = primer;
     }
 
-    public JDBCStateStoreInstantiator(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesBatchWriter entriesWriter, int timeBetweenFlushWrites) {
+    public JDBCStateStoreInstantiator(final JDBCStorageDelegate<TextState> delegate, final JDBCEntriesBatchWriter entriesWriter, int timeBetweenFlushWrites, final InitializationPrimer primer) {
       this.delegate = delegate;
       this.entriesWriter = entriesWriter;
       this.timeBetweenFlushWrites = Optional.of(timeBetweenFlushWrites);
+      this.primer = primer;
     }
 
     @Override
@@ -280,9 +287,9 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
       JDBCStateStoreActor instance;
       if (timeBetweenFlushWrites.isPresent()) {
         int time = timeBetweenFlushWrites.get();
-        instance = new JDBCStateStoreActor(delegate, (JDBCEntriesBatchWriter) entriesWriter, time);
+        instance = new JDBCStateStoreActor(delegate, (JDBCEntriesBatchWriter) entriesWriter, time, primer);
       } else {
-        instance = new JDBCStateStoreActor(delegate, (JDBCEntriesInstantWriter) entriesWriter);
+        instance = new JDBCStateStoreActor(delegate, entriesWriter, primer);
       }
 
       entriesWriter.setLogger(instance.logger());
