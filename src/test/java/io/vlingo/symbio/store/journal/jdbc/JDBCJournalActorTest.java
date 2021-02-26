@@ -52,7 +52,6 @@ import io.vlingo.symbio.store.journal.EntityStream;
 import io.vlingo.symbio.store.journal.Journal;
 import io.vlingo.symbio.store.journal.JournalReader;
 import io.vlingo.symbio.store.journal.StreamReader;
-import io.vlingo.symbio.store.state.StateStore;
 
 public abstract class JDBCJournalActorTest extends BaseJournalTest {
     private Entity1Adapter entity1Adapter = new Entity1Adapter();
@@ -79,8 +78,9 @@ public abstract class JDBCJournalActorTest extends BaseJournalTest {
                         new DispatcherControl.DispatcherControlInstantiator(
                                 Collections.singletonList(typed(dispatcher)),
                                 dispatcherControlDelegate,
-                                StateStore.DefaultCheckConfirmationExpirationInterval,
-                                StateStore.DefaultConfirmationExpiration)));
+                                // do not allow timeouts to occur
+                                600_000L,
+                                600_000L)));
 
         journal = journalFrom(world, configuration, Collections.singletonList(typed(dispatcher)), dispatcherControl);
         EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
