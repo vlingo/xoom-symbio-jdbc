@@ -55,8 +55,8 @@ public abstract class BaseJournalTest {
 
     @After
     public void tearDownDatabase() throws Exception {
-        world.terminate();
         dropDatabase();
+        world.terminate();
     }
 
     private void dropDatabase() throws SQLException {
