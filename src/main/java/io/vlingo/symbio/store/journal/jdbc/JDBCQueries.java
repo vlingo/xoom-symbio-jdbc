@@ -166,7 +166,7 @@ public abstract class JDBCQueries {
 
         insertDispatchable.setString(1, d_dispatch_id);
         insertDispatchable.setString(2, d_originator_id);
-        insertDispatchable.setLong(3, System.nanoTime());
+        insertDispatchable.setLong(3, System.currentTimeMillis());
 
         insertDispatchable.setString(4, d_state_id);
         insertDispatchable.setString(5, d_state_data);
