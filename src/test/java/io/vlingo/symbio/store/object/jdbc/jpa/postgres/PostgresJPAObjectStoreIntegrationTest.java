@@ -17,15 +17,18 @@ import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries;
 import io.vlingo.symbio.store.object.jdbc.PostgresObjectStoreEntryJournalQueries;
 import io.vlingo.symbio.store.object.jdbc.jpa.JDBCObjectStoreEntryReaderTest;
 import io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStoreDelegate;
+import io.vlingo.symbio.store.testcontainers.SharedPostgreSQLContainer;
 
 import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Map;
 
 public class PostgresJPAObjectStoreIntegrationTest extends JDBCObjectStoreEntryReaderTest {
+    private SharedPostgreSQLContainer postgresContainer = SharedPostgreSQLContainer.getInstance();
+
     @Override
     protected Configuration createAdminConfiguration() throws Exception {
-        return PostgresConfigurationProvider.testConfiguration(DataFormat.Text);
+        return postgresContainer.testConfiguration(DataFormat.Text);
     }
 
     @Override
@@ -37,8 +40,13 @@ public class PostgresJPAObjectStoreIntegrationTest extends JDBCObjectStoreEntryR
 
     @Override
     protected ConnectionProvider createConnectionProvider() {
-        return new ConnectionProvider("org.postgresql.Driver", "jdbc:postgresql://localhost/", testDatabaseName,
-                "vlingo_test", "vlingo123", false);
+        return new ConnectionProvider(
+                "org.postgresql.Driver",
+                "jdbc:postgresql://" + postgresContainer.getHost() + ":" + postgresContainer.getMappedPort(SharedPostgreSQLContainer.POSTGRESQL_PORT) + "/",
+                testDatabaseName,
+                postgresContainer.getUsername(),
+                postgresContainer.getPassword(),
+                false);
     }
 
     @Override
@@ -61,9 +69,9 @@ public class PostgresJPAObjectStoreIntegrationTest extends JDBCObjectStoreEntryR
         Map<String, Object> properties = new HashMap<>();
 
         properties.put("javax.persistence.jdbc.driver", "org.postgresql.Driver");
-        properties.put("javax.persistence.jdbc.url", "jdbc:postgresql://localhost/" + databaseNamePostfix);
-        properties.put("javax.persistence.jdbc.user", "vlingo_test");
-        properties.put("javax.persistence.jdbc.password", "vlingo123");
+        properties.put("javax.persistence.jdbc.url", "jdbc:postgresql://" + postgresContainer.getHost() + ":" + postgresContainer.getMappedPort(SharedPostgreSQLContainer.POSTGRESQL_PORT) + "/" + databaseNamePostfix);
+        properties.put("javax.persistence.jdbc.user", postgresContainer.getUsername());
+        properties.put("javax.persistence.jdbc.password", postgresContainer.getPassword());
 
         return properties;
     }

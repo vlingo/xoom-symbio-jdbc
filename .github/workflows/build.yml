@@ -11,39 +11,8 @@ jobs:
     name: Build & Deploy
     runs-on: ubuntu-latest
 
-    services:
-      postgresql:
-        image: postgres:latest
-        ports:
-          - '5432:5432'
-        env:
-          POSTGRES_PASSWORD: vlingo123
-        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-      mysql:
-        image: mysql:latest
-        ports:
-          - '3306:3306'
-        env:
-          MYSQL_ROOT_PASSWORD: vlingo123
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
-
     steps:
       - uses: actions/checkout@v2
-
-      - name: Prepare databases
-        run: |
-          psql -c "CREATE DATABASE vlingo_test;" -U postgres
-          psql -c "CREATE USER vlingo_test WITH PASSWORD 'vlingo123' LOGIN NOSUPERUSER INHERIT CREATEDB NOCREATEROLE NOREPLICATION;" -U postgres
-
-          mysql -u root -e "CREATE DATABASE vlingo_test;"
-          mysql -u root -e "CREATE USER 'vlingo_test'@'%' IDENTIFIED BY 'vlingo123';"
-          mysql -u root -e "GRANT ALL ON *.* TO 'vlingo_test'@'%';"
-          mysql -u root -e "FLUSH PRIVILEGES;"
-        env:
-          PGPASSWORD: vlingo123
-          PGHOST: localhost
-          MYSQL_PWD: vlingo123
-          MYSQL_HOST: 127.0.0.1
 
       - name: Set up JDK 1.8
         uses: actions/setup-java@v1

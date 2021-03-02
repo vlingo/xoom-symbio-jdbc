@@ -19,13 +19,13 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.jdbc.JDBCEntriesInstantWriter;
-import io.vlingo.symbio.store.state.jdbc.JDBCEntriesWriter;
-import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor;
-import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
-import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
+import io.vlingo.symbio.store.state.jdbc.*;
+import io.vlingo.symbio.store.testcontainers.SharedPostgreSQLContainer;
+
+import java.util.List;
 
 public class PostgresJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
+    private SharedPostgreSQLContainer postgresContainer = SharedPostgreSQLContainer.getInstance();
 
     @Override
     protected JDBCStorageDelegate<Object> delegate() throws Exception {
@@ -36,7 +36,7 @@ public class PostgresJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
     @Override
     protected TestConfiguration testConfiguration(DataFormat format) throws Exception {
         System.out.println("Starting: PostgresJDBCTextStateStoreActorTest: testConfiguration()");
-        return PostgresConfigurationProvider.testConfiguration(DataFormat.Text);
+        return postgresContainer.testConfiguration(format);
     }
 
     @Override

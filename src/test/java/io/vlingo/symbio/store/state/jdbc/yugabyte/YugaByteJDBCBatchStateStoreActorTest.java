@@ -9,8 +9,6 @@ package io.vlingo.symbio.store.state.jdbc.yugabyte;
 
 import java.util.List;
 
-import org.junit.Ignore;
-
 import io.vlingo.actors.World;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
@@ -22,6 +20,7 @@ import io.vlingo.symbio.store.state.jdbc.JDBCEntriesBatchWriter;
 import io.vlingo.symbio.store.state.jdbc.JDBCEntriesWriter;
 import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
+import org.junit.Ignore;
 
 @Ignore
 public class YugaByteJDBCBatchStateStoreActorTest extends YugaByteJDBCStateStoreActorTest {

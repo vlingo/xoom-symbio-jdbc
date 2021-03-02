@@ -15,7 +15,6 @@ import java.util.List;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.Configuration.ConfigurationInterest;
-import io.vlingo.symbio.store.common.jdbc.Configuration.TestConfiguration;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 
 public class PostgresConfigurationProvider {
@@ -75,20 +74,5 @@ public class PostgresConfigurationProvider {
                 false,
                 originatorId,
                 createTables);
-    }
-
-    public static TestConfiguration testConfiguration(final DataFormat format) throws Exception {
-        return new TestConfiguration(
-                DatabaseType.Postgres,
-                interest,
-                "org.postgresql.Driver",
-                format,
-                "jdbc:postgresql://localhost/",
-                "vlingo_test",  // database name
-                "vlingo_test",  // username
-                "vlingo123",    // password
-                false,          // useSSL
-                "TEST",         // originatorId
-                true);          // create tables
     }
 }

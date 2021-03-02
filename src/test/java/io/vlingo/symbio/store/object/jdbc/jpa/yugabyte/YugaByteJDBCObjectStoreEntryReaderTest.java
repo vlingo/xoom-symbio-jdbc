@@ -17,6 +17,7 @@ import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries;
 import io.vlingo.symbio.store.object.jdbc.YugaByteObjectStoreEntryJournalQueries;
 import io.vlingo.symbio.store.object.jdbc.jpa.JDBCObjectStoreEntryReaderTest;
 import io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStoreDelegate;
+import io.vlingo.symbio.store.testcontainers.SharedYugaByteDbContainer;
 import org.junit.Ignore;
 
 import java.sql.Connection;
@@ -25,9 +26,11 @@ import java.util.Map;
 
 @Ignore
 public class YugaByteJDBCObjectStoreEntryReaderTest extends JDBCObjectStoreEntryReaderTest {
+    private SharedYugaByteDbContainer dbContainer = SharedYugaByteDbContainer.getInstance();
+
     @Override
     protected Configuration createAdminConfiguration() throws Exception {
-        return YugaByteConfigurationProvider.testConfiguration(DataFormat.Text);
+        return dbContainer.testConfiguration(DataFormat.Text);
     }
 
     @Override
@@ -37,7 +40,13 @@ public class YugaByteJDBCObjectStoreEntryReaderTest extends JDBCObjectStoreEntry
 
     @Override
     protected ConnectionProvider createConnectionProvider() {
-        return new ConnectionProvider("org.postgresql.Driver", "jdbc:postgresql://localhost:5433/", testDatabaseName, "postgres", "postgres", false);
+        return new ConnectionProvider(
+                "org.postgresql.Driver",
+                "jdbc:postgresql://" + dbContainer.getHost() + ":" + dbContainer.getMappedPort(SharedYugaByteDbContainer.YUGABYTE_PORT) + "/",
+                testDatabaseName,
+                "postgres",
+                "postgres",
+                false);
     }
 
     @Override
@@ -60,7 +69,7 @@ public class YugaByteJDBCObjectStoreEntryReaderTest extends JDBCObjectStoreEntry
         Map<String, Object> properties = new HashMap<>();
 
         properties.put("javax.persistence.jdbc.driver", "org.postgresql.Driver");
-        properties.put("javax.persistence.jdbc.url", "jdbc:postgresql://localhost:5433/" + databaseNamePostfix);
+        properties.put("javax.persistence.jdbc.url", "jdbc:postgresql://" + dbContainer.getHost() + ":" + dbContainer.getMappedPort(SharedYugaByteDbContainer.YUGABYTE_PORT) + "/" + databaseNamePostfix);
         properties.put("javax.persistence.jdbc.user", "postgres");
         properties.put("javax.persistence.jdbc.password", "postgres");
 
