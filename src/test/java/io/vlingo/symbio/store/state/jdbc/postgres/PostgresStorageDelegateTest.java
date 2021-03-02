@@ -10,11 +10,12 @@ package io.vlingo.symbio.store.state.jdbc.postgres;
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegateTest;
+import io.vlingo.symbio.store.testcontainers.SharedPostgreSQLContainer;
 
 public class PostgresStorageDelegateTest extends JDBCStorageDelegateTest {
+    private SharedPostgreSQLContainer postgresContainer = SharedPostgreSQLContainer.getInstance();
 
     @Override
     protected JDBCStorageDelegate<Object> storageDelegate(Configuration.TestConfiguration configuration, Logger logger) {
@@ -23,6 +24,6 @@ public class PostgresStorageDelegateTest extends JDBCStorageDelegateTest {
 
     @Override
     protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        return PostgresConfigurationProvider.testConfiguration(format);
+        return postgresContainer.testConfiguration(format);
     }
 }

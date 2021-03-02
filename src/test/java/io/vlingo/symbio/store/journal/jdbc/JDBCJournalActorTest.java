@@ -275,12 +275,11 @@ public abstract class JDBCJournalActorTest extends BaseJournalTest {
     @Test
     public void testThatJournalReaderStreams() {
         final int limit = 200;
+        final AccessSafely access = AccessSafely.afterCompleting(limit);
 
         for (int count = 0; count < limit; ++count) {
             journal.append("123-" + count, 1, new TestEvent("123-" + count, count), interest, object);
         }
-
-        final AccessSafely access = AccessSafely.afterCompleting(limit);
 
         access.writingWith("sourcesCounter", (state) -> {
             totalSources.incrementAndGet();
