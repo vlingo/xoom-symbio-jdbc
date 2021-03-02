@@ -21,16 +21,6 @@ Adding additional JDBC storage delegates is a straightforward process requiring 
 
 We welcome you to add support for your favorite database!
 
-## Docker and Bouncing the Server Volume
-Postrgres and MySQL must be run for some tests. See the `pgbounce.sh`. This shell script can be used to bounce the Postgres (and MySQL) volume named in `docker-compose.yml`:
-
-  `vlingo-symbio-jdbc-postgres`
-
-Run the server using the following, which both stops the current instance and then starts a new instance.
-
-`$ ./pgbounce.sh`
-
-
 ### Bintray
 
 ```xml
