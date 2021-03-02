@@ -80,7 +80,7 @@ public abstract class JDBCJournalActorTest extends BaseJournalTest {
                                 dispatcherControlDelegate,
                                 // do not allow timeouts to occur
                                 2_000L,
-                                1_200_000L)));
+                                5_000L)));
 
         journal = journalFrom(world, configuration, Collections.singletonList(typed(dispatcher)), dispatcherControl);
         EntryAdapterProvider.instance(world).registerAdapter(TestEvent.class, new TestEventAdapter());
