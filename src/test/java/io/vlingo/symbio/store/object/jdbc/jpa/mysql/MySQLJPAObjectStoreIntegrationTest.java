@@ -17,15 +17,18 @@ import io.vlingo.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries;
 import io.vlingo.symbio.store.object.jdbc.MySQLObjectStoreEntryJournalQueries;
 import io.vlingo.symbio.store.object.jdbc.jpa.JDBCObjectStoreEntryReaderTest;
 import io.vlingo.symbio.store.object.jdbc.jpa.JPAObjectStoreDelegate;
+import io.vlingo.symbio.store.testcontainers.SharedMySQLContainer;
 
 import java.sql.Connection;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MySQLJPAObjectStoreIntegrationTest extends JDBCObjectStoreEntryReaderTest {
+    private SharedMySQLContainer mysqlContainer = SharedMySQLContainer.getInstance();
+
     @Override
     protected Configuration createAdminConfiguration() throws Exception {
-        return MySQLConfigurationProvider.testConfiguration(DataFormat.Text);
+        return mysqlContainer.testConfiguration(DataFormat.Text);
     }
 
     @Override
@@ -35,8 +38,13 @@ public class MySQLJPAObjectStoreIntegrationTest extends JDBCObjectStoreEntryRead
 
     @Override
     protected ConnectionProvider createConnectionProvider() {
-        return new ConnectionProvider("com.mysql.cj.jdbc.Driver", "jdbc:mysql://localhost/", testDatabaseName,
-                "vlingo_test", "vlingo123", false);
+        return new ConnectionProvider(
+                "com.mysql.cj.jdbc.Driver",
+                "jdbc:mysql://" + mysqlContainer.getHost() + ":" + mysqlContainer.getMappedPort(SharedMySQLContainer.MYSQL_PORT) + "/",
+                testDatabaseName,
+                mysqlContainer.getUsername(),
+                mysqlContainer.getPassword(),
+                false);
     }
 
     @Override
@@ -59,9 +67,9 @@ public class MySQLJPAObjectStoreIntegrationTest extends JDBCObjectStoreEntryRead
         Map<String, Object> properties = new HashMap<>();
 
         properties.put("javax.persistence.jdbc.driver", "com.mysql.cj.jdbc.Driver");
-        properties.put("javax.persistence.jdbc.url", "jdbc:mysql://localhost/" + databaseNamePostfix);
-        properties.put("javax.persistence.jdbc.user", "vlingo_test");
-        properties.put("javax.persistence.jdbc.password", "vlingo123");
+        properties.put("javax.persistence.jdbc.url", "jdbc:mysql://" + mysqlContainer.getHost() + ":" + mysqlContainer.getMappedPort(SharedMySQLContainer.MYSQL_PORT) + "/" + databaseNamePostfix);
+        properties.put("javax.persistence.jdbc.user", mysqlContainer.getUsername());
+        properties.put("javax.persistence.jdbc.password", mysqlContainer.getPassword());
 
         return properties;
     }

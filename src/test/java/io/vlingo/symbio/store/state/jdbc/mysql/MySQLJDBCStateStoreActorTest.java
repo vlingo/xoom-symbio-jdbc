@@ -14,18 +14,18 @@ import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.mysql.MySQLConfigurationProvider;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.state.StateStore;
-import io.vlingo.symbio.store.state.jdbc.JDBCEntriesInstantWriter;
-import io.vlingo.symbio.store.state.jdbc.JDBCEntriesWriter;
-import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActor;
-import io.vlingo.symbio.store.state.jdbc.JDBCStateStoreActorTest;
-import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
+import io.vlingo.symbio.store.state.jdbc.*;
+import io.vlingo.symbio.store.testcontainers.SharedMySQLContainer;
+
+import java.util.List;
 
 public class MySQLJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
+    private SharedMySQLContainer mysqlContainer = SharedMySQLContainer.getInstance();
+
     @Override
     protected JDBCStorageDelegate<Object> delegate() throws Exception {
         System.out.println("Starting: MySQLJDBCTextStateStoreActorTest: delegate()");
@@ -35,7 +35,7 @@ public class MySQLJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
     @Override
     protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
         System.out.println("Starting: MySQLJDBCTextStateStoreActorTest: testConfiguration()");
-        return MySQLConfigurationProvider.testConfiguration(DataFormat.Text);
+        return mysqlContainer.testConfiguration(format);
     }
 
     @Override

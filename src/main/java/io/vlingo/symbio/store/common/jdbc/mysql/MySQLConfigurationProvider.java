@@ -77,19 +77,4 @@ public class MySQLConfigurationProvider {
                 originatorId,
                 createTables);
     }
-
-    public static Configuration.TestConfiguration testConfiguration(final DataFormat format) throws Exception {
-        return new Configuration.TestConfiguration(
-                DatabaseType.MySQL,
-                interest,
-                "com.mysql.cj.jdbc.Driver",
-                format,
-                "jdbc:mysql://localhost/",
-                "vlingo_test",  // database name
-                "vlingo_test",  // username
-                "vlingo123",    // password
-                false,          // useSSL
-                "TEST",         // originatorId
-                true);          // create tables
-    }
 }
