@@ -14,17 +14,19 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.state.jdbc.*;
-import org.junit.Ignore;
+import io.vlingo.symbio.store.testcontainers.SharedYugaByteDbContainer;
 
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.yugabyte.YugaByteConfigurationProvider;
 import io.vlingo.symbio.store.state.StateStore;
+import org.junit.Ignore;
 
 import java.util.List;
 
 @Ignore
 public class YugaByteJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
+    private SharedYugaByteDbContainer dbContainer = SharedYugaByteDbContainer.getInstance();
+
     @Override
     protected JDBCStorageDelegate<Object> delegate() throws Exception {
         System.out.println("Starting: YugaByteJDBCTextStateStoreActorTest: delegate()");
@@ -34,7 +36,7 @@ public class YugaByteJDBCStateStoreActorTest extends JDBCStateStoreActorTest {
     @Override
     protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
         System.out.println("Starting: YugaByteJDBCTextStateStoreActorTest: testConfiguration()");
-        return YugaByteConfigurationProvider.testConfiguration(DataFormat.Text);
+        return dbContainer.testConfiguration(DataFormat.Text);
     }
 
     @Override

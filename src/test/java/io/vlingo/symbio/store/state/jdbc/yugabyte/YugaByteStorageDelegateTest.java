@@ -10,13 +10,15 @@ package io.vlingo.symbio.store.state.jdbc.yugabyte;
 import io.vlingo.actors.Logger;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.yugabyte.YugaByteConfigurationProvider;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegate;
 import io.vlingo.symbio.store.state.jdbc.JDBCStorageDelegateTest;
+import io.vlingo.symbio.store.testcontainers.SharedYugaByteDbContainer;
 import org.junit.Ignore;
 
 @Ignore
 public class YugaByteStorageDelegateTest extends JDBCStorageDelegateTest {
+    private SharedYugaByteDbContainer dbContainer = SharedYugaByteDbContainer.getInstance();
+
     @Override
     protected JDBCStorageDelegate<Object> storageDelegate(Configuration.TestConfiguration configuration, Logger logger) {
         return new YugaByteStorageDelegate(configuration, logger);
@@ -24,6 +26,6 @@ public class YugaByteStorageDelegateTest extends JDBCStorageDelegateTest {
 
     @Override
     protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        return YugaByteConfigurationProvider.testConfiguration(format);
+        return dbContainer.testConfiguration(format);
     }
 }

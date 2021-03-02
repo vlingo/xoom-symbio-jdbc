@@ -9,14 +9,11 @@ package io.vlingo.symbio.store.journal.jdbc.yugabyte;
 
 import java.util.List;
 
-import org.junit.Ignore;
-
 import io.vlingo.actors.World;
 import io.vlingo.symbio.Entry;
 import io.vlingo.symbio.State;
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.yugabyte.YugaByteConfigurationProvider;
 import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
@@ -25,12 +22,16 @@ import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActor;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActorTest;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalInstantWriter;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalWriter;
+import io.vlingo.symbio.store.testcontainers.SharedYugaByteDbContainer;
+import org.junit.Ignore;
 
 @Ignore
 public class YugaByteJournalActorTest extends JDBCJournalActorTest {
+    private SharedYugaByteDbContainer dbContainer = SharedYugaByteDbContainer.getInstance();
+
     @Override
     protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        return YugaByteConfigurationProvider.testConfiguration(format);
+        return dbContainer.testConfiguration(format);
     }
 
     @Override

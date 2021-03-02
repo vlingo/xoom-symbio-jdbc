@@ -9,14 +9,16 @@ package io.vlingo.symbio.store.journal.jdbc.yugabyte;
 
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
-import io.vlingo.symbio.store.common.jdbc.yugabyte.YugaByteConfigurationProvider;
 import io.vlingo.symbio.store.journal.jdbc.JDBCJournalReaderActorTest;
+import io.vlingo.symbio.store.testcontainers.SharedYugaByteDbContainer;
 import org.junit.Ignore;
 
 @Ignore
 public class YugaByteJournalReaderActorTest extends JDBCJournalReaderActorTest {
+    private SharedYugaByteDbContainer dbContainer = SharedYugaByteDbContainer.getInstance();
+
     @Override
     protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        return YugaByteConfigurationProvider.testConfiguration(format);
+        return dbContainer.testConfiguration(format);
     }
 }

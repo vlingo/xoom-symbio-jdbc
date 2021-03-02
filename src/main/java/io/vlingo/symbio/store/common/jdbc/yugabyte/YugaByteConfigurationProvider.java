@@ -74,19 +74,4 @@ public class YugaByteConfigurationProvider {
                 originatorId,
                 createTables);
     }
-
-    public static Configuration.TestConfiguration testConfiguration(final DataFormat format) throws Exception {
-        return new Configuration.TestConfiguration(
-                DatabaseType.Postgres,
-                interest,
-                "org.postgresql.Driver",
-                format,
-                "jdbc:postgresql://localhost:5433/",
-                "vlingo_test",  // database name
-                "postgres",  // username
-                "postgres",    // password
-                false,          // useSSL
-                "TEST",         // originatorId
-                true);          // create tables
-    }
 }

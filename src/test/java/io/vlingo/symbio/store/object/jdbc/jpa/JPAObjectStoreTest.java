@@ -83,7 +83,9 @@ public abstract class JPAObjectStoreTest {
      */
     @After
     public void tearDown() throws Exception {
-        objectStore.close();
+        if (objectStore != null) {
+            objectStore.close();
+        }
         world.terminate();
         dropTestDatabase();
     }
