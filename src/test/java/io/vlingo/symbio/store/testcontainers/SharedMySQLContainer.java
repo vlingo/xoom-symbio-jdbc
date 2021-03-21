@@ -11,7 +11,7 @@ import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.common.jdbc.mysql.MySQLConfigurationProvider;
 
 public class SharedMySQLContainer extends MySQLContainer<SharedMySQLContainer> {
-    private static final String IMAGE_VERSION = "mysql:latest";
+    private static final String IMAGE_VERSION = "mysql:8.0.22";
     private static SharedMySQLContainer container;
 
     private SharedMySQLContainer() {
