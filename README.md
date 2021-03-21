@@ -2,27 +2,12 @@
 
 [![Javadocs](http://javadoc.io/badge/io.vlingo/vlingo-symbio-jdbc.svg?color=brightgreen)](http://javadoc.io/doc/io.vlingo/vlingo-symbio-jdbc) [![Build](https://github.com/vlingo/vlingo-symbio-jdbc/workflows/Build/badge.svg)](https://github.com/vlingo/vlingo-symbio-jdbc/actions?query=workflow%3ABuild) [ ![Download](https://api.bintray.com/packages/vlingo/vlingo-platform-java/vlingo-symbio-jdbc/images/download.svg) ](https://bintray.com/vlingo/vlingo-platform-java/vlingo-symbio-jdbc/_latestVersion) [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/vlingo-platform-java/symbio)
 
-The VLINGO/PLATFORM implementation of VLINGO/SYMBIO for JDBC.
+The VLINGO XOOM SYMBIO implementation for JDBC.
 
 Docs: https://docs.vlingo.io/vlingo-symbio
 
 ### Important
 If using snapshot builds [follow these instructions](https://github.com/vlingo/vlingo-platform#snapshots-repository) or you will experience failures.
-
-### State Storage
-The `StateStore` is a simple object storage mechanism that can be run against a number of persistence engines.
-Available JDBC storage implementations:
-
-   - General-purpose JDBC: `JDBCStateStoreActor`
-
-The `JDBCTextStateStoreActor` has these database delegate implementations:
-
-   - HSQLDB: `HSQLDBStorageDelegate`
-   - PostgresSQL: `PostgresStorageDelegate`
-
-Adding additional JDBC storage delegates is a straightforward process requiring a few hours of work.
-
-We welcome you to add support for your favorite database!
 
 ### Bintray
 
