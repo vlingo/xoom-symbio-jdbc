@@ -4,6 +4,9 @@
 
 The VLINGO/PLATFORM implementation of VLINGO/SYMBIO for JDBC.
 
+### Important
+If using snapshot builds [follow these instructions](https://github.com/vlingo/vlingo-platform#snapshots-repository) or you will experience failures.
+
 Docs: https://docs.vlingo.io/vlingo-symbio
 
 ### State Storage
