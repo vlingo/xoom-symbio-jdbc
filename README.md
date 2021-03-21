@@ -4,10 +4,10 @@
 
 The VLINGO/PLATFORM implementation of VLINGO/SYMBIO for JDBC.
 
+Docs: https://docs.vlingo.io/vlingo-symbio
+
 ### Important
 If using snapshot builds [follow these instructions](https://github.com/vlingo/vlingo-platform#snapshots-repository) or you will experience failures.
-
-Docs: https://docs.vlingo.io/vlingo-symbio
 
 ### State Storage
 The `StateStore` is a simple object storage mechanism that can be run against a number of persistence engines.
