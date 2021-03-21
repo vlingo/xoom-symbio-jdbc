@@ -1,10 +1,11 @@
 package io.vlingo.symbio.store.testcontainers;
 
+import org.testcontainers.containers.PostgreSQLContainer;
+
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider;
-import org.testcontainers.containers.PostgreSQLContainer;
 
 public class SharedPostgreSQLContainer extends PostgreSQLContainer<SharedPostgreSQLContainer> {
     private static final String IMAGE_VERSION = "postgres:latest";
@@ -14,6 +15,7 @@ public class SharedPostgreSQLContainer extends PostgreSQLContainer<SharedPostgre
         super(IMAGE_VERSION);
     }
 
+    @SuppressWarnings("resource")
     public static SharedPostgreSQLContainer getInstance() {
         if (container == null) {
             container = new SharedPostgreSQLContainer()

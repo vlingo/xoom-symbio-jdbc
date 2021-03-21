@@ -18,10 +18,10 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.journal.Journal;
-import io.vlingo.symbio.store.journal.jdbc.*;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActor;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActorTest;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalBatchWriter;
 import io.vlingo.symbio.store.testcontainers.SharedPostgreSQLContainer;
-
-import java.util.List;
 
 public class PostgresBatchJournalActorTest extends JDBCJournalActorTest {
 	private SharedPostgreSQLContainer postgresContainer = SharedPostgreSQLContainer.getInstance();

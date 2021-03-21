@@ -1,12 +1,12 @@
 package io.vlingo.symbio.store.testcontainers;
 
+import org.testcontainers.containers.JdbcDatabaseContainer;
+import org.testcontainers.utility.DockerImageName;
+
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
-import io.vlingo.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider;
 import io.vlingo.symbio.store.common.jdbc.yugabyte.YugaByteConfigurationProvider;
-import org.testcontainers.containers.JdbcDatabaseContainer;
-import org.testcontainers.utility.DockerImageName;
 
 public class SharedYugaByteDbContainer extends JdbcDatabaseContainer<SharedYugaByteDbContainer> {
     public static final Integer YUGABYTE_PORT = 5433;
@@ -17,6 +17,7 @@ public class SharedYugaByteDbContainer extends JdbcDatabaseContainer<SharedYugaB
         super(DockerImageName.parse(IMAGE_VERSION));
     }
 
+    @SuppressWarnings("resource")
     public static SharedYugaByteDbContainer getInstance() {
         if (container == null) {
             container = new SharedYugaByteDbContainer()

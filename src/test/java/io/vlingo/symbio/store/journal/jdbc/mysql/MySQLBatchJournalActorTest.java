@@ -18,10 +18,10 @@ import io.vlingo.symbio.store.dispatch.Dispatchable;
 import io.vlingo.symbio.store.dispatch.Dispatcher;
 import io.vlingo.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.symbio.store.journal.Journal;
-import io.vlingo.symbio.store.journal.jdbc.*;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActor;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalActorTest;
+import io.vlingo.symbio.store.journal.jdbc.JDBCJournalBatchWriter;
 import io.vlingo.symbio.store.testcontainers.SharedMySQLContainer;
-
-import java.util.List;
 
 public class MySQLBatchJournalActorTest extends JDBCJournalActorTest {
 	private SharedMySQLContainer mysqlContainer = SharedMySQLContainer.getInstance();

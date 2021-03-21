@@ -1,13 +1,14 @@
 package io.vlingo.symbio.store.testcontainers;
 
+import java.sql.Connection;
+import java.sql.SQLException;
+
+import org.testcontainers.containers.MySQLContainer;
+
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.common.jdbc.mysql.MySQLConfigurationProvider;
-import org.testcontainers.containers.MySQLContainer;
-
-import java.sql.Connection;
-import java.sql.SQLException;
 
 public class SharedMySQLContainer extends MySQLContainer<SharedMySQLContainer> {
     private static final String IMAGE_VERSION = "mysql:latest";
@@ -17,6 +18,7 @@ public class SharedMySQLContainer extends MySQLContainer<SharedMySQLContainer> {
         super(IMAGE_VERSION);
     }
 
+    @SuppressWarnings("resource")
     public static SharedMySQLContainer getInstance() {
         if (container == null) {
             String username = "vlingo_test";
