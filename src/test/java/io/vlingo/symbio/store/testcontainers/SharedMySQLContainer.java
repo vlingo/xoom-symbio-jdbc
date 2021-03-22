@@ -1,17 +1,17 @@
 package io.vlingo.symbio.store.testcontainers;
 
-import java.sql.Connection;
-import java.sql.SQLException;
-
-import org.testcontainers.containers.MySQLContainer;
-
 import io.vlingo.symbio.store.DataFormat;
 import io.vlingo.symbio.store.common.jdbc.Configuration;
 import io.vlingo.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.symbio.store.common.jdbc.mysql.MySQLConfigurationProvider;
+import org.testcontainers.containers.MySQLContainer;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 
 public class SharedMySQLContainer extends MySQLContainer<SharedMySQLContainer> {
-    private static final String IMAGE_VERSION = "mysql:8.0.22";
+    private static final String IMAGE_VERSION = "mysql:latest";
     private static SharedMySQLContainer container;
 
     private SharedMySQLContainer() {
@@ -27,11 +27,10 @@ public class SharedMySQLContainer extends MySQLContainer<SharedMySQLContainer> {
             container = new SharedMySQLContainer()
                     .withEnv("MYSQL_ROOT_HOST", "%")
                     .withDatabaseName(databaseName)
-                    .withUsername("root")
-                    .withPassword("");
+                    .withPassword(password);
             container.start();
-            createUser(username, password);
-            container.withUsername(username).withPassword(password);
+            container.createUser(username, password);
+            container.withUsername(username);
         }
         return container;
     }
@@ -56,8 +55,8 @@ public class SharedMySQLContainer extends MySQLContainer<SharedMySQLContainer> {
                 true);
     }
 
-    private static void createUser(String username, String password) {
-        try(Connection connection = container.createConnection("")) {
+    private void createUser(String username, String password) {
+        try(Connection connection = DriverManager.getConnection(getJdbcUrl(), "root", getPassword())) {
             connection.createStatement().executeUpdate(String.format("CREATE USER '%s'@'%%' IDENTIFIED BY '%s';", username, password));
             connection.createStatement().executeUpdate(String.format("GRANT ALL PRIVILEGES ON *.* TO '%s'@'%%';", username));
         } catch (SQLException cause) {
