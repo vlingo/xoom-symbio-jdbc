@@ -22,13 +22,13 @@ If using snapshot builds [follow these instructions](https://github.com/vlingo/v
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>1.5.0</version>
+      <version>1.5.1</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio-jdbc</artifactId>
-      <version>1.5.0</version>
+      <version>1.5.1</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -36,8 +36,8 @@ If using snapshot builds [follow these instructions](https://github.com/vlingo/v
 
 ```gradle
 dependencies {
-    compile 'io.vlingo:vlingo-symbio:1.5.0'
-    compile 'io.vlingo:vlingo-symbio-jdbc:1.5.0'
+    compile 'io.vlingo:vlingo-symbio:1.5.1'
+    compile 'io.vlingo:vlingo-symbio-jdbc:1.5.1'
 }
 
 repositories {
