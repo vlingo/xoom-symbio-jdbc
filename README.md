@@ -13,13 +13,13 @@ Docs: https://docs.vlingo.io/vlingo-symbio
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio</artifactId>
-      <version>1.5.2</version>
+      <version>1.6.0</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.vlingo</groupId>
       <artifactId>vlingo-symbio-jdbc</artifactId>
-      <version>1.5.2</version>
+      <version>1.6.0</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -27,8 +27,8 @@ Docs: https://docs.vlingo.io/vlingo-symbio
 
 ```gradle
 dependencies {
-    compile 'io.vlingo:vlingo-symbio:1.5.2'
-    compile 'io.vlingo:vlingo-symbio-jdbc:1.5.2'
+    compile 'io.vlingo:vlingo-symbio:1.6.0'
+    compile 'io.vlingo:vlingo-symbio-jdbc:1.6.0'
 }
 ```
 
