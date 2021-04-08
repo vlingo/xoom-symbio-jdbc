@@ -20,20 +20,20 @@
         <mapping-file>META-INF/orm.xml</mapping-file>
 
         <!-- Annotated entities, converters, etc. contained in the persistence unit -->
-        <class>io.vlingo.symbio.store.object.PersistentObject</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateTimeConverter</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.JPAEntry</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.JPADispatchable</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.Person</class>
+        <class>io.vlingo.xoom.symbio.store.object.PersistentObject</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.converters.LocalDateTimeConverter</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.JPAEntry</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.JPADispatchable</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.Person</class>
 
         <exclude-unlisted-classes>false</exclude-unlisted-classes>
 
         <properties>
             <property name="javax.persistence.jdbc.driver" value="com.mysql.cj.jdbc.Driver"/>
-            <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost/vlingo_test"/>
-            <property name="javax.persistence.jdbc.user" value="vlingo_test"/>
+            <property name="javax.persistence.jdbc.url" value="jdbc:mysql://localhost/xoom_test"/>
+            <property name="javax.persistence.jdbc.user" value="xoom_test"/>
             <property name="javax.persistence.jdbc.password" value="vlingo123"/>
             <property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
             <property name="javax.persistence.schema-generation.database.action" value="drop-and-create"/>
@@ -61,13 +61,13 @@
         <mapping-file>META-INF/orm.xml</mapping-file>
 
         <!-- Annotated entities, converters, etc. contained in the persistence unit -->
-        <class>io.vlingo.symbio.store.object.PersistentObject</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateTimeConverter</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.JPAEntry</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.JPADispatchable</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.Person</class>
+        <class>io.vlingo.xoom.symbio.store.object.PersistentObject</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.converters.LocalDateTimeConverter</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.JPAEntry</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.JPADispatchable</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.Person</class>
 
         <exclude-unlisted-classes>false</exclude-unlisted-classes>
 
@@ -102,20 +102,20 @@
         <mapping-file>META-INF/orm.xml</mapping-file>
 
         <!-- Annotated entities, converters, etc. contained in the persistence unit -->
-        <class>io.vlingo.symbio.store.object.PersistentObject</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateTimeConverter</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.JPAEntry</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.JPADispatchable</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.Person</class>
+        <class>io.vlingo.xoom.symbio.store.object.PersistentObject</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.converters.LocalDateTimeConverter</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.JPAEntry</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.JPADispatchable</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.Person</class>
 
         <exclude-unlisted-classes>false</exclude-unlisted-classes>
 
         <properties>
             <property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver"/>
-            <property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost/vlingo_test"/>
-            <property name="javax.persistence.jdbc.user" value="vlingo_test"/>
+            <property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost/xoom_test"/>
+            <property name="javax.persistence.jdbc.user" value="xoom_test"/>
             <property name="javax.persistence.jdbc.password" value="vlingo123"/>
             <property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>
             <property name="javax.persistence.schema-generation.database.action" value="drop-and-create"/>
@@ -144,19 +144,19 @@
         <mapping-file>META-INF/orm.xml</mapping-file>
 
         <!-- Annotated entities, converters, etc. contained in the persistence unit -->
-        <class>io.vlingo.symbio.store.object.PersistentObject</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.LocalDateTimeConverter</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.JPAEntry</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.model.JPADispatchable</class>
-        <class>io.vlingo.symbio.store.object.jdbc.jpa.Person</class>
+        <class>io.vlingo.xoom.symbio.store.object.PersistentObject</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.converters.LocalDateConverter</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.converters.LocalDateTimeConverter</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.converters.MetadataConverter</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.JPAEntry</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.model.JPADispatchable</class>
+        <class>io.vlingo.xoom.symbio.store.object.jdbc.jpa.Person</class>
 
         <exclude-unlisted-classes>false</exclude-unlisted-classes>
 
         <properties>
             <property name="javax.persistence.jdbc.driver" value="org.postgresql.Driver"/>
-            <property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost:5433/vlingo_test"/>
+            <property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost:5433/xoom_test"/>
             <property name="javax.persistence.jdbc.user" value="postgres"/>
             <property name="javax.persistence.jdbc.password" value="postgres"/>
             <property name="javax.persistence.LockModeType" value="OPTIMISTIC_FORCE_INCREMENT"/>

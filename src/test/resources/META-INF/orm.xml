@@ -11,7 +11,7 @@
 		</persistence-unit-defaults>
 	</persistence-unit-metadata>
 	
-	<mapped-superclass class="io.vlingo.symbio.store.object.StateObject">
+	<mapped-superclass class="io.vlingo.xoom.symbio.store.object.StateObject">
 		<attributes>
 			<id name="persistenceId">
 				<column name="ID" />

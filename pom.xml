@@ -1,11 +1,11 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>io.vlingo</groupId>
-  <artifactId>vlingo-symbio-jdbc</artifactId>
+  <groupId>io.vlingo.xoom</groupId>
+  <artifactId>xoom-symbio-jdbc</artifactId>
   <version>1.6.1-SNAPSHOT</version>
-  <name>vlingo-symbio-jdbc</name>
-  <description>Implementation of vlingo-symbio for JDBC.</description>
-  <url>https://github.com/vlingo/vlingo-symbio-jdbc</url>
+  <name>xoom-symbio-jdbc</name>
+  <description>Implementation of xoom-symbio for JDBC.</description>
+  <url>https://github.com/vlingo/xoom-symbio-jdbc</url>
   <licenses>
     <license>
       <name>Mozilla Public License 2.0</name>
@@ -22,9 +22,9 @@
     </developer>
   </developers>
   <scm>
-    <connection>scm:git:git://github.com/vlingo/vlingo-symbio-jdbc.git</connection>
-    <developerConnection>scm:git:ssh://github.com/vlingo/vlingo-symbio-jdbc.git</developerConnection>
-    <url>http://github.com/vlingo/vlingo-symbio-jdbc/tree/master</url>
+    <connection>scm:git:git://github.com/vlingo/xoom-symbio-jdbc.git</connection>
+    <developerConnection>scm:git:ssh://github.com/vlingo/xoom-symbio-jdbc.git</developerConnection>
+    <url>http://github.com/vlingo/xoom-symbio-jdbc/tree/master</url>
   </scm>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -105,18 +105,18 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.vlingo</groupId>
-      <artifactId>vlingo-common</artifactId>
+      <groupId>io.vlingo.xoom</groupId>
+      <artifactId>xoom-common</artifactId>
       <version>1.6.1-SNAPSHOT</version>
     </dependency>
     <dependency>
-      <groupId>io.vlingo</groupId>
-      <artifactId>vlingo-actors</artifactId>
+      <groupId>io.vlingo.xoom</groupId>
+      <artifactId>xoom-actors</artifactId>
       <version>1.6.1-SNAPSHOT</version>
     </dependency>
     <dependency>
-      <groupId>io.vlingo</groupId>
-      <artifactId>vlingo-symbio</artifactId>
+      <groupId>io.vlingo.xoom</groupId>
+      <artifactId>xoom-symbio</artifactId>
       <version>1.6.1-SNAPSHOT</version>
     </dependency>
     <dependency>
@@ -261,7 +261,7 @@
         <repository>
           <id>github</id>
           <name>GitHub Packages</name>
-          <url>https://maven.pkg.github.com/vlingo/vlingo-platform</url>
+          <url>https://maven.pkg.github.com/vlingo/xoom-platform</url>
         </repository>
       </distributionManagement>
     </profile>
@@ -272,7 +272,7 @@
         <repository>
           <id>github</id>
           <name>GitHub Packages</name>
-          <url>https://maven.pkg.github.com/vlingo/vlingo-platform</url>
+          <url>https://maven.pkg.github.com/vlingo/xoom-platform</url>
         </repository>
       </repositories>
     </profile>

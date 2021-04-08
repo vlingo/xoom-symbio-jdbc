@@ -1,0 +1,232 @@
+package io.vlingo.xoom.symbio.store.object.jdbc.jpa;
+
+import java.util.Collection;
+
+import io.vlingo.xoom.actors.Actor;
+import io.vlingo.xoom.actors.DeadLetter;
+import io.vlingo.xoom.actors.LocalMessage;
+import io.vlingo.xoom.actors.Mailbox;
+import io.vlingo.xoom.actors.Returns;
+import io.vlingo.xoom.common.Completes;
+import io.vlingo.xoom.common.SerializableConsumer;
+import io.vlingo.xoom.symbio.Entry;
+import io.vlingo.xoom.symbio.Metadata;
+import io.vlingo.xoom.symbio.store.EntryReader;
+import io.vlingo.xoom.symbio.store.object.ObjectStore;
+import io.vlingo.xoom.symbio.store.object.StateObject;
+import io.vlingo.xoom.symbio.store.object.StateSources;
+
+public class JPAObjectStore__Proxy implements io.vlingo.xoom.symbio.store.object.jdbc.jpa.JPAObjectStore {
+
+  private static final String removeRepresentation1 = "remove(T, long, io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
+  private static final String removeRepresentation2 = "remove(T, long, io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
+  private static final String closeRepresentation3 = "close()";
+  private static final String entryReaderRepresentation4 = "entryReader(java.lang.String)";
+  private static final String queryObjectRepresentation5 = "queryObject(io.vlingo.xoom.symbio.store.object.QueryExpression, io.vlingo.xoom.symbio.store.object.ObjectStoreReader.QueryResultInterest, java.lang.Object)";
+  private static final String queryObjectRepresentation6 = "queryObject(io.vlingo.xoom.symbio.store.object.QueryExpression, io.vlingo.xoom.symbio.store.object.ObjectStoreReader.QueryResultInterest)";
+  private static final String queryAllRepresentation7 = "queryAll(io.vlingo.xoom.symbio.store.object.QueryExpression, io.vlingo.xoom.symbio.store.object.ObjectStoreReader.QueryResultInterest)";
+  private static final String queryAllRepresentation8 = "queryAll(io.vlingo.xoom.symbio.store.object.QueryExpression, io.vlingo.xoom.symbio.store.object.ObjectStoreReader.QueryResultInterest, java.lang.Object)";
+  private static final String persistRepresentation9 = "persist(io.vlingo.xoom.symbio.StateSources, long, io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
+  private static final String persistRepresentation11 = "persist(io.vlingo.xoom.symbio.StateSources, long, io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
+  private static final String persistRepresentation13 = "persist(io.vlingo.xoom.symbio.StateSources, io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
+  private static final String persistRepresentation15 = "persist(io.vlingo.xoom.symbio.StateSources, io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
+  private static final String persistAllRepresentation18 = "persistAll(java.util.Collection<io.vlingo.xoom.symbio.StateSources>, long, io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
+  private static final String persistAllRepresentation19 = "persistAll(java.util.Collection<io.vlingo.xoom.symbio.StateSources>, long, io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
+  private static final String persistAllRepresentation21 = "persistAll(java.util.Collection<io.vlingo.xoom.symbio.StateSources>, io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest)";
+  private static final String persistAllRepresentation23 = "persistAll(java.util.Collection<io.vlingo.xoom.symbio.StateSources>, io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest, java.lang.Object)";
+
+  private final Actor actor;
+  private final Mailbox mailbox;
+
+  public JPAObjectStore__Proxy(final Actor actor, final Mailbox mailbox){
+    this.actor = actor;
+    this.mailbox = mailbox;
+  }
+
+  @Override
+  public <T extends io.vlingo.xoom.symbio.store.object.StateObject>void remove(final T arg0, final long arg1, final io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.remove(arg0, arg1, arg2);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, removeRepresentation1); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, removeRepresentation1)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, removeRepresentation1));
+    }
+  }
+  @Override
+  public <T extends io.vlingo.xoom.symbio.store.object.StateObject>void remove(final T arg0, final long arg1, final io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2, final java.lang.Object arg3) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.remove(arg0, arg1, arg2, arg3);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, removeRepresentation2); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, removeRepresentation2)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, removeRepresentation2));
+    }
+  }
+  @Override
+  public void close() {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = ObjectStore::close;
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, closeRepresentation3); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, closeRepresentation3)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, closeRepresentation3));
+    }
+  }
+  @Override
+  public Completes<EntryReader<? extends Entry<?>>> entryReader(final String arg0) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<ObjectStore> consumer = (actor) -> actor.entryReader(arg0);
+      final Completes<EntryReader<? extends Entry<?>>> completes = Completes.using(actor.scheduler());
+      if (mailbox.isPreallocated()) { mailbox.send(actor, ObjectStore.class, consumer, Returns.value(completes), entryReaderRepresentation4); }
+      else { mailbox.send(new LocalMessage<ObjectStore>(actor, ObjectStore.class, consumer, Returns.value(completes), entryReaderRepresentation4)); }
+      return completes;
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, entryReaderRepresentation4));
+    }
+    return null;
+  }
+  @Override
+  public void queryObject(final io.vlingo.xoom.symbio.store.QueryExpression arg0, final io.vlingo.xoom.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1, final java.lang.Object arg2) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.queryObject(arg0, arg1, arg2);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, queryObjectRepresentation5); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, queryObjectRepresentation5)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, queryObjectRepresentation5));
+    }
+  }
+  @Override
+  public void queryObject(final io.vlingo.xoom.symbio.store.QueryExpression arg0, final io.vlingo.xoom.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.queryObject(arg0, arg1);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, queryObjectRepresentation6); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, queryObjectRepresentation6)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, queryObjectRepresentation6));
+    }
+  }
+  @Override
+  public void queryAll(final io.vlingo.xoom.symbio.store.QueryExpression arg0, final io.vlingo.xoom.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.queryAll(arg0, arg1);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, queryAllRepresentation7); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, queryAllRepresentation7)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, queryAllRepresentation7));
+    }
+  }
+  @Override
+  public void queryAll(final io.vlingo.xoom.symbio.store.QueryExpression arg0, final io.vlingo.xoom.symbio.store.object.ObjectStoreReader.QueryResultInterest arg1, final java.lang.Object arg2) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.queryAll(arg0, arg1, arg2);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, queryAllRepresentation8); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, queryAllRepresentation8)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, queryAllRepresentation8));
+    }
+  }
+  @Override
+  public <T extends io.vlingo.xoom.symbio.store.object.StateObject, E>void persist(final StateSources<T,E> arg0, final long arg1, final io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1, arg2);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistRepresentation9); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, persistRepresentation9)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, persistRepresentation9));
+    }
+  }
+  @Override
+  public <T extends io.vlingo.xoom.symbio.store.object.StateObject, E>void persist(final StateSources<T,E> arg0, final long arg1, final io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2, final java.lang.Object arg3) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1, arg2, arg3);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistRepresentation11); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, persistRepresentation11)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, persistRepresentation11));
+    }
+  }
+  @Override
+  public <T extends io.vlingo.xoom.symbio.store.object.StateObject, E>void persist(final StateSources<T,E> arg0, final io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistRepresentation13); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, persistRepresentation13)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, persistRepresentation13));
+    }
+  }
+  @Override
+  public <T extends io.vlingo.xoom.symbio.store.object.StateObject, E>void persist(final StateSources<T,E> arg0, final io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1, final java.lang.Object arg2) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1, arg2);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistRepresentation15); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, persistRepresentation15)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, persistRepresentation15));
+    }
+  }
+
+  @Override
+  public <T extends StateObject, E> void persist(final StateSources<T,E> arg0, final Metadata arg1, final long arg2, final PersistResultInterest arg3, final Object arg4) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.persist(arg0, arg1, arg2, arg3, arg4);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistRepresentation15); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, persistRepresentation15)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, persistRepresentation15));
+    }
+  }
+
+  @Override
+  public <T extends io.vlingo.xoom.symbio.store.object.StateObject, E>void persistAll(final java.util.Collection<StateSources<T,E>> arg0, final long arg1, final io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1, arg2);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistAllRepresentation18); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, persistAllRepresentation18)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, persistAllRepresentation18));
+    }
+  }
+  @Override
+  public <T extends io.vlingo.xoom.symbio.store.object.StateObject, E>void persistAll(final java.util.Collection<StateSources<T,E>> arg0, final long arg1, final io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg2, final java.lang.Object arg3) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1, arg2, arg3);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistAllRepresentation19); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, persistAllRepresentation19)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, persistAllRepresentation19));
+    }
+  }
+  @Override
+  public <T extends io.vlingo.xoom.symbio.store.object.StateObject, E>void persistAll(final java.util.Collection<StateSources<T,E>> arg0, final io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistAllRepresentation21); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, persistAllRepresentation21)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, persistAllRepresentation21));
+    }
+  }
+  @Override
+  public <T extends io.vlingo.xoom.symbio.store.object.StateObject, E>void persistAll(final java.util.Collection<StateSources<T,E>> arg0, final io.vlingo.xoom.symbio.store.object.ObjectStoreWriter.PersistResultInterest arg1, final java.lang.Object arg2) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1, arg2);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistAllRepresentation23); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, persistAllRepresentation23)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, persistAllRepresentation23));
+    }
+  }
+
+  @Override
+  public <T extends StateObject, E> void persistAll(final Collection<StateSources<T,E>> arg0, final Metadata arg1, final long arg2, final PersistResultInterest arg3, final Object arg4) {
+    if (!actor.isStopped()) {
+      final SerializableConsumer<JPAObjectStore> consumer = (actor) -> actor.persistAll(arg0, arg1, arg2, arg3, arg4);
+      if (mailbox.isPreallocated()) { mailbox.send(actor, JPAObjectStore.class, consumer, null, persistAllRepresentation23); }
+      else { mailbox.send(new LocalMessage<>(actor, JPAObjectStore.class, consumer, persistAllRepresentation23)); }
+    } else {
+      actor.deadLetters().failedDelivery(new DeadLetter(actor, persistAllRepresentation23));
+    }
+  }
+}
