@@ -120,7 +120,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
         }
       }
     } catch (Exception e) {
-      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
+      logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
       return completes().with(null);
     }
   }
@@ -155,7 +155,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
         }
       }
     } catch (Exception e) {
-      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
+      logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
       return completes().with(null);
     }
   }
@@ -205,7 +205,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
       // fall through
     }
 
-    logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve size, using -1L.");
+    logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve size, using -1L.");
 
     return completes().with(-1L);
   }
@@ -260,7 +260,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
          final ResultSet result = statement.executeQuery()) {
       return mapQueriedEntriesFrom(result);
     } catch (Exception e) {
-      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read ids because: " + e.getMessage(), e);
+      logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read ids because: " + e.getMessage(), e);
       return new ArrayList<>();
     }
   }
@@ -279,7 +279,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
       // fall through
     }
 
-    logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve latest offset, using current.");
+    logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve latest offset, using current.");
 
     return offset;
   }
@@ -292,7 +292,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
       upsertCurrentEntryOffset.setLong(3, offset);
       upsertCurrentEntryOffset.executeUpdate();
     } catch (SQLException e) {
-      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not upsert current offset because: " + e.getMessage(), e);
+      logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not upsert current offset because: " + e.getMessage(), e);
     }
   }
 

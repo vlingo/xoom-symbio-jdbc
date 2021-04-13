@@ -60,7 +60,7 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
             }
             doCommit();
         } catch (Exception e) {
-          logger.error("vlingo/symbio-jdbc-" + databaseType + ": Failed to query all unconfirmed dispatchables because: " + e.getMessage(), e);
+          logger.error("xoom-symbio-jdbc-" + databaseType + ": Failed to query all unconfirmed dispatchables because: " + e.getMessage(), e);
           fail();
         }
 
@@ -73,7 +73,7 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
             queries.prepareDeleteDispatchableQuery(dispatchId).executeUpdate();
             doCommit();
         } catch (final Exception e) {
-            logger.error("vlingo/symbio-jdbc-" + databaseType + ": Failed to confirm dispatch with id " + dispatchId + " because: " + e.getMessage(), e);
+            logger.error("xoom-symbio-jdbc-" + databaseType + ": Failed to confirm dispatch with id " + dispatchId + " because: " + e.getMessage(), e);
             fail();
         }
     }
@@ -91,7 +91,7 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
         try {
             connection.commit();
         } catch (final SQLException e) {
-            logger.error("vlingo/symbio-jdbc-" + databaseType + ": Could not complete transaction", e);
+            logger.error("xoom-symbio-jdbc-" + databaseType + ": Could not complete transaction", e);
             fail();
             throw new IllegalStateException(e);
         }

@@ -91,7 +91,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
         return completes().with(entry.get());
       }
     } catch (Exception e) {
-      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
+      logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
       return completes().with(null);
     }
   }
@@ -123,7 +123,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
         return completes().with(entries);
       }
     } catch (Exception e) {
-      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read ids because: " + e.getMessage(), e);
+      logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read ids because: " + e.getMessage(), e);
       return completes().with(null);
     }
   }
@@ -167,7 +167,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
     try {
       return completes().with(jdbi.handle().createQuery(querySize.query).mapTo(Long.class).one());
     } catch (Exception e) {
-      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve size, using -1L.");
+      logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve size, using -1L.");
       return completes().with(-1L);
     }
   }
@@ -194,7 +194,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
       final List<Entry<String>> entries = (List)jdbi.handle().createQuery(expression.query).mapTo(expression.type).list();
       return entries;
     } catch (Exception e) {
-      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
+      logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
       return new ArrayList<>();
     }
   }
@@ -207,7 +207,7 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
     try {
       return jdbi.handle().createQuery(queryLastEntryId.query).mapTo(Long.class).one();
     } catch (Exception e) {
-      logger().info("vlingo/symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve latest offset, using current.");
+      logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve latest offset, using current.");
       return offset;
     }
   }

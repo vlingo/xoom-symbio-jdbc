@@ -189,8 +189,8 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
                 return completes().with(count);
             }
         } catch (Exception e) {
-            logger().error("vlingo/symbio-postgres: " + e.getMessage(), e);
-            logger().error("vlingo/symbio-postgres: Rewinding the offset");
+            logger().error("xoom-symbio-postgres: " + e.getMessage(), e);
+            logger().error("xoom-symbio-postgres: Rewinding the offset");
         }
 
         return completes().with(-1L);
@@ -240,7 +240,7 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
              ResultSet result = statement.executeQuery()) {
             return mapQueriedEntriesFrom(result);
         } catch (Exception e) {
-            logger().error("vlingo/symbio-postgres error: " + e.getMessage(), e);
+            logger().error("xoom-symbio-postgres error: " + e.getMessage(), e);
             return new ArrayList<>();
         }
     }
@@ -263,7 +263,7 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
                 }
             }
         } catch (Exception e) {
-            logger().error("vlingo/symbio-hsqldb: Could not retrieve latest offset, using current.");
+            logger().error("xoom-symbio-hsqldb: Could not retrieve latest offset, using current.");
         }
 
         return 0;
@@ -279,8 +279,8 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
             updateCurrentOffset.executeUpdate();
             configuration.connection.commit();
         } catch (Exception e) {
-            logger().error("vlingo/symbio-hsqldb: Could not persist the offset. Will retry on next read.");
-            logger().error("vlingo/symbio-hsqldb: " + e.getMessage(), e);
+            logger().error("xoom-symbio-hsqldb: Could not persist the offset. Will retry on next read.");
+            logger().error("xoom-symbio-hsqldb: " + e.getMessage(), e);
         }
     }
 }
