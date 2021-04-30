@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.vlingo</groupId>
   <artifactId>vlingo-symbio-jdbc</artifactId>
-  <version>1.6.1-SNAPSHOT</version>
+  <version>1.7.5</version>
   <name>vlingo-symbio-jdbc</name>
   <description>Implementation of xoom-symbio for JDBC.</description>
   <url>https://github.com/vlingo/xoom-symbio-jdbc</url>
@@ -113,17 +113,17 @@
     <dependency>
       <groupId>io.vlingo.xoom</groupId>
       <artifactId>xoom-common</artifactId>
-      <version>1.6.1-SNAPSHOT</version>
+      <version>1.7.5</version>
     </dependency>
     <dependency>
       <groupId>io.vlingo.xoom</groupId>
       <artifactId>xoom-actors</artifactId>
-      <version>1.6.1-SNAPSHOT</version>
+      <version>1.7.5</version>
     </dependency>
     <dependency>
       <groupId>io.vlingo.xoom</groupId>
       <artifactId>xoom-symbio</artifactId>
-      <version>1.6.1-SNAPSHOT</version>
+      <version>1.7.5</version>
     </dependency>
     <dependency>
       <groupId>org.hsqldb</groupId>
