@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.vlingo</groupId>
   <artifactId>vlingo-symbio-jdbc</artifactId>
-  <version>1.7.5</version>
+  <version>1.7.6-SNAPSHOT</version>
   <name>vlingo-symbio-jdbc</name>
   <description>Implementation of xoom-symbio for JDBC.</description>
   <url>https://github.com/vlingo/xoom-symbio-jdbc</url>
