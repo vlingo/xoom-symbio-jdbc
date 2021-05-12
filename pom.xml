@@ -138,7 +138,7 @@
     <dependency>
       <groupId>org.hibernate</groupId>
       <artifactId>hibernate-c3p0</artifactId>
-      <version>5.4.1.Final</version>
+      <version>5.4.31.Final</version>
       <type>pom</type>
     </dependency>
     <dependency>
