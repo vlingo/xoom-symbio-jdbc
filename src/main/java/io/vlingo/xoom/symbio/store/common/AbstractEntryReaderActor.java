@@ -7,14 +7,6 @@
 
 package io.vlingo.xoom.symbio.store.common;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
 import io.vlingo.xoom.actors.Actor;
 import io.vlingo.xoom.common.Completes;
 import io.vlingo.xoom.reactivestreams.Stream;
@@ -27,42 +19,30 @@ import io.vlingo.xoom.symbio.store.gap.GappedEntries;
 import io.vlingo.xoom.symbio.store.journal.JournalReader;
 import io.vlingo.xoom.symbio.store.state.StateStoreEntryReader;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor implements StateStoreEntryReader<T> {
     private final Advice advice;
     private final String name;
     private final Configuration configuration;
     private final EntryAdapterProvider entryAdapterProvider;
 
-    private final PreparedStatement queryBatch;
-    private final String queryIds;
-    private final PreparedStatement queryCount;
-    private final PreparedStatement queryOne;
-    private final PreparedStatement queryLatestOffset;
-    private final PreparedStatement updateCurrentOffset;
-
     private GapRetryReader<T> reader = null;
 
     private long currentId = 0L;
 
-    public AbstractEntryReaderActor(final Advice advice, final String name) throws Exception {
+    public AbstractEntryReaderActor(final Advice advice, final String name) {
         this.advice = advice;
         this.name = name;
         this.configuration = advice.specificConfiguration();
-
         this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
-
-        try {
-            this.queryBatch = configuration.connection.prepareStatement(this.advice.queryEntryBatchExpression);
-            this.queryIds = this.advice.queryEntryIdsExpression;
-            this.queryCount = configuration.connection.prepareStatement(this.advice.queryCount);
-            this.queryLatestOffset = configuration.connection.prepareStatement(this.advice.queryLatestOffset);
-            this.queryOne = configuration.connection.prepareStatement(this.advice.queryEntryExpression);
-            this.updateCurrentOffset = configuration.connection.prepareStatement(this.advice.queryUpdateCurrentOffset);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            e.printStackTrace();
-            throw e;
-        }
     }
 
     /**
@@ -75,13 +55,7 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
 
     @Override
     public void close() {
-        try {
-            queryBatch.close();
-            queryOne.close();
-            configuration.connection.close();
-        } catch (SQLException e) {
-            // ignore
-        }
+        //
     }
 
     @Override
@@ -91,7 +65,8 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
 
     @Override
     public Completes<T> readNext() {
-        try {
+        try (final Connection connection = configuration.connectionProvider.connection();
+             final PreparedStatement queryOne = connection.prepareStatement(this.advice.queryEntryExpression)) {
             queryOne.clearParameters();
             queryOne.setLong(1, currentId);
             try (final ResultSet result = queryOne.executeQuery()) {
@@ -117,7 +92,8 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
 
     @Override
     public Completes<List<T>> readNext(final int maximumEntries) {
-        try {
+        try (final Connection connection = configuration.connectionProvider.connection();
+             final PreparedStatement queryBatch = connection.prepareStatement(this.advice.queryEntryBatchExpression)) {
             queryBatch.clearParameters();
             queryBatch.setLong(1, currentId);
             queryBatch.setInt(2, maximumEntries);
@@ -183,7 +159,9 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
 
     @Override
     public Completes<Long> size() {
-        try (final ResultSet resultSet = queryCount.executeQuery()) {
+        try (final Connection connection = configuration.connectionProvider.connection();
+             final PreparedStatement queryCount = connection.prepareStatement(this.advice.queryCount);
+             final ResultSet resultSet = queryCount.executeQuery()) {
             if (resultSet.next()) {
                 final long count = resultSet.getLong(1);
                 return completes().with(count);
@@ -216,8 +194,8 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
         return entries;
     }
 
-    private PreparedStatement prepareQueryByIdsStatement(String query, List<Long> ids) throws SQLException {
-        PreparedStatement statement = configuration.connection.prepareStatement(query);
+    private PreparedStatement prepareQueryByIdsStatement(Connection connection, String query, List<Long> ids) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(query);
         for (int i = 0; i < ids.size(); i++) {
             // parameter index starts from 1
             statement.setLong(i + 1, ids.get(i));
@@ -235,12 +213,13 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
     }
 
     private List<T> readIds(List<Long> ids) {
-        String query = queryByIds(queryIds, ids.size());
-        try (PreparedStatement statement = prepareQueryByIdsStatement(query, ids);
-             ResultSet result = statement.executeQuery()) {
+        String query = queryByIds(advice.queryEntryIdsExpression, ids.size());
+        try (final Connection connection = configuration.connectionProvider.connection();
+             final PreparedStatement statement = prepareQueryByIdsStatement(connection, query, ids);
+             final ResultSet result = statement.executeQuery()) {
             return mapQueriedEntriesFrom(result);
         } catch (Exception e) {
-            logger().error("xoom-symbio-postgres error: " + e.getMessage(), e);
+            logger().error("xoom-symbio-jdbc error: " + e.getMessage(), e);
             return new ArrayList<>();
         }
     }
@@ -254,8 +233,9 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
     }
 
     private long retrieveLatestOffset() {
-        try {
-            queryBatch.clearParameters();
+        try (final Connection connection = configuration.connectionProvider.connection();
+             final PreparedStatement queryLatestOffset = connection.prepareStatement(this.advice.queryLatestOffset)) {
+            queryLatestOffset.clearParameters();
             queryLatestOffset.setString(1, name);
             try (ResultSet resultSet = queryLatestOffset.executeQuery()) {
                 if (resultSet.next()) {
@@ -263,24 +243,25 @@ public abstract class AbstractEntryReaderActor<T extends Entry<?>> extends Actor
                 }
             }
         } catch (Exception e) {
-            logger().error("xoom-symbio-hsqldb: Could not retrieve latest offset, using current.");
+            logger().error("xoom-symbio-jdbc: Could not retrieve latest offset, using current.");
         }
 
         return 0;
     }
 
     private void updateCurrentOffset() {
-        try {
+        try (final Connection connection = configuration.connectionProvider.connection();
+             final PreparedStatement updateCurrentOffset = connection.prepareStatement(this.advice.queryUpdateCurrentOffset)) {
             updateCurrentOffset.clearParameters();
             updateCurrentOffset.setLong(1, currentId);
             updateCurrentOffset.setString(2, name);
             updateCurrentOffset.setLong(3, currentId);
 
             updateCurrentOffset.executeUpdate();
-            configuration.connection.commit();
+            connection.commit();
         } catch (Exception e) {
-            logger().error("xoom-symbio-hsqldb: Could not persist the offset. Will retry on next read.");
-            logger().error("xoom-symbio-hsqldb: " + e.getMessage(), e);
+            logger().error("xoom-symbio-jdbc: Could not persist the offset. Will retry on next read.");
+            logger().error("xoom-symbio-jdbc: " + e.getMessage(), e);
         }
     }
 }
