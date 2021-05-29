@@ -7,9 +7,11 @@
 
 package io.vlingo.xoom.symbio.store.common.jdbc;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
+import javax.sql.DataSource;
 import java.sql.Connection;
-import java.sql.DriverManager;
-import java.util.Properties;
 
 /**
  * Provider of {@code Connection} instances.
@@ -22,6 +24,8 @@ public class ConnectionProvider {
   public final boolean useSSL;
 
   final String password;
+
+  private final DataSource dataSource;
 
   public ConnectionProvider(
           final String driverClassname,
@@ -36,6 +40,8 @@ public class ConnectionProvider {
     this.username = username;
     this.password = password;
     this.useSSL = useSSL;
+
+    dataSource = buildDataSource();
   }
 
   /**
@@ -44,14 +50,7 @@ public class ConnectionProvider {
    */
   public Connection connection() {
     try {
-      Class.forName(driverClassname);
-      final Properties properties = new Properties();
-      properties.setProperty("user", username);
-      properties.setProperty("password", password);
-      properties.setProperty("ssl", Boolean.toString(useSSL));
-      final Connection connection = DriverManager.getConnection(url + databaseName, properties);
-      connection.setAutoCommit(false);
-      return connection;
+      return dataSource.getConnection();
     }  catch (Exception e) {
       throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because database unavailable or wrong credentials.");
     }
@@ -64,5 +63,17 @@ public class ConnectionProvider {
    */
   public ConnectionProvider copyReplacing(final String databaseName) {
     return new ConnectionProvider(driverClassname, url, databaseName, username, password, useSSL);
+  }
+
+  private DataSource buildDataSource() {
+    HikariConfig config = new HikariConfig();
+    config.setDriverClassName(driverClassname);
+    config.setUsername(username);
+    config.setPassword(password);
+    config.setJdbcUrl(url + databaseName);
+    config.setMaximumPoolSize(1);
+    config.setAutoCommit(false);
+
+    return new HikariDataSource(config);
   }
 }
