@@ -14,13 +14,6 @@ import java.text.MessageFormat;
  * A {@code JDBCObjectStoreEntryJournalQueries} for YugaByte.
  */
 public class YugaByteObjectStoreEntryJournalQueries extends JDBCObjectStoreEntryJournalQueries {
-    /**
-     * Construct my state.
-     * @param connection the Connection
-     */
-    public YugaByteObjectStoreEntryJournalQueries(final Connection connection) {
-        super(connection);
-    }
 
     /*
      * @see io.vlingo.xoom.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries#upsertCurrentEntryOffsetQuery(java.lang.String[])

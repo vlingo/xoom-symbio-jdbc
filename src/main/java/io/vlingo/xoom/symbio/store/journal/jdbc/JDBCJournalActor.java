@@ -7,6 +7,7 @@
 
 package io.vlingo.xoom.symbio.store.journal.jdbc;
 
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -57,9 +58,10 @@ public class JDBCJournalActor extends Actor implements Journal<String>, Schedule
         this.journalReaders = new HashMap<>();
         this.streamReaders = new HashMap<>();
 
-        configuration.connection.setAutoCommit(false);
-        JDBCQueries queries = JDBCQueries.queriesFor(configuration.connection);
-        queries.createTables();
+        try (Connection initConnection = configuration.connectionProvider.connection()) {
+            JDBCQueries queries = JDBCQueries.queriesFor(initConnection);
+            queries.createTables(initConnection);
+        }
     }
 
     public JDBCJournalActor(final Configuration configuration, final JDBCJournalInstantWriter journalWriter) throws Exception {

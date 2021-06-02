@@ -114,7 +114,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   public Completes<EntryReader<? extends Entry<?>>> entryReader(final String name) {
     ObjectStoreEntryReader<? extends Entry<?>> entryReader = entryReaders.get(name);
     if (entryReader == null) {
-      final Configuration clonedConfiguration = Configuration.cloneOf(delegate.configuration);
+      final Configuration clonedConfiguration = Configuration.cloneOf(delegate.configuration); // is clone still necessary?
       final Address address = stage().world().addressFactory().uniquePrefixedWith("objectStoreEntryReader-" + name);
       final Class<? extends Actor> actorType;
       ActorInstantiator<?> instantiator = null;
@@ -127,7 +127,8 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
       case JDBC:
       case JPA:
         actorType = JDBCObjectStoreEntryReaderActor.class;
-        instantiator = new JDBCObjectStoreEntryReaderInstantiator(DatabaseType.databaseType(clonedConfiguration.connection), clonedConfiguration.connection, name);
+        instantiator = new JDBCObjectStoreEntryReaderInstantiator(
+            DatabaseType.databaseType(clonedConfiguration.connectionProvider.connection()), clonedConfiguration.connectionProvider, name);
         break;
       default:
         throw new IllegalStateException(getClass().getSimpleName() + ": Cannot create entry reader '" + name + "' due to unknown type: " + delegate.type());

@@ -26,53 +26,57 @@ import java.util.Map;
 
 @Ignore
 public class YugaByteJDBCObjectStoreEntryReaderTest extends JDBCObjectStoreEntryReaderTest {
-    private SharedYugaByteDbContainer dbContainer = SharedYugaByteDbContainer.getInstance();
+  private SharedYugaByteDbContainer dbContainer = SharedYugaByteDbContainer.getInstance();
 
-    @Override
-    protected Configuration createAdminConfiguration() throws Exception {
-        return dbContainer.testConfiguration(DataFormat.Text);
+  @Override
+  protected Configuration createAdminConfiguration() throws Exception {
+    return dbContainer.testConfiguration(DataFormat.Text);
+  }
+
+  @Override
+  protected JPAObjectStoreDelegate createDelegate(Map<String, Object> properties, String originatorId, StateAdapterProvider stateAdapterProvider, Logger logger) {
+    return new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_YUGABYTE_PERSISTENCE_UNIT, properties, "TEST", stateAdapterProvider, logger);
+  }
+
+  @Override
+  protected ConnectionProvider createConnectionProvider() {
+    return new ConnectionProvider(
+        "org.postgresql.Driver",
+        "jdbc:postgresql://" + dbContainer.getHost() + ":" + dbContainer.getMappedPort(SharedYugaByteDbContainer.YUGABYTE_PORT) + "/",
+        testDatabaseName,
+        "postgres",
+        "postgres",
+        false);
+  }
+
+  @Override
+  protected JDBCObjectStoreEntryJournalQueries createQueries(Connection connection) {
+    return new YugaByteObjectStoreEntryJournalQueries();
+  }
+
+  @Override
+  protected void createTestDatabase() throws Exception {
+    try (final Connection initConnection = adminConfiguration.connectionProvider.connection()) {
+      YugaByteConfigurationProvider.interest.createDatabase(initConnection, testDatabaseName);
     }
+  }
 
-    @Override
-    protected JPAObjectStoreDelegate createDelegate(Map<String, Object> properties, String originatorId, StateAdapterProvider stateAdapterProvider, Logger logger) {
-        return new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_YUGABYTE_PERSISTENCE_UNIT, properties, "TEST", stateAdapterProvider, logger);
+  @Override
+  protected void dropTestDatabase() throws Exception {
+    try (final Connection initConnection = adminConfiguration.connectionProvider.connection()) {
+      YugaByteConfigurationProvider.interest.dropDatabase(initConnection, testDatabaseName);
     }
+  }
 
-    @Override
-    protected ConnectionProvider createConnectionProvider() {
-        return new ConnectionProvider(
-                "org.postgresql.Driver",
-                "jdbc:postgresql://" + dbContainer.getHost() + ":" + dbContainer.getMappedPort(SharedYugaByteDbContainer.YUGABYTE_PORT) + "/",
-                testDatabaseName,
-                "postgres",
-                "postgres",
-                false);
-    }
+  @Override
+  protected Map<String, Object> getDatabaseSpecificProperties(String databaseNamePostfix) {
+    Map<String, Object> properties = new HashMap<>();
 
-    @Override
-    protected JDBCObjectStoreEntryJournalQueries createQueries(Connection connection) {
-        return new YugaByteObjectStoreEntryJournalQueries(connection);
-    }
+    properties.put("javax.persistence.jdbc.driver", "org.postgresql.Driver");
+    properties.put("javax.persistence.jdbc.url", "jdbc:postgresql://" + dbContainer.getHost() + ":" + dbContainer.getMappedPort(SharedYugaByteDbContainer.YUGABYTE_PORT) + "/" + databaseNamePostfix);
+    properties.put("javax.persistence.jdbc.user", "postgres");
+    properties.put("javax.persistence.jdbc.password", "postgres");
 
-    @Override
-    protected void createTestDatabase() throws Exception {
-        YugaByteConfigurationProvider.interest.createDatabase(adminConfiguration.connection, testDatabaseName);
-    }
-
-    @Override
-    protected void dropTestDatabase() throws Exception {
-        YugaByteConfigurationProvider.interest.dropDatabase(adminConfiguration.connection, testDatabaseName);
-    }
-
-    @Override
-    protected Map<String, Object> getDatabaseSpecificProperties(String databaseNamePostfix) {
-        Map<String, Object> properties = new HashMap<>();
-
-        properties.put("javax.persistence.jdbc.driver", "org.postgresql.Driver");
-        properties.put("javax.persistence.jdbc.url", "jdbc:postgresql://" + dbContainer.getHost() + ":" + dbContainer.getMappedPort(SharedYugaByteDbContainer.YUGABYTE_PORT) + "/" + databaseNamePostfix);
-        properties.put("javax.persistence.jdbc.user", "postgres");
-        properties.put("javax.persistence.jdbc.password", "postgres");
-
-        return properties;
-    }
+    return properties;
+  }
 }

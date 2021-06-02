@@ -28,11 +28,11 @@ public class HSQLDBConfigurationProvider {
 
     }
 
-    @Override public void createDatabase(final Connection connection, final String databaseName) {
+    @Override public void createDatabase(final Connection initConnection, final String databaseName) {
       databaseCount.incrementAndGet();
     }
 
-    @Override public void dropDatabase(final Connection connection, final String databaseName) {
+    @Override public void dropDatabase(final Connection initConnection, final String databaseName) {
       boolean isDone = databaseCount.decrementAndGet() == 0;
       if (isDone) {
         databaseSever.shutdown();

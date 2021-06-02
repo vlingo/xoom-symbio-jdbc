@@ -63,10 +63,9 @@ public class JDBCEntriesBatchWriter implements JDBCEntriesWriter {
 	@Override
 	public void flush() {
 		if (batchEntries.size() > 0) {
-			appendBatchedEntries();
-
 			try {
 				delegate.beginWrite();
+				appendBatchedEntries();
 
 				Map<String, List<State.TextState>> states = batchEntries.states();
 				for (Map.Entry<String, List<State.TextState>> storeStates : states.entrySet()) {

@@ -7,6 +7,7 @@
 package io.vlingo.xoom.symbio.store.object.jdbc.jpa;
 
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -49,6 +50,7 @@ import io.vlingo.xoom.symbio.store.object.jdbc.JDBCObjectStoreEntryReaderActor.J
  */
 public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   private final ConnectionProvider connectionProvider;
+  private final DatabaseType databaseType;
   private final DispatcherControl dispatcherControl;
   private final List<Dispatcher<Dispatchable<Entry<String>, State<?>>>> dispatchers;
   private boolean closed;
@@ -80,7 +82,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
    * @param confirmationExpiration the long confirmation expiration
    */
   @SuppressWarnings({ "unchecked", "rawtypes" })
-  public JPAObjectStoreActor(
+  public JPAObjectStoreActor (
           final JPAObjectStoreDelegate delegate,
           final ConnectionProvider connectionProvider,
           final List<Dispatcher<Dispatchable<Entry<String>, State<?>>>> dispatchers,
@@ -104,6 +106,12 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
                             dispatchers, delegate.copy(),
                             checkConfirmationExpirationInterval,
                             confirmationExpiration)));
+
+    try (final Connection connection = connectionProvider.connection()) {
+      this.databaseType = DatabaseType.databaseType(connection);
+    } catch (SQLException e) {
+      throw new RuntimeException("Failed to instantiate JPAObjectStoreActor because: " + e.getMessage(), e);
+    }
   }
 
   /**
@@ -128,7 +136,7 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   public void close() {
     if (!closed) {
       delegate.close();
-      if ( this.dispatcherControl != null ){
+      if ( this.dispatcherControl != null ) {
         this.dispatcherControl.stop();
       }
       this.closed = true;
@@ -139,14 +147,12 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
   public Completes<EntryReader<? extends Entry<?>>> entryReader(final String name) {
     ObjectStoreEntryReader<?> reader = entryReaders.get(name);
     if (reader == null) {
-      final Connection connection = connectionProvider.connection();
-      final DatabaseType databaseType = DatabaseType.databaseType(connection);
-
       reader = childActorFor(
-              ObjectStoreEntryReader.class,
-              Definition.has(JDBCObjectStoreEntryReaderActor.class, new JDBCObjectStoreEntryReaderInstantiator(databaseType, connection, name)));
+          ObjectStoreEntryReader.class,
+          Definition.has(JDBCObjectStoreEntryReaderActor.class, new JDBCObjectStoreEntryReaderInstantiator(databaseType, connectionProvider, name)));
       entryReaders.put(name, reader);
     }
+
     return completes().with(reader);
   }
 

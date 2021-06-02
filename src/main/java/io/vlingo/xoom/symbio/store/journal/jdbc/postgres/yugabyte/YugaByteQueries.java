@@ -25,24 +25,19 @@ public class YugaByteQueries extends PostgresQueries {
                   " e_entry_data, e_entry_type, e_entry_type_version, e_entry_metadata) " +
           "VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
 
-  private final IdentityGenerator identityGenerator;
-
-  public YugaByteQueries(final Connection connection) throws SQLException {
-    super(connection);
-
-    this.identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
-  }
+  private final IdentityGenerator identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
 
   @Override
-  public Tuple2<PreparedStatement,Optional<String>> prepareInsertEntryQuery(
-          final String stream_name,
-          final int stream_version,
-          final String entry_data,
-          final String entry_type,
-          final int entry_type_version,
-          final String entry_metadata)
-  throws SQLException {
-
+  public Tuple2<PreparedStatement, Optional<String>> prepareNewInsertEntryQuery(
+      final Connection connection,
+      final String stream_name,
+      final int stream_version,
+      final String entry_data,
+      final String entry_type,
+      final int entry_type_version,
+      final String entry_metadata)
+      throws SQLException {
+    PreparedStatement insertEntry = newInsertEntryStatement(connection);
     insertEntry.clearParameters();
 
     final UUID e_id = identityGenerator.generate();

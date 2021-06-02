@@ -39,6 +39,7 @@ import io.vlingo.xoom.symbio.store.DataFormat;
 import io.vlingo.xoom.symbio.store.QueryExpression;
 import io.vlingo.xoom.symbio.store.StoredTypes;
 import io.vlingo.xoom.symbio.store.common.jdbc.CachedStatement;
+import io.vlingo.xoom.symbio.store.common.jdbc.ConnectionProvider;
 import io.vlingo.xoom.symbio.store.dispatch.Dispatchable;
 import io.vlingo.xoom.symbio.store.dispatch.DispatcherControl;
 import io.vlingo.xoom.symbio.store.state.StateStore.StorageDelegate;
@@ -47,7 +48,14 @@ import io.vlingo.xoom.symbio.store.state.StateTypeStateStoreMap;
 public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
         DispatcherControl.DispatcherControlDelegate<Entry<?>, State<?>> {
   private static final String DISPATCHEABLE_ENTRIES_DELIMITER = "|";
-  protected final Connection connection;
+
+  /**
+   * Valid connection between beginRead/beginWrite and complete/fail
+   * Each new cycle such a cycle will use a new Connection
+   */
+  protected Connection connection = null;
+
+  protected final ConnectionProvider connectionProvider;
   protected final boolean createTables;
   protected final JDBCDispatchableCachedStatements<T> dispatchableCachedStatements;
   protected final DataFormat format;
@@ -58,13 +66,13 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   protected final Map<String, CachedStatement<T>> writeStatements;
 
   protected JDBCStorageDelegate(
-          final Connection connection,
+          final ConnectionProvider connectionProvider,
           final DataFormat format,
           final String originatorId,
           final boolean createTables,
           final Logger logger) {
 
-    this.connection = connection;
+    this.connectionProvider = connectionProvider;
     this.format = format;
     this.originatorId = originatorId;
     this.logger = logger;
@@ -78,21 +86,21 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
 
   @SuppressWarnings("unchecked")
   public <A, E> A appendExpressionFor(final Entry<E> entry) throws Exception {
-    final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendEntryStatement();
+    final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendEntryStatement(connection);
     prepareForAppend(cachedStatement, entry);
     return (A) cachedStatement.preparedStatement;
   }
 
   @SuppressWarnings("unchecked")
   public <A> A appendExpressionFor(final List<Entry<?>> entries) throws Exception {
-    final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendBatchEntriesStatement();
+    final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendBatchEntriesStatement(connection);
     prepareForBatchAppend(cachedStatement, entries);
     return (A) cachedStatement.preparedStatement;
   }
 
   @SuppressWarnings("unchecked")
   public <A> A appendIdentityExpression() {
-    final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendEntryIdentityStatement();
+    final CachedStatement<T> cachedStatement = dispatchableCachedStatements.appendEntryIdentityStatement(connection);
     return (A) cachedStatement.preparedStatement;
   }
 
@@ -100,7 +108,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   public Collection<Dispatchable<Entry<?>, State<?>>> allUnconfirmedDispatchableStates() throws Exception {
     final List<Dispatchable<Entry<?>, State<?>>> dispatchables = new ArrayList<>();
 
-    try (final ResultSet result = dispatchableCachedStatements.queryAllStatement().preparedStatement.executeQuery()) {
+    try (final ResultSet result = dispatchableCachedStatements.queryAllStatement(connection).preparedStatement.executeQuery()) {
       while (result.next()) {
         final Dispatchable<Entry<?>, State<?>> dispatchable = dispatchableFrom(result);
         dispatchables.add(dispatchable);
@@ -115,6 +123,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
       logger.warn(getClass().getSimpleName() + ": Cannot begin read because currently: " + mode.name());
     } else {
       mode = Mode.Reading;
+      connection = connectionProvider.connection(); // valid connection from now on
     }
   }
 
@@ -127,6 +136,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
 //      System.out.println("SET WRITING MODE");
 //      (new IllegalStateException()).printStackTrace();
       mode = Mode.Writing;
+      connection = connectionProvider.connection(); // valid connection from now on
     }
   }
 
@@ -139,9 +149,8 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   public void close() {
     try {
       mode = Mode.None;
-      final Connection connection = connection();
       if (connection != null) {
-        connection.close();
+        connection.close(); // connection gets back to connection pool
       }
     } catch (final Exception e) {
       logger.error(getClass().getSimpleName() + ": Could not close because: " + e.getMessage(), e);
@@ -152,15 +161,20 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   public boolean isClosed() {
     try {
       return connection == null || connection.isClosed();
-    }
-    catch (final SQLException ex) {
+    } catch (final SQLException ex) {
       return true;
     }
   }
 
   public void complete() throws Exception {
     mode = Mode.None;
-    connection.commit();
+
+    try {
+      connection.commit();
+      connection.close(); // connection gets back to connection pool
+    } finally {
+      connection = null;
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -172,9 +186,9 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   public void confirmDispatched(final String dispatchId) {
     try {
       beginWrite();
-      dispatchableCachedStatements.deleteStatement().preparedStatement.clearParameters();
-      dispatchableCachedStatements.deleteStatement().preparedStatement.setString(1, dispatchId);
-      dispatchableCachedStatements.deleteStatement().preparedStatement.executeUpdate();
+      dispatchableCachedStatements.deleteStatement(connection).preparedStatement.clearParameters();
+      dispatchableCachedStatements.deleteStatement(connection).preparedStatement.setString(1, dispatchId);
+      dispatchableCachedStatements.deleteStatement(connection).preparedStatement.executeUpdate();
       complete();
     } catch (final Exception e) {
       fail();
@@ -186,7 +200,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
 
   @SuppressWarnings("unchecked")
   public <W, S> W dispatchableWriteExpressionFor(final Dispatchable<Entry<?>, State<S>> dispatchable) throws Exception {
-    final PreparedStatement preparedStatement = dispatchableCachedStatements.appendDispatchableStatement().preparedStatement;
+    final PreparedStatement preparedStatement = dispatchableCachedStatements.appendDispatchableStatement(connection).preparedStatement;
 
     final State<S> state = dispatchable.typedState();
 
@@ -198,9 +212,9 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     preparedStatement.setString(5, state.type);
     preparedStatement.setInt(6, state.typeVersion);
     if (format.isBinary()) {
-      setBinaryObject(dispatchableCachedStatements.appendDispatchableStatement(), 7, state);
+      setBinaryObject(dispatchableCachedStatements.appendDispatchableStatement(connection), 7, state);
     } else if (state.isText()) {
-      setTextObject(dispatchableCachedStatements.appendDispatchableStatement(), 7, state);
+      setTextObject(dispatchableCachedStatements.appendDispatchableStatement(connection), 7, state);
     }
     preparedStatement.setInt(8, state.dataVersion);
     preparedStatement.setString(9, state.metadata.value);
@@ -222,7 +236,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
   }
 
   public PreparedStatement dispatchableWriteExpressionFor(final List<Dispatchable<Entry<?>, State<String>>> dispatchables) throws Exception {
-    final PreparedStatement preparedStatement = dispatchableCachedStatements.appendDispatchableStatement().preparedStatement;
+    final PreparedStatement preparedStatement = dispatchableCachedStatements.appendDispatchableStatement(connection).preparedStatement;
     for (Dispatchable<Entry<?>, State<String>> dispatchable : dispatchables) {
       dispatchableWriteExpressionFor(dispatchable);
       preparedStatement.addBatch();
@@ -264,7 +278,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     if (entriesIds != null && !entriesIds.isEmpty()) {
       final String[] ids = entriesIds.split("\\"+ DISPATCHEABLE_ENTRIES_DELIMITER);
       for (final String entryId : ids) {
-          final PreparedStatement queryEntryStatement = dispatchableCachedStatements.getQueryEntry().preparedStatement;
+          final PreparedStatement queryEntryStatement = dispatchableCachedStatements.getQueryEntry(connection).preparedStatement;
           queryEntryStatement.clearParameters();
           queryEntryStatement.setObject(1, Long.valueOf(entryId));
           queryEntryStatement.executeQuery();
@@ -273,7 +287,7 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
                entries.add(entryFrom(result, entryId));
              }
           }
-          dispatchableCachedStatements.getQueryEntry().preparedStatement.clearParameters();
+          queryEntryStatement.clearParameters();
       }
     }
     return new Dispatchable<>(dispatchId, createdAt, state, entries);
@@ -300,6 +314,14 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
       connection.rollback();
     } catch (final Exception e) {
       logger.error(getClass().getSimpleName() + ": Rollback failed because: " + e.getMessage(), e);
+
+      try {
+        connection.close(); // connection gets back to connection pool
+      } catch (SQLException e2) {
+        logger.error(getClass().getSimpleName() + ": Closing the connection failed because: " + e.getMessage(), e);
+      }
+    } finally {
+      connection = null;
     }
   }
 
@@ -484,86 +506,90 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     }
   }
 
-  private void createDispatchablesTable() throws Exception {
+  private void createDispatchablesTable(Connection initConnection) throws Exception {
     final String tableName = dispatchableTableName();
-    if (!tableExists(tableName)) {
-      try (final Statement statement = connection.createStatement()) {
+    if (!tableExists(initConnection, tableName)) {
+      try (final Statement statement = initConnection.createStatement()) {
         statement.executeUpdate(dispatchableTableCreateExpression());
         statement.executeUpdate(dispatchableIdIndexCreateExpression());
         statement.executeUpdate(dispatchableOriginatorIdIndexCreateExpression());
-        connection.commit();
+        initConnection.commit();
       } catch (final Exception e) {
         throw new IllegalStateException("Cannot create table " + tableName + " because: " + e, e);
       }
     }
   }
 
-  private void createEntryTable() throws Exception {
+  private void createEntryTable(Connection initConnection) throws Exception {
     final String tableName = entryTableName();
-    if (!tableExists(tableName)) {
-      try (final Statement statement = connection.createStatement()) {
+    if (!tableExists(initConnection, tableName)) {
+      try (final Statement statement = initConnection.createStatement()) {
         statement.executeUpdate(entryTableCreateExpression());
-        connection.commit();
+        initConnection.commit();
       } catch (final Exception e) {
         throw new IllegalStateException("Cannot create table " + tableName + " because: " + e, e);
       }
     }
   }
 
-  private void createEntryOffsetsTable() throws Exception {
+  private void createEntryOffsetsTable(Connection initConnection) throws Exception {
     final String tableName = entryOffsetsTableName();
-    if (!tableExists(tableName)) {
-      try (final Statement statement = connection.createStatement()) {
+    if (!tableExists(initConnection, tableName)) {
+      try (final Statement statement = initConnection.createStatement()) {
         statement.executeUpdate(entryOffsetsTableCreateExpression());
-        connection.commit();
+        initConnection.commit();
       } catch (final Exception e) {
         throw new IllegalStateException("Cannot create table " + tableName + " because: " + e, e);
       }
     }
   }
 
-  private void createStateStoreTable(final String tableName) throws Exception {
+  private void createStateStoreTable(final Connection initConnection, final String tableName) throws Exception {
     final String sql = stateStoreTableCreateExpression(tableName);
-    try (final Statement statement = connection.createStatement()) {
+    try (final Statement statement = initConnection.createStatement()) {
       statement.executeUpdate(sql);
-      connection.commit();
+      initConnection.commit();
     }
   }
 
   private void createTables() {
-    try {
-      createDispatchablesTable();
-    } catch (final Exception e) {
-      // assume table exists; could look at metadata
-      logger.error("Could not create dispatchables table because: " + e.getMessage(), e);
-    }
-
-    try {
-      createEntryTable();
-    } catch (final Exception e) {
-      // assume table exists; could look at metadata
-      logger.error("Could not create entry table because: " + e.getMessage(), e);
-    }
-
-    try {
-      createEntryOffsetsTable();
-    } catch (Exception e) {
-      // assume table exists; could look at metadata
-      logger.error("Could not create entry table because: " + e.getMessage(), e);
-    }
-
-    for (final String storeName : StateTypeStateStoreMap.allStoreNames()) {
-      final String tableName = tableNameFor(storeName);
+    try (Connection initConnection = connectionProvider.connection()) { // connection will get back to connection pool
       try {
-        logger.info("Checking for table: " + tableName);
-        if (!tableExists(tableName)) {
-          logger.info("Creating missing table: " + tableName);
-          createStateStoreTable(tableName);
-        }
+        createDispatchablesTable(initConnection);
       } catch (final Exception e) {
         // assume table exists; could look at metadata
-        logger.error("Could not create " + tableName + " table because: " + e.getMessage(), e);
+        logger.error("Could not create dispatchables table because: " + e.getMessage(), e);
       }
+
+      try {
+        createEntryTable(initConnection);
+      } catch (final Exception e) {
+        // assume table exists; could look at metadata
+        logger.error("Could not create entry table because: " + e.getMessage(), e);
+      }
+
+      try {
+        createEntryOffsetsTable(initConnection);
+      } catch (Exception e) {
+        // assume table exists; could look at metadata
+        logger.error("Could not create entry table because: " + e.getMessage(), e);
+      }
+
+      for (final String storeName : StateTypeStateStoreMap.allStoreNames()) {
+        final String tableName = tableNameFor(storeName);
+        try {
+          logger.info("Checking for table: " + tableName);
+          if (!tableExists(initConnection, tableName)) {
+            logger.info("Creating missing table: " + tableName);
+            createStateStoreTable(initConnection, tableName);
+          }
+        } catch (final Exception e) {
+          // assume table exists; could look at metadata
+          logger.error("Could not create " + tableName + " table because: " + e.getMessage(), e);
+        }
+      }
+    } catch (Exception e) {
+      logger.error("Failed to successfully create tables because: " + e.getMessage(), e);
     }
   }
 
@@ -620,8 +646,8 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     return Tuple2.from(null, null);
   }
 
-  private boolean tableExists(final String tableName) throws Exception {
-    final DatabaseMetaData metadata = connection.getMetaData();
+  private boolean tableExists(final Connection initConnection, final String tableName) throws Exception {
+    final DatabaseMetaData metadata = initConnection.getMetaData();
     try (final ResultSet resultSet = metadata.getTables(null, null, tableName, null)) {
       return resultSet.next();
     }

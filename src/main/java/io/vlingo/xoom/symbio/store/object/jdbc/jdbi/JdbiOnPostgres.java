@@ -10,6 +10,7 @@ package io.vlingo.xoom.symbio.store.object.jdbc.jdbi;
 import java.text.MessageFormat;
 import java.util.function.BiFunction;
 
+import io.vlingo.xoom.symbio.store.common.jdbc.DatabaseType;
 import org.jdbi.v3.core.statement.Update;
 
 import io.vlingo.xoom.symbio.store.common.jdbc.Configuration;
@@ -43,6 +44,6 @@ public class JdbiOnPostgres extends JdbiOnDatabase {
   }
 
   private JdbiOnPostgres(final Configuration configuration) {
-    super(configuration);
+    super(configuration, DatabaseType.Postgres);
   }
 }

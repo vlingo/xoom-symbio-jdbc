@@ -24,53 +24,53 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class MySQLJDBCObjectStoreEntryReaderTest extends JDBCObjectStoreEntryReaderTest {
-    private SharedMySQLContainer mysqlContainer = SharedMySQLContainer.getInstance();
+  private SharedMySQLContainer mysqlContainer = SharedMySQLContainer.getInstance();
 
-    @Override
-    protected Configuration createAdminConfiguration() throws Exception {
-        return mysqlContainer.testConfiguration(DataFormat.Text);
-    }
+  @Override
+  protected Configuration createAdminConfiguration() throws Exception {
+    return mysqlContainer.testConfiguration(DataFormat.Text);
+  }
 
-    @Override
-    protected JPAObjectStoreDelegate createDelegate(Map<String, Object> properties, String originatorId, StateAdapterProvider stateAdapterProvider, Logger logger) {
-        return new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_MYSQL_PERSISTENCE_UNIT, properties, "TEST", stateAdapterProvider, logger);
-    }
+  @Override
+  protected JPAObjectStoreDelegate createDelegate(Map<String, Object> properties, String originatorId, StateAdapterProvider stateAdapterProvider, Logger logger) {
+    return new JPAObjectStoreDelegate(JPAObjectStoreDelegate.JPA_MYSQL_PERSISTENCE_UNIT, properties, "TEST", stateAdapterProvider, logger);
+  }
 
-    @Override
-    protected ConnectionProvider createConnectionProvider() {
-        return new ConnectionProvider(
-                "com.mysql.cj.jdbc.Driver",
-                "jdbc:mysql://" + mysqlContainer.getHost() + ":" + mysqlContainer.getMappedPort(SharedMySQLContainer.MYSQL_PORT) + "/",
-                testDatabaseName,
-                mysqlContainer.getUsername(),
-                mysqlContainer.getPassword(),
-                false);
-    }
+  @Override
+  protected ConnectionProvider createConnectionProvider() {
+    return new ConnectionProvider(
+        "com.mysql.cj.jdbc.Driver",
+        "jdbc:mysql://" + mysqlContainer.getHost() + ":" + mysqlContainer.getMappedPort(SharedMySQLContainer.MYSQL_PORT) + "/",
+        testDatabaseName,
+        mysqlContainer.getUsername(),
+        mysqlContainer.getPassword(),
+        false);
+  }
 
-    @Override
-    protected JDBCObjectStoreEntryJournalQueries createQueries(Connection connection) {
-        return new MySQLObjectStoreEntryJournalQueries(connection);
-    }
+  @Override
+  protected JDBCObjectStoreEntryJournalQueries createQueries(Connection connection) {
+    return new MySQLObjectStoreEntryJournalQueries();
+  }
 
-    @Override
-    protected void createTestDatabase() throws Exception {
-        MySQLConfigurationProvider.interest.createDatabase(adminConfiguration.connection, testDatabaseName);
-    }
+  @Override
+  protected void createTestDatabase() throws Exception {
+    MySQLConfigurationProvider.interest.createDatabase(adminConfiguration.connectionProvider.connection(), testDatabaseName);
+  }
 
-    @Override
-    protected void dropTestDatabase() throws Exception {
-        MySQLConfigurationProvider.interest.dropDatabase(adminConfiguration.connection, testDatabaseName);
-    }
+  @Override
+  protected void dropTestDatabase() throws Exception {
+    MySQLConfigurationProvider.interest.dropDatabase(adminConfiguration.connectionProvider.connection(), testDatabaseName);
+  }
 
-    @Override
-    protected Map<String, Object> getDatabaseSpecificProperties(String databaseNamePostfix) {
-        Map<String, Object> properties = new HashMap<>();
+  @Override
+  protected Map<String, Object> getDatabaseSpecificProperties(String databaseNamePostfix) {
+    Map<String, Object> properties = new HashMap<>();
 
-        properties.put("javax.persistence.jdbc.driver", "com.mysql.cj.jdbc.Driver");
-        properties.put("javax.persistence.jdbc.url", "jdbc:mysql://" + mysqlContainer.getHost() + ":" + mysqlContainer.getMappedPort(SharedMySQLContainer.MYSQL_PORT) + "/" + databaseNamePostfix);
-        properties.put("javax.persistence.jdbc.user", mysqlContainer.getUsername());
-        properties.put("javax.persistence.jdbc.password", mysqlContainer.getPassword());
+    properties.put("javax.persistence.jdbc.driver", "com.mysql.cj.jdbc.Driver");
+    properties.put("javax.persistence.jdbc.url", "jdbc:mysql://" + mysqlContainer.getHost() + ":" + mysqlContainer.getMappedPort(SharedMySQLContainer.MYSQL_PORT) + "/" + databaseNamePostfix);
+    properties.put("javax.persistence.jdbc.user", mysqlContainer.getUsername());
+    properties.put("javax.persistence.jdbc.password", mysqlContainer.getPassword());
 
-        return properties;
-    }
+    return properties;
+  }
 }

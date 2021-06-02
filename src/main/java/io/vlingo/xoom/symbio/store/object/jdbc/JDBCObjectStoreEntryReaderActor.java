@@ -16,6 +16,7 @@ import io.vlingo.xoom.symbio.Entry;
 import io.vlingo.xoom.symbio.EntryAdapterProvider;
 import io.vlingo.xoom.symbio.Metadata;
 import io.vlingo.xoom.symbio.store.EntryReaderStream;
+import io.vlingo.xoom.symbio.store.common.jdbc.ConnectionProvider;
 import io.vlingo.xoom.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.xoom.symbio.store.gap.GapRetryReader;
 import io.vlingo.xoom.symbio.store.gap.GappedEntries;
@@ -35,41 +36,28 @@ import java.util.List;
  */
 public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStoreEntryReader<Entry<String>> {
 
-  private final Connection connection;
+  private final ConnectionProvider connectionProvider;
   private final EntryAdapterProvider entryAdapterProvider;
   private final JDBCObjectStoreEntryJournalQueries queries;
   private final String name;
 
-  private final PreparedStatement entryQuery;
-  private final PreparedStatement entriesQuery;
-
   private GapRetryReader<Entry<String>> reader = null;
-
-  private final PreparedStatement queryLastEntryId;
-  private final PreparedStatement querySize;
-  private final PreparedStatement upsertCurrentEntryOffset;
 
   private long offset;
 
-  public JDBCObjectStoreEntryReaderActor(final DatabaseType databaseType, final Connection connection, final String name) throws SQLException {
-    this.queries = JDBCObjectStoreEntryJournalQueries.using(databaseType, connection);
+  public JDBCObjectStoreEntryReaderActor(final DatabaseType databaseType, final ConnectionProvider connectionProvider, final String name) throws SQLException {
     this.name = name;
-    this.connection = connection;
+    this.connectionProvider = connectionProvider;
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.offset = 1L;
 
-    this.connection.setAutoCommit(true);
+    // this.connection.setAutoCommit(true);
 
-    this.entryQuery = queries.statementForEntryQuery();
-    this.entriesQuery = queries.statementForEntriesQuery(new String[] { "?", "?" });
-
-    this.queryLastEntryId = queries.statementForQueryLastEntryId();
-    this.querySize = queries.statementForSizeQuery();
-    this.upsertCurrentEntryOffset = queries.statementForUpsertCurrentEntryOffsetQuery(new String[] { "?", "?" });
-
-    queries.createTextEntryJournalReaderOffsetsTable();
-
-    restoreCurrentOffset();
+    try (Connection initConnection = connectionProvider.connection()) {
+      this.queries = JDBCObjectStoreEntryJournalQueries.using(databaseType);
+      queries.createTextEntryJournalReaderOffsetsTable(initConnection);
+      restoreCurrentOffset(initConnection);
+    }
   }
 
   private GapRetryReader<Entry<String>> reader() {
@@ -82,13 +70,7 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
 
   @Override
   public void close() {
-    try {
-      if (!connection.isClosed()) {
-        connection.close();
-      }
-    } catch (SQLException e) {
-      // ignore
-    }
+    // no resources to be closed
   }
 
   @Override
@@ -98,7 +80,8 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
 
   @Override
   public Completes<Entry<String>> readNext() {
-    try {
+    try (final Connection connection = connectionProvider.connection();
+         final PreparedStatement entryQuery = queries.statementForEntriesQuery(connection, new String[]{"?", "?"})) {
       entryQuery.clearParameters();
       entryQuery.setLong(1, offset);
       try (final ResultSet result = entryQuery.executeQuery()) {
@@ -111,16 +94,16 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
           reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
 
           ++offset;
-          updateCurrentOffset();
+          updateCurrentOffset(connection);
           return completes();
         } else {
           ++offset;
-          updateCurrentOffset();
+          updateCurrentOffset(connection);
           return completes().with(entry);
         }
       }
     } catch (Exception e) {
-      logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
+      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
       return completes().with(null);
     }
   }
@@ -133,7 +116,8 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
 
   @Override
   public Completes<List<Entry<String>>> readNext(final int maximumEntries) {
-    try {
+    try (final Connection connection = connectionProvider.connection();
+         final PreparedStatement entriesQuery = queries.statementForEntriesQuery(connection, new String[]{"?", "?"})) {
       entriesQuery.clearParameters();
       entriesQuery.setLong(1, offset);
       entriesQuery.setLong(2, offset + maximumEntries - 1L);
@@ -146,16 +130,16 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
 
           // Move offset with maximumEntries regardless of filled up gaps
           offset += maximumEntries;
-          updateCurrentOffset();
+          updateCurrentOffset(connection);
           return completes();
         } else {
           offset += maximumEntries;
-          updateCurrentOffset();
+          updateCurrentOffset(connection);
           return completes().with(entries);
         }
       }
     } catch (Exception e) {
-      logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
+      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
       return completes().with(null);
     }
   }
@@ -169,34 +153,46 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
   @Override
   public void rewind() {
     this.offset = 1L;
-    updateCurrentOffset();
+
+    try (final Connection connection = connectionProvider.connection()) {
+      updateCurrentOffset(connection);
+    } catch (Exception e) {
+      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not rewind because: " + e.getMessage(), e);
+    }
   }
 
   @Override
   public Completes<String> seekTo(final String id) {
-    switch (id) {
-    case Beginning:
-        this.offset = 1L;
-        updateCurrentOffset();
-        break;
-    case End:
-        this.offset = retrieveLatestOffset() + 1L;
-        updateCurrentOffset();
-        break;
-    case Query:
-        break;
-    default:
-        this.offset = Long.parseLong(id);
-        updateCurrentOffset();
-        break;
-    }
+    try (final Connection connection = connectionProvider.connection()) {
+      switch (id) {
+        case Beginning:
+          this.offset = 1L;
+          updateCurrentOffset(connection);
+          break;
+        case End:
+          this.offset = retrieveLatestOffset(connection) + 1L;
+          updateCurrentOffset(connection);
+          break;
+        case Query:
+          break;
+        default:
+          this.offset = Long.parseLong(id);
+          updateCurrentOffset(connection);
+          break;
+      }
 
-    return completes().with(String.valueOf(offset));
+      return completes().with(String.valueOf(offset));
+    } catch (SQLException e) {
+
+      return completes().with(null);
+    }
   }
 
   @Override
   public Completes<Long> size() {
-    try (final ResultSet result = querySize.executeQuery()) {
+    try (final Connection connection = connectionProvider.connection();
+         final PreparedStatement querySize = queries.statementForSizeQuery(connection);
+         final ResultSet result = querySize.executeQuery()) {
       if (result.next()) {
         final long size = result.getLong(1);
         return completes().with(size);
@@ -245,8 +241,8 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
     return new TextEntry(id, Entry.typed(entryType), eventTypeVersion, entryData, entryVersion, Metadata.with(entryMetadata, entryMetadataOp));
   }
 
-  private PreparedStatement prepareQueryByIdsStatement(List<Long> ids) throws SQLException {
-    PreparedStatement statement = queries.statementForEntriesQuery(ids.size());
+  private PreparedStatement prepareQueryByIdsStatement(final Connection connection, final List<Long> ids) throws SQLException {
+    PreparedStatement statement = queries.statementForEntriesQuery(connection, ids.size());
     for (int i = 0; i < ids.size(); i++) {
       // parameter index starts from 1
       statement.setLong(i + 1, ids.get(i));
@@ -256,7 +252,8 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
   }
 
   private List<Entry<String>> readIds(List<Long> ids) {
-    try (final PreparedStatement statement = prepareQueryByIdsStatement(ids);
+    try (final Connection connection = connectionProvider.connection();
+         final PreparedStatement statement = prepareQueryByIdsStatement(connection, ids);
          final ResultSet result = statement.executeQuery()) {
       return mapQueriedEntriesFrom(result);
     } catch (Exception e) {
@@ -265,12 +262,13 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
     }
   }
 
-  private void restoreCurrentOffset() {
-    this.offset = retrieveLatestOffset();
+  private void restoreCurrentOffset(final Connection connection) {
+    this.offset = retrieveLatestOffset(connection);
   }
 
-  private long retrieveLatestOffset() {
-    try (final ResultSet result = queryLastEntryId.executeQuery()) {
+  private long retrieveLatestOffset(final Connection connection) {
+    try (final PreparedStatement queryLastEntryId = queries.statementForQueryLastEntryId(connection);
+         final ResultSet result = queryLastEntryId.executeQuery()) {
       if (result.next()) {
         final long latestId = result.getLong(1);
         return latestId > 0 ? latestId : 1L;
@@ -284,8 +282,8 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
     return offset;
   }
 
-  private void updateCurrentOffset() {
-    try {
+  private void updateCurrentOffset(final Connection connection) {
+    try (final PreparedStatement upsertCurrentEntryOffset = queries.statementForUpsertCurrentEntryOffsetQuery(connection, new String[]{"?", "?"})) {
       upsertCurrentEntryOffset.clearParameters();
       upsertCurrentEntryOffset.setString(1, name);
       upsertCurrentEntryOffset.setLong(2, offset);
@@ -299,20 +297,20 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
   public static class JDBCObjectStoreEntryReaderInstantiator implements ActorInstantiator<JDBCObjectStoreEntryReaderActor> {
     private static final long serialVersionUID = 4022321764623417613L;
 
-    private final Connection connection;
+    private final ConnectionProvider connectionProvider;
     private final DatabaseType databaseType;
     private final String name;
 
-    public JDBCObjectStoreEntryReaderInstantiator(final DatabaseType databaseType, final Connection connection, final String name) {
+    public JDBCObjectStoreEntryReaderInstantiator(final DatabaseType databaseType, final ConnectionProvider connectionProvider, final String name) {
       this.databaseType = databaseType;
-      this.connection = connection;
+      this.connectionProvider = connectionProvider;
       this.name = name;
     }
 
     @Override
     public JDBCObjectStoreEntryReaderActor instantiate() {
       try {
-        return new JDBCObjectStoreEntryReaderActor(databaseType, connection, name);
+        return new JDBCObjectStoreEntryReaderActor(databaseType, connectionProvider, name);
       } catch (SQLException e) {
         throw new IllegalArgumentException("Failed instantiator of " + getClass() + " because: " + e.getMessage(), e);
       }

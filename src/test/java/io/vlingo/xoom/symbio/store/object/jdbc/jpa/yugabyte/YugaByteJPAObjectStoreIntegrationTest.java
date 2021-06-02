@@ -51,17 +51,21 @@ public class YugaByteJPAObjectStoreIntegrationTest extends JDBCObjectStoreEntryR
 
     @Override
     protected JDBCObjectStoreEntryJournalQueries createQueries(Connection connection) {
-        return new YugaByteObjectStoreEntryJournalQueries(connection);
+        return new YugaByteObjectStoreEntryJournalQueries();
     }
 
     @Override
     protected void createTestDatabase() throws Exception {
-        YugaByteConfigurationProvider.interest.createDatabase(adminConfiguration.connection, testDatabaseName);
+        try (final Connection initConnection = adminConfiguration.connectionProvider.connection()) {
+            YugaByteConfigurationProvider.interest.createDatabase(initConnection, testDatabaseName);
+        }
     }
 
     @Override
     protected void dropTestDatabase() throws Exception {
-        YugaByteConfigurationProvider.interest.dropDatabase(adminConfiguration.connection, testDatabaseName);
+        try (final Connection initConnection = adminConfiguration.connectionProvider.connection()) {
+            YugaByteConfigurationProvider.interest.dropDatabase(initConnection, testDatabaseName);
+        }
     }
 
     @Override

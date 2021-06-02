@@ -47,21 +47,18 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
   private static final int EntryMetadataOperation = 4;
   private static final int EntryVersion = 5;
 
-  public final Connection connection;
-
   /**
    * Answer a new {@code JDBCObjectStoreEntryJournalQueries} based on the {@code Configuration#databaseType}.
    * @param databaseType the DatabaseType
-   * @param connection the Connection
    * @return JDBCObjectStoreEntryJournalQueries
    */
-  public static JDBCObjectStoreEntryJournalQueries using(final DatabaseType databaseType, final Connection connection) {
+  public static JDBCObjectStoreEntryJournalQueries using(final DatabaseType databaseType) {
     switch (databaseType) {
     case HSQLDB:
-      return new HSQLDBObjectStoreEntryJournalQueries(connection);
+      return new HSQLDBObjectStoreEntryJournalQueries();
     case MySQL:
     case MariaDB:
-      return  new MySQLObjectStoreEntryJournalQueries(connection);
+      return  new MySQLObjectStoreEntryJournalQueries();
     case SQLServer:
       break;
     case Vitess:
@@ -69,20 +66,12 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
     case Oracle:
       break;
     case Postgres:
-      return new PostgresObjectStoreEntryJournalQueries(connection);
+      return new PostgresObjectStoreEntryJournalQueries();
     case YugaByte:
-      return new YugaByteObjectStoreEntryJournalQueries(connection);
+      return new YugaByteObjectStoreEntryJournalQueries();
     }
 
     throw new IllegalArgumentException("Database currently not supported: " + databaseType.name());
-  }
-
-  /**
-   * Construct my state.
-   * @param connection the Connection for the queries
-   */
-  public JDBCObjectStoreEntryJournalQueries(final Connection connection) {
-    this.connection = connection;
   }
 
   /**
@@ -257,28 +246,24 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
   public abstract String wideTextDataType();
 
   /**
-   * Answer my {@code Connection} instance.
-   * @return Connection
-   */
-  public Connection connection() {
-    return connection;
-  }
-
-  /**
    * Create all common tables.
+   *
+   * @param connection
    * @throws SQLException when creation fails
    */
-  public void createCommonTables() throws SQLException {
-    createTextEntryJournalTable();
-    createDispatchableTable();
-    createTextEntryJournalReaderOffsetsTable();
+  public void createCommonTables(final Connection connection) throws SQLException {
+    createTextEntryJournalTable(connection);
+    createDispatchableTable(connection);
+    createTextEntryJournalReaderOffsetsTable(connection);
   }
 
   /**
    * Creates the table to store {@code Dispatchable} objects.
+   *
+   * @param connection
    * @throws SQLException when creation fails
    */
-  public void createDispatchableTable() throws SQLException {
+  public void createDispatchableTable(final Connection connection) throws SQLException {
     final String wideTextDataType = wideTextDataType();
 
     connection
@@ -310,9 +295,11 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
 
   /**
    * Creates the table used to store journal {@code Entry} objects.
+   *
+   * @param connection
    * @throws SQLException when creation fails
    */
-  public void createTextEntryJournalTable() throws SQLException {
+  public void createTextEntryJournalTable(final Connection connection) throws SQLException {
     connection
       .createStatement()
       .execute("CREATE TABLE IF NOT EXISTS " + EntryJournalTableName +
@@ -321,9 +308,11 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
 
   /**
    * Creates the table used to store the current offsets of entry readers.
+   *
+   * @param connection
    * @throws SQLException when creation fails
    */
-  public void createTextEntryJournalReaderOffsetsTable() throws SQLException {
+  public void createTextEntryJournalReaderOffsetsTable(final Connection connection) throws SQLException {
     connection
       .createStatement()
       .execute("CREATE TABLE IF NOT EXISTS " + EntryReaderOffsetsTableName +
@@ -332,79 +321,95 @@ public abstract class JDBCObjectStoreEntryJournalQueries {
 
   /**
    * Answer the {@code PreparedStatement} for retrieving the last entry id.
+   *
+   * @param connection
    * @return PreparedStatement
    * @throws SQLException when creation fails
    */
-  public PreparedStatement statementForQueryLastEntryId() throws SQLException {
+  public PreparedStatement statementForQueryLastEntryId(final Connection connection) throws SQLException {
     return connection.prepareStatement(lastEntryIdQuery());
   }
 
   /**
    * Answer the {@code PreparedStatement} for retrieving the size (number of entries) in the journal.
+   *
+   * @param connection
    * @return PreparedStatement
    * @throws SQLException when creation fails
    */
-  public PreparedStatement statementForSizeQuery() throws SQLException {
+  public PreparedStatement statementForSizeQuery(final Connection connection) throws SQLException {
     return connection.prepareStatement(sizeQuery());
   }
 
   /**
    * Answer the parameterized {@code PreparedStatement} for retrieving a single {@code Entry} instance.
+   *
+   * @param connection
    * @return PreparedStatement
    * @throws SQLException when creation fails
    */
-  public PreparedStatement statementForEntryQuery() throws SQLException {
+  public PreparedStatement statementForEntryQuery(final Connection connection) throws SQLException {
     return connection.prepareStatement(entryQuery());
   }
 
   /**
    * Answer the {@code PreparedStatement} for retrieving a single {@code Entry} instance.
+   *
+   * @param connection
    * @param id the long identity to select (possibly greater than this id)
    * @return PreparedStatement
    * @throws SQLException when creation fails
    */
-  public PreparedStatement statementForEntryQuery(final long id) throws SQLException {
+  public PreparedStatement statementForEntryQuery(final Connection connection, final long id) throws SQLException {
     return connection.prepareStatement(entryQuery(id));
   }
 
   /**
    * Answer the parameterized {@code PreparedStatement} for retrieving multiple {@code Entry} instances.
+   *
+   * @param connection
    * @param placeholders the String[] of parameter placeholders
    * @return PreparedStatement
    * @throws SQLException  when creation fails
    */
-  public PreparedStatement statementForEntriesQuery(final String[] placeholders) throws SQLException {
+  public PreparedStatement statementForEntriesQuery(final Connection connection, final String[] placeholders) throws SQLException {
     return connection.prepareStatement(entriesQuery(placeholders));
   }
 
   /**
    * Answer the parameterized {@code PreparedStatement} for retrieving multiple {@code Entry} instances based on ids.
+   *
+   * @param connection
    * @param idsCount the int number of Entry instances to find
    * @return PreparedStatement
    * @throws SQLException if the PreparedStatement creation fails
    */
-  public PreparedStatement statementForEntriesQuery(final int idsCount) throws SQLException {
+  public PreparedStatement statementForEntriesQuery(final Connection connection, final int idsCount) throws SQLException {
     return connection.prepareStatement(entriesQuery(idsCount));
   }
 
   /**
    * Answer the {@code PreparedStatement} for retrieving multiple {@code Entry} instances.
+   *
+   * @param connection
    * @param id the long identity to begin selection (possibly greater than this id)
    * @param count the int Entry instance limit
    * @return PreparedStatement
    * @throws SQLException  when creation fails
    */
-  public PreparedStatement statementForEntriesQuery(final long id, final int count) throws SQLException {
+  public PreparedStatement statementForEntriesQuery(final Connection connection, final long id, final int count) throws SQLException {
     return connection.prepareStatement(entriesQuery(id, count));
   }
 
   /**
    * Answer the {@code PreparedStatement} for inserting/updating the current entry offset.
+   *
+   * @param connection
    * @param placeholders the {@code String[]} placeholders for the dispatchable data parameters
    * @return PreparedStatement
    * @throws SQLException  when creation fails
    */
-  public PreparedStatement statementForUpsertCurrentEntryOffsetQuery(final String[] placeholders) throws SQLException {
+  public PreparedStatement statementForUpsertCurrentEntryOffsetQuery(final Connection connection, final String[] placeholders) throws SQLException {
     return connection.prepareStatement(upsertCurrentEntryOffsetQuery(placeholders));
   }
 }

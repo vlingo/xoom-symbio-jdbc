@@ -27,12 +27,14 @@ public class YugaByteConfigurationProvider {
         }
 
         @Override
-        public void createDatabase(final Connection connection, final String databaseName) throws Exception {
-            try (final Statement statement = connection.createStatement()) {
-                connection.setAutoCommit(true);
+        public void createDatabase(final Connection initConnection, final String databaseName) throws Exception {
+            try (final Statement statement = initConnection.createStatement()) {
+                // initConnection.setAutoCommit(true);
                 statement.executeUpdate("CREATE DATABASE " + databaseName + " WITH OWNER = " + configuration.connectionProvider.username);
-                connection.setAutoCommit(false);
+                // initConnection.setAutoCommit(false);
+                initConnection.commit();
             } catch (Exception e) {
+                initConnection.rollback();
                 final List<String> message = Arrays.asList(e.getMessage().split(" "));
                 if (message.contains("database") && message.contains("already") && message.contains("exists")) return;
                 System.out.println("YugaByte database " + databaseName + " could not be created because: " + e.getMessage());
@@ -42,11 +44,11 @@ public class YugaByteConfigurationProvider {
         }
 
         @Override
-        public void dropDatabase(final Connection connection, final String databaseName) throws Exception {
-            try (final Statement statement = connection.createStatement()) {
-                connection.setAutoCommit(true);
+        public void dropDatabase(final Connection initConnection, final String databaseName) throws Exception {
+            try (final Statement statement = initConnection.createStatement()) {
+                initConnection.setAutoCommit(true);
                 statement.executeUpdate("DROP DATABASE " + databaseName);
-                connection.setAutoCommit(false);
+                initConnection.setAutoCommit(false);
             } catch (Exception e) {
                 System.out.println("YugaByte database " + databaseName + " could not be dropped because: " + e.getMessage());
             }

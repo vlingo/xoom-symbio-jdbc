@@ -41,7 +41,6 @@ public class Configuration {
   public static final long DefaultTransactionTimeout = 5 * 60 * 1000L; // 5 minutes
 
   public final String actualDatabaseName;
-  public final Connection connection;
   public final ConnectionProvider connectionProvider;
   public final DatabaseType databaseType;
   public final DataFormat format;
@@ -143,15 +142,16 @@ public class Configuration {
     this.createTables = createTables;
     this.transactionTimeoutMillis = transactionTimeoutMillis;
     beforeConnect();
-    this.connection = connect();
-    afterConnect();
+    try (Connection initialConnection = connect()) {
+      afterConnect(initialConnection);
+    }
   }
 
   protected String actualDatabaseName(final String databaseName) {
     return connectionProvider.databaseName;
   }
 
-  protected void afterConnect() throws Exception {
+  protected void afterConnect(Connection connection) throws Exception {
     interest.afterConnect(connection);
   }
 
@@ -166,8 +166,8 @@ public class Configuration {
   public interface ConfigurationInterest {
     void afterConnect(final Connection connection) throws Exception;
     void beforeConnect(final Configuration configuration) throws Exception;
-    void createDatabase(final Connection connection, final String databaseName) throws Exception;
-    void dropDatabase(final Connection connection, final String databaseName) throws Exception;
+    void createDatabase(final Connection initConnection, final String databaseName) throws Exception;
+    void dropDatabase(final Connection initConnection, final String databaseName) throws Exception;
   }
 
   public static class TestConfiguration extends Configuration {
@@ -190,15 +190,16 @@ public class Configuration {
     }
 
     public void cleanUp() {
-      try (final Connection ownerConnection = swapConnections()) {
-        try (final Statement statement = ownerConnection.createStatement()) {
-          ownerConnection.setAutoCommit(true);
+      try (final Connection ownerConnection = connect()) {
+        try {
           interest.dropDatabase(ownerConnection, actualDatabaseName);
+          ownerConnection.commit();
         }  catch (Exception e) {
+          ownerConnection.rollback();
           e.printStackTrace();
           // ignore
         }
-      }  catch (Exception e) {
+      } catch (Exception e) {
         e.printStackTrace();
         // ignore
       }
@@ -214,25 +215,20 @@ public class Configuration {
 
     @Override
     protected Connection connect() {
-      final Connection connection = super.connect();
-
-      try (final Statement statement = connection.createStatement()) {
-        interest.createDatabase(connection, actualDatabaseName);
-        connection.close();
-        final ConnectionProvider copy = connectionProvider.copyReplacing(actualDatabaseName);
-        return copy.connection();
-      }  catch (Exception e) {
-        throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because the server or database unavilable, or wrong credentials.", e);
-      }
-    }
-
-    private Connection swapConnections() {
-      try {
-        connection.close();
-        return connectionProvider.connection();
+      try (final Connection connection = super.connect()) {
+        try {
+          interest.createDatabase(connection, actualDatabaseName);
+          connection.commit();
+        } catch (Exception e) {
+          connection.rollback();
+          throw e;
+        }
       } catch (Exception e) {
-        throw new IllegalStateException(getClass().getSimpleName() + ": Cannot swap database to owner's because: " + e.getMessage(), e);
+        throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because the server or database unavailable, or wrong credentials.", e);
       }
+
+      final ConnectionProvider copy = connectionProvider.copyReplacing(actualDatabaseName);
+      return copy.connection();
     }
   }
 }

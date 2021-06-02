@@ -15,19 +15,12 @@ import java.text.MessageFormat;
  * A {@code JDBCObjectStoreEntryJournalQueries} for MySQL.
  */
 public class MySQLObjectStoreEntryJournalQueries extends JDBCObjectStoreEntryJournalQueries {
-    /**
-     * Construct my state.
-     * @param connection the Connection on which to perform queries
-     */
-    public MySQLObjectStoreEntryJournalQueries(Connection connection) {
-        super(connection);
-    }
 
     /**
-     * @see JDBCObjectStoreEntryJournalQueries#createTextEntryJournalReaderOffsetsTable()
+     * @see JDBCObjectStoreEntryJournalQueries#createTextEntryJournalReaderOffsetsTable(Connection)
      */
     @Override
-    public void createTextEntryJournalReaderOffsetsTable() throws SQLException {
+    public void createTextEntryJournalReaderOffsetsTable(final Connection connection) throws SQLException {
         // VARCHAR(1024) => Error Code: 1071. Specified key was too long; max key length is 3072 bytes
         connection
                 .createStatement()

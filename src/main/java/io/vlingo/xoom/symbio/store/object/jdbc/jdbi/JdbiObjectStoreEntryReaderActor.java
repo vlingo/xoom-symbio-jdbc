@@ -55,12 +55,8 @@ public class JdbiObjectStoreEntryReaderActor extends Actor implements ObjectStor
 
   @Override
   public void close() {
-    try {
-      if (!jdbi.configuration().connection.isClosed()) {
-        jdbi.configuration().connection.close();
-      }
-    } catch (SQLException e) {
-      // ignore
+    if (!jdbi.isClosed()) {
+      jdbi.close();
     }
   }
 

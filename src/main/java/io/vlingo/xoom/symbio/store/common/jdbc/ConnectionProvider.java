@@ -57,6 +57,15 @@ public class ConnectionProvider {
   }
 
   /**
+   * Answer my {@link DataSource}.
+   *
+   * @return
+   */
+  public DataSource dataSource() {
+    return dataSource;
+  }
+
+  /**
    * Answer a copy of me but with the given {@code databaseName}.
    * @param databaseName the String name of the database with which to create the new ConnectionProvider
    * @return ConnectionProvider
@@ -71,7 +80,7 @@ public class ConnectionProvider {
     config.setUsername(username);
     config.setPassword(password);
     config.setJdbcUrl(url + databaseName);
-    config.setMaximumPoolSize(1);
+    config.setMaximumPoolSize(5);
     config.setAutoCommit(false);
 
     return new HikariDataSource(config);

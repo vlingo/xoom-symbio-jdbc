@@ -153,10 +153,6 @@ public class MySQLQueries extends JDBCQueries {
                     "FROM " + TABLE_VLINGO_SYMBIO_JOURNAL + " " +
                     "WHERE E_STREAM_NAME = ? AND E_STREAM_VERSION >= ? ORDER BY E_STREAM_VERSION";
 
-    public MySQLQueries(Connection connection) throws SQLException {
-        super(connection);
-    }
-
     @Override
     protected String createDispatchableTable() {
         return CREATE_DISPATCHABLE_TABLE;

@@ -70,7 +70,7 @@ public class JdbiObjectStoreDelegate extends JDBCObjectStoreDelegate {
   public JdbiObjectStoreDelegate(final Configuration configuration, final StateAdapterProvider stateAdapterProvider,
           final QueryExpression unconfirmedDispatchablesExpression, final Collection<StateObjectMapper> mappers, final Logger logger) {
     super(configuration);
-    this.handle = Jdbi.open(configuration.connection);
+    this.handle = Jdbi.open(configuration.connectionProvider.dataSource());
     this.stateAdapterProvider = stateAdapterProvider;
     this.unconfirmedDispatchablesExpression = unconfirmedDispatchablesExpression;
     this.mappers = new HashMap<>();

@@ -7,6 +7,7 @@
 
 package io.vlingo.xoom.symbio.store.object.jdbc.jdbi;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,6 +39,7 @@ import io.vlingo.xoom.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQuerie
  */
 public abstract class JdbiOnDatabase {
     public final Configuration configuration;
+    private final DatabaseType databaseType;
     public final Handle handle;
 
     private final JDBCObjectStoreEntryJournalQueries queries;
@@ -45,66 +47,77 @@ public abstract class JdbiOnDatabase {
     private ObjectStore objectStore;
 
     public static JdbiOnDatabase openUsing(final Configuration configuration) {
-        final DatabaseType databaseType = DatabaseType.databaseType(configuration.connection);
+      try (final Connection initConnection = configuration.connectionProvider.connection()) {
+        final DatabaseType databaseType = DatabaseType.databaseType(initConnection);
         switch (databaseType) {
-            case HSQLDB:
-                return JdbiOnHSQLDB.openUsing(configuration);
-            case MySQL:
-            case MariaDB:
-                return JdbiOnMySQL.openUsing(configuration);
-            case SQLServer:
-                break;
-            case Vitess:
-                break;
-            case Oracle:
-                break;
-            case Postgres:
-                return JdbiOnPostgres.openUsing(configuration);
-            case YugaByte:
-                return JdbiOnYugaByte.openUsing(configuration);
+          case HSQLDB:
+            return JdbiOnHSQLDB.openUsing(configuration);
+          case MySQL:
+          case MariaDB:
+            return JdbiOnMySQL.openUsing(configuration);
+          case SQLServer:
+            break;
+          case Vitess:
+            break;
+          case Oracle:
+            break;
+          case Postgres:
+            return JdbiOnPostgres.openUsing(configuration);
+          case YugaByte:
+            return JdbiOnYugaByte.openUsing(configuration);
         }
 
         throw new IllegalArgumentException("Database currently not supported: " + databaseType.name());
+      } catch (SQLException e) {
+        throw new RuntimeException("Failed to lookup database type because: " + e.getMessage(), e);
+      }
     }
 
+//    /**
+//     * Answer my {@code Configuration} instance.
+//     * @return Configuration
+//     */
+//    public Configuration configuration() {
+//        return configuration;
+//    }
+
     /**
-     * Answer my {@code Configuration} instance.
-     * @return Configuration
+     * Close this resource.
      */
-    public Configuration configuration() {
-        return configuration;
+    public void close() {
+        handle.close();
     }
 
     /**
      * Create all common tables.
      * @throws SQLException when creation fails
      */
-    public void createCommonTables() throws SQLException {
-        queries.createCommonTables();
+    public void createCommonTables(final Connection connection) throws SQLException {
+        queries.createCommonTables(connection);
     }
 
     /**
      * Creates the table to store {@code Dispatchable} objects.
      * @throws SQLException when creation fails
      */
-    public void createDispatchableTable() throws SQLException {
-        queries.createDispatchableTable();
+    public void createDispatchableTable(final Connection connection) throws SQLException {
+        queries.createDispatchableTable(connection);
     }
 
     /**
      * Creates the table used to store journal {@code Entry} objects.
      * @throws SQLException when creation fails
      */
-    public void createTextEntryJournalTable() throws SQLException {
-        queries.createTextEntryJournalTable();
+    public void createTextEntryJournalTable(final Connection connection) throws SQLException {
+        queries.createTextEntryJournalTable(connection);
     }
 
     /**
      * Creates the table used to store the current offsets of entry readers.
      * @throws SQLException when creation fails
      */
-    public void createTextEntryJournalReaderOffsetsTable() throws SQLException {
-        queries.createTextEntryJournalReaderOffsetsTable();
+    public void createTextEntryJournalReaderOffsetsTable(final Connection connection) throws SQLException {
+        queries.createTextEntryJournalReaderOffsetsTable(connection);
     }
 
     /**
@@ -119,7 +132,7 @@ public abstract class JdbiOnDatabase {
      * @return DatabaseType
      */
     public DatabaseType databaseType() {
-        return DatabaseType.databaseType(configuration.connection);
+        return databaseType;
     }
 
     /**
@@ -128,6 +141,15 @@ public abstract class JdbiOnDatabase {
      */
     public Handle handle() {
         return handle;
+    }
+
+    /**
+     * Answer whether if this resource is closed.
+     *
+     * @return
+     */
+    public boolean isClosed() {
+        return handle.isClosed();
     }
 
     /**
@@ -260,10 +282,11 @@ public abstract class JdbiOnDatabase {
         return persistentObjectMapper;
     }
 
-    protected JdbiOnDatabase(final Configuration configuration) {
+    protected JdbiOnDatabase(final Configuration configuration, final DatabaseType databaseType) {
         this.configuration = configuration;
-        this.handle = Jdbi.open(configuration.connection);
-        this.queries = JDBCObjectStoreEntryJournalQueries.using(DatabaseType.databaseType(configuration.connection), configuration.connection);
+        this.databaseType = databaseType;
+        this.handle = Jdbi.open(configuration.connectionProvider.dataSource());
+        this.queries = JDBCObjectStoreEntryJournalQueries.using(databaseType);
     }
 
     private StateObjectMapper dispatchableMapping() {
