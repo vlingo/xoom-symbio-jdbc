@@ -13,10 +13,14 @@ import io.vlingo.xoom.symbio.store.journal.jdbc.JDBCStreamReaderActorTest;
 import io.vlingo.xoom.symbio.store.testcontainers.SharedPostgreSQLContainer;
 
 public class PostgresStreamReaderActorTest extends JDBCStreamReaderActorTest {
-    private SharedPostgreSQLContainer postgresContainer = SharedPostgreSQLContainer.getInstance();
 
-    @Override
-    protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        return postgresContainer.testConfiguration(format);
+  @Override
+  protected Configuration.TestConfiguration testConfiguration(DataFormat format) {
+    try {
+      SharedPostgreSQLContainer postgresContainer = SharedPostgreSQLContainer.getInstance();
+      return postgresContainer.testConfiguration(format);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create PostgreSQL test configuration because: " + e.getMessage(), e);
     }
+  }
 }

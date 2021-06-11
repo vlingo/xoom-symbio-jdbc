@@ -25,18 +25,22 @@ import io.vlingo.xoom.symbio.store.journal.jdbc.JDBCJournalWriter;
 import io.vlingo.xoom.symbio.store.testcontainers.SharedPostgreSQLContainer;
 
 public class PostgresJournalActorTest extends JDBCJournalActorTest {
-    private SharedPostgreSQLContainer postgresContainer = SharedPostgreSQLContainer.getInstance();
 
-    @Override
-    protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        return postgresContainer.testConfiguration(format);
+  @Override
+  protected Configuration.TestConfiguration testConfiguration(DataFormat format) {
+    try {
+      SharedPostgreSQLContainer postgresContainer = SharedPostgreSQLContainer.getInstance();
+      return postgresContainer.testConfiguration(format);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create PostgreSQL test configuration because: " + e.getMessage(), e);
     }
+  }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    protected Journal<String> journalFrom(World world, Configuration configuration, List<Dispatcher<Dispatchable<Entry<String>, State.TextState>>> dispatchers,
-                                          DispatcherControl dispatcherControl) throws Exception {
-        JDBCJournalWriter journalWriter = new JDBCJournalInstantWriter(configuration, dispatchers, dispatcherControl);
-        return world.stage().actorFor(Journal.class, JDBCJournalActor.class, configuration, journalWriter);
-    }
+  @Override
+  @SuppressWarnings("unchecked")
+  protected Journal<String> journalFrom(World world, Configuration configuration, List<Dispatcher<Dispatchable<Entry<String>, State.TextState>>> dispatchers,
+                                        DispatcherControl dispatcherControl) throws Exception {
+    JDBCJournalWriter journalWriter = new JDBCJournalInstantWriter(configuration, dispatchers, dispatcherControl);
+    return world.stage().actorFor(Journal.class, JDBCJournalActor.class, configuration, journalWriter);
+  }
 }

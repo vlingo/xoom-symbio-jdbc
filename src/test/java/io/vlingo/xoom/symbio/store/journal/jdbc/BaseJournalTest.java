@@ -7,21 +7,7 @@
 
 package io.vlingo.xoom.symbio.store.journal.jdbc;
 
-import static org.junit.Assert.assertEquals;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.util.Optional;
-import java.util.UUID;
-
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-
 import com.google.gson.Gson;
-
 import io.vlingo.xoom.actors.World;
 import io.vlingo.xoom.common.Tuple2;
 import io.vlingo.xoom.common.identity.IdentityGenerator;
@@ -30,9 +16,21 @@ import io.vlingo.xoom.symbio.Metadata;
 import io.vlingo.xoom.symbio.store.DataFormat;
 import io.vlingo.xoom.symbio.store.common.event.TestEvent;
 import io.vlingo.xoom.symbio.store.common.jdbc.Configuration;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.junit.Assert.assertEquals;
 
 public abstract class BaseJournalTest {
-  protected Configuration configuration;
+  protected Configuration.TestConfiguration configuration;
   protected Connection connection;
   protected World world;
   protected String aggregateRootId;
@@ -47,12 +45,12 @@ public abstract class BaseJournalTest {
     streamName = aggregateRootId;
     world = World.startWithDefaults("event-stream-tests");
     configuration = testConfiguration(DataFormat.Text);
-    connection = configuration.connectionProvider.connection();
+    connection = configuration.connectionProvider.newConnection();
     gson = new Gson();
     identityGenerator = new IdentityGenerator.TimeBasedIdentityGenerator();
-
+    // configuration = testConfiguration(DataFormat.Text);
     queries = JDBCQueries.queriesFor(connection);
-    dropDatabase();
+    // dropDatabase();
     queries.createTables(connection);
   }
 
@@ -60,7 +58,7 @@ public abstract class BaseJournalTest {
   public void tearDownDatabase() throws Exception {
     dropDatabase();
     connection.close(); // connection gets back to connection pool
-    configuration.connectionProvider.dataSource();
+    configuration.cleanUp();
     world.terminate();
   }
 
@@ -72,7 +70,7 @@ public abstract class BaseJournalTest {
     Thread.sleep(2);
 
     final Tuple2<PreparedStatement, Optional<String>> insert =
-        queries.prepareNewInsertEntryQuery(
+        queries.prepareInsertEntryQuery(
             connection,
             aggregateRootId.toString(),
             dataVersion,
@@ -124,5 +122,5 @@ public abstract class BaseJournalTest {
     return gson.fromJson(event.entryData(), TestEvent.class);
   }
 
-  protected abstract Configuration.TestConfiguration testConfiguration(final DataFormat format) throws Exception;
+  protected abstract Configuration.TestConfiguration testConfiguration(final DataFormat format);
 }

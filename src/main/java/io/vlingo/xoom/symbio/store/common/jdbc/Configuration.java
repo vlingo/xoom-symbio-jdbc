@@ -8,7 +8,6 @@
 package io.vlingo.xoom.symbio.store.common.jdbc;
 
 import java.sql.Connection;
-import java.sql.Statement;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.vlingo.xoom.symbio.store.DataFormat;
@@ -40,6 +39,7 @@ public class Configuration {
    */
   public static final long DefaultTransactionTimeout = 5 * 60 * 1000L; // 5 minutes
 
+  public final String databaseName; // ownerDatabaseName
   public final String actualDatabaseName;
   public final ConnectionProvider connectionProvider;
   public final DatabaseType databaseType;
@@ -118,37 +118,46 @@ public class Configuration {
   }
 
   private Configuration(
-          final DatabaseType databaseType,
-          final ConfigurationInterest interest,
-          final String driverClassname,
-          final DataFormat format,
-          final String url,
-          final String databaseName,
-          final String username,
-          final String password,
-          final boolean useSSL,
-          final String originatorId,
-          final boolean createTables,
-          final long transactionTimeoutMillis,
-          final boolean reuseDatabaseName)
-    throws Exception {
+      final DatabaseType databaseType,
+      final ConfigurationInterest interest,
+      final String driverClassname,
+      final DataFormat format,
+      final String url,
+      final String databaseName,
+      final String username,
+      final String password,
+      final boolean useSSL,
+      final String originatorId,
+      final boolean createTables,
+      final long transactionTimeoutMillis,
+      final boolean reuseDatabaseName)
+      throws Exception {
 
+    this.format = format;
+    this.databaseName = databaseName;
+    this.actualDatabaseName = reuseDatabaseName ? databaseName : actualDatabaseName(databaseName);
     this.databaseType = databaseType;
     this.interest = interest;
-    this.format = format;
-    this.connectionProvider = new ConnectionProvider(driverClassname, url, databaseName, username, password, useSSL);
-    this.actualDatabaseName = reuseDatabaseName ? databaseName : actualDatabaseName(databaseName);
     this.originatorId = originatorId;
     this.createTables = createTables;
     this.transactionTimeoutMillis = transactionTimeoutMillis;
-    beforeConnect();
-    try (Connection initialConnection = connect()) {
-      afterConnect(initialConnection);
+
+    beforeConnect(); // no Connection is available yet
+    this.connectionProvider = connectionProvider(driverClassname, url, databaseName, actualDatabaseName, username, password, useSSL);
+
+    try (final Connection connection = connectionProvider.newConnection()) {
+      try {
+        afterConnect(connection);
+        connection.commit();
+      } catch (Exception e) {
+        connection.rollback();
+        throw new IllegalStateException("Failed to initialize Configuration because: " + e.getMessage(), e);
+      }
     }
   }
 
   protected String actualDatabaseName(final String databaseName) {
-    return connectionProvider.databaseName;
+    return databaseName;
   }
 
   protected void afterConnect(Connection connection) throws Exception {
@@ -159,14 +168,21 @@ public class Configuration {
     interest.beforeConnect(this);
   }
 
-  protected Connection connect() {
-    return connectionProvider.connection();
+  protected ConnectionProvider connectionProvider(
+      final String driverClassname,
+      final String url,
+      final String databaseName,
+      final String actualDatabaseName,
+      final String username,
+      final String password,
+      final boolean useSSL) {
+    return new ConnectionProvider(driverClassname, url, actualDatabaseName, username, password, useSSL);
   }
 
   public interface ConfigurationInterest {
     void afterConnect(final Connection connection) throws Exception;
     void beforeConnect(final Configuration configuration) throws Exception;
-    void createDatabase(final Connection initConnection, final String databaseName) throws Exception;
+    void createDatabase(final Connection initConnection, final String databaseName, final String username) throws Exception;
     void dropDatabase(final Connection initConnection, final String databaseName) throws Exception;
   }
 
@@ -190,11 +206,13 @@ public class Configuration {
     }
 
     public void cleanUp() {
-      try (final Connection ownerConnection = connect()) {
+      try (final Connection ownerConnection = ConnectionProvider.connectionWith(connectionProvider.driverClassname, connectionProvider.url, databaseName,
+          connectionProvider.username, connectionProvider.password, connectionProvider.useSSL)) {
         try {
-          interest.dropDatabase(ownerConnection, actualDatabaseName);
+          connectionProvider.close(); // close all Connections before deleting the database
+          interest.dropDatabase(ownerConnection, this.actualDatabaseName);
           ownerConnection.commit();
-        }  catch (Exception e) {
+        } catch (Exception e) {
           ownerConnection.rollback();
           e.printStackTrace();
           // ignore
@@ -214,21 +232,21 @@ public class Configuration {
     }
 
     @Override
-    protected Connection connect() {
-      try (final Connection connection = super.connect()) {
-        try {
-          interest.createDatabase(connection, actualDatabaseName);
-          connection.commit();
-        } catch (Exception e) {
-          connection.rollback();
-          throw e;
-        }
+    protected ConnectionProvider connectionProvider(
+        String driverClassname,
+        String url,
+        String databaseName,
+        String actualDatabaseName,
+        String username,
+        String password,
+        boolean useSSL) {
+      try (Connection connection = ConnectionProvider.connectionWith(driverClassname, url, databaseName, username, password, useSSL)) {
+        interest.createDatabase(connection, actualDatabaseName, username);
+        connection.commit();
+        return super.connectionProvider(driverClassname, url, databaseName, actualDatabaseName, username, password, useSSL);
       } catch (Exception e) {
         throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because the server or database unavailable, or wrong credentials.", e);
       }
-
-      final ConnectionProvider copy = connectionProvider.copyReplacing(actualDatabaseName);
-      return copy.connection();
     }
   }
 }

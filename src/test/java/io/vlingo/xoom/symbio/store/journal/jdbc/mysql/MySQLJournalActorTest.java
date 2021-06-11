@@ -25,18 +25,22 @@ import io.vlingo.xoom.symbio.store.journal.jdbc.JDBCJournalWriter;
 import io.vlingo.xoom.symbio.store.testcontainers.SharedMySQLContainer;
 
 public class MySQLJournalActorTest extends JDBCJournalActorTest {
-    private SharedMySQLContainer mysqlContainer = SharedMySQLContainer.getInstance();
 
-    @Override
-    protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        return mysqlContainer.testConfiguration(format);
+  @Override
+  protected Configuration.TestConfiguration testConfiguration(DataFormat format) {
+    try {
+      SharedMySQLContainer mysqlContainer = SharedMySQLContainer.getInstance();
+      return mysqlContainer.testConfiguration(format);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create MySQL test configuration because: " + e.getMessage(), e);
     }
+  }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    protected Journal<String> journalFrom(World world, Configuration configuration, List<Dispatcher<Dispatchable<Entry<String>, State.TextState>>> dispatchers,
-                                          DispatcherControl dispatcherControl) throws Exception {
-        JDBCJournalWriter journalWriter = new JDBCJournalInstantWriter(configuration, dispatchers, dispatcherControl);
-        return world.stage().actorFor(Journal.class, JDBCJournalActor.class, configuration, journalWriter);
-    }
+  @Override
+  @SuppressWarnings("unchecked")
+  protected Journal<String> journalFrom(World world, Configuration configuration, List<Dispatcher<Dispatchable<Entry<String>, State.TextState>>> dispatchers,
+                                        DispatcherControl dispatcherControl) throws Exception {
+    JDBCJournalWriter journalWriter = new JDBCJournalInstantWriter(configuration, dispatchers, dispatcherControl);
+    return world.stage().actorFor(Journal.class, JDBCJournalActor.class, configuration, journalWriter);
+  }
 }

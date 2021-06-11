@@ -46,9 +46,17 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
     this.logger = logger;
     this.originatorId = configuration.originatorId;
 
-    try (Connection connection = configuration.connectionProvider.connection()) {
-      this.queries = JDBCQueries.queriesFor(connection);
-      queries.createTables(connection);
+    try (final Connection connection = configuration.connectionProvider.newConnection()) {
+      try {
+        this.queries = JDBCQueries.queriesFor(connection);
+        queries.createTables(connection);
+        connection.commit();
+      } catch (Exception e) {
+        connection.rollback();
+        String message = "Failed to initialize JDBCDispatcherControlDelegate because: " + e.getMessage();
+        logger.error(message, e);
+        throw new IllegalStateException(message, e);
+      }
     }
   }
 
@@ -56,21 +64,19 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
   public Collection<Dispatchable<Entry<String>, State.TextState>> allUnconfirmedDispatchableStates() throws Exception {
     final List<Dispatchable<Entry<String>, State.TextState>> dispatchables = new ArrayList<>();
 
-    try (final Connection connection = connectionProvider.connection();
-         final PreparedStatement selectDispatchables = queries.prepareSelectDispatchablesQuery(connection, originatorId);
-         final ResultSet result = selectDispatchables.executeQuery()) {
-      try {
+    try (final Connection connection = connectionProvider.newConnection()) {
+      try (final PreparedStatement selectDispatchables = queries.prepareSelectDispatchablesQuery(connection, originatorId);
+           final ResultSet result = selectDispatchables.executeQuery()) {
         while (result.next()) {
           dispatchables.add(dispatchableFrom(result));
         }
-
-        doCommit(connection);
+        connection.commit();
       } catch (Exception e) {
-        logger.error("xoom-symbio-jdbc-" + databaseType + ": Failed to query all unconfirmed dispatchables because: " + e.getMessage(), e);
-        fail(connection);
+        connection.rollback();
+        logger.error("xoom-symbio-jdbc-" + databaseType + " error: Failed to query all unconfirmed dispatchables because: " + e.getMessage(), e);
       }
     } catch (Exception e) {
-      logger.error("xoom-symbio-jdbc-" + databaseType + ": Unexpected error occurred when querying all unconfirmed dispatchables because: " + e.getMessage(), e);
+      logger.error("xoom-symbio-jdbc-" + databaseType + " connection error: Unexpected error occurred when querying all unconfirmed dispatchables because: " + e.getMessage(), e);
     }
 
     return dispatchables;
@@ -78,41 +84,22 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
 
   @Override
   public void confirmDispatched(final String dispatchId) {
-    try (final Connection connection = connectionProvider.connection();
-         final PreparedStatement deleteDispatchable = queries.prepareDeleteDispatchableQuery(connection, dispatchId)) {
-      try {
+    try (final Connection connection = connectionProvider.newConnection()) {
+      try (final PreparedStatement deleteDispatchable = queries.prepareDeleteDispatchableQuery(connection, dispatchId)) {
         deleteDispatchable.executeUpdate();
-        doCommit(connection);
+        connection.commit();
       } catch (final Exception e) {
-        logger.error("xoom-symbio-jdbc-" + databaseType + ": Failed to confirm dispatch with id " + dispatchId + " because: " + e.getMessage(), e);
-        fail(connection);
+        connection.rollback();
+        logger.error("xoom-symbio-jdbc-" + databaseType + " error: Failed to confirm dispatch with id " + dispatchId + " because: " + e.getMessage(), e);
       }
     } catch (final Exception e) {
-      logger.error("xoom-symbio-jdbc-" + databaseType + ": Unexpected error occurred when confirming dispatch with id " + dispatchId + " because: " + e.getMessage(), e);
+      logger.error("xoom-symbio-jdbc-" + databaseType + " connection error: Unexpected error occurred when confirming dispatch with id " + dispatchId + " because: " + e.getMessage(), e);
     }
   }
 
   @Override
   public void stop() {
     // no resources to be closed
-  }
-
-  private void doCommit(final Connection connection) {
-    try {
-      connection.commit();
-    } catch (final SQLException e) {
-      logger.error("xoom-symbio-jdbc-" + databaseType + ": Could not complete transaction", e);
-      fail(connection);
-      throw new IllegalStateException(e);
-    }
-  }
-
-  private void fail(final Connection connection) {
-    try {
-      connection.rollback();
-    } catch (final Exception e) {
-      logger.error(getClass().getSimpleName() + ": Rollback failed because: " + e.getMessage(), e);
-    }
   }
 
   private Dispatchable<Entry<String>, State.TextState> dispatchableFrom(final ResultSet resultSet) throws SQLException, ClassNotFoundException {
@@ -146,17 +133,23 @@ public class JDBCDispatcherControlDelegate implements DispatcherControl.Dispatch
     if (entriesIds != null && !entriesIds.isEmpty()) {
       final String[] ids = entriesIds.split("\\" + DISPATCHEABLE_ENTRIES_DELIMITER);
 
-      try (final Connection connection = connectionProvider.connection();
-           final PreparedStatement selectEntry = queries.prepareSelectEntryQuery(connection)) {
-        for (final String entryId : ids) {
-          selectEntry.clearParameters();
-          selectEntry.setLong(1, Long.parseLong(entryId));
+      try (final Connection connection = connectionProvider.newConnection()) {
+        try (final PreparedStatement selectEntry = queries.prepareSelectEntryQuery(connection)) {
+          for (final String entryId : ids) {
+            selectEntry.clearParameters();
+            selectEntry.setLong(1, Long.parseLong(entryId));
 
-          try (final ResultSet result = selectEntry.executeQuery()) {
-            if (result.next()) {
-              entries.add(entryFrom(result));
+            try (final ResultSet result = selectEntry.executeQuery()) {
+              if (result.next()) {
+                entries.add(entryFrom(result));
+              }
             }
           }
+
+          connection.commit();
+        } catch (Exception e) {
+          connection.rollback();
+          logger.error("xoom-symbio-jdbc-" + databaseType + " error: Failed to construct dispatchable with id " + dispatchId + " because: " + e.getMessage(), e);
         }
       }
     }

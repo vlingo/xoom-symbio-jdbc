@@ -29,7 +29,7 @@ public class JDBCStateStoreStream<RS> implements Stream {
   private final Logger logger;
   private Publisher<RS> publisher;
   private final Stage stage;
-  private final ResultSet resultSet;
+  private final QueryResource queryResource;
   private ResultSetSource<RS> resultSetSource;
   private final StateAdapterProvider stateAdapterProvider;
   private StateStreamSubscriber<RS> subscriber;
@@ -38,12 +38,12 @@ public class JDBCStateStoreStream<RS> implements Stream {
           final Stage stage,
           final JDBCStorageDelegate<TextState> delegate,
           final StateAdapterProvider stateAdapterProvider,
-          final ResultSet resultSet,
+          final QueryResource queryResource,
           final Logger logger) {
     this.stage = stage;
     this.delegate = delegate;
     this.stateAdapterProvider = stateAdapterProvider;
-    this.resultSet = resultSet;
+    this.queryResource = queryResource;
     this.logger = logger;
   }
 
@@ -76,7 +76,7 @@ public class JDBCStateStoreStream<RS> implements Stream {
                     Streams.DefaultBufferSize,
                     Streams.OverflowPolicy.DropCurrent);
 
-    resultSetSource = new ResultSetSource<>(resultSet, delegate, stateAdapterProvider, flowElementsRate, logger);
+    resultSetSource = new ResultSetSource<>(queryResource, delegate, stateAdapterProvider, flowElementsRate, logger);
 
     publisher = stage.actorFor(Publisher.class, StreamPublisher.class, resultSetSource, configuration);
 
@@ -100,16 +100,18 @@ public class JDBCStateStoreStream<RS> implements Stream {
     final JDBCStorageDelegate<TextState> delegate;
     private final long flowElementsRate;
     private final Logger logger;
-    private final ResultSet resultSet;
+    private final QueryResource queryResource;
+    private final ResultSet queryResultSet;
     private final StateAdapterProvider stateAdapterProvider;
 
     public ResultSetSource(
-            final ResultSet resultSet,
+            final QueryResource queryResource,
             final JDBCStorageDelegate<TextState> delegate,
             final StateAdapterProvider stateAdapterProvider,
             final long flowElementsRate,
             final Logger logger) {
-      this.resultSet = resultSet;
+      this.queryResource = queryResource;
+      this.queryResultSet = queryResource.execute();
       this.delegate = delegate;
       this.stateAdapterProvider = stateAdapterProvider;
       this.flowElementsRate = flowElementsRate;
@@ -117,10 +119,10 @@ public class JDBCStateStoreStream<RS> implements Stream {
     }
 
     @Override
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public Completes<Elements<RS>> next() {
       try {
-        if (resultSet.isClosed()) {
+        if (queryResultSet.isClosed()) {
           return Completes.withFailure(Elements.terminated());
         }
 
@@ -130,12 +132,12 @@ public class JDBCStateStoreStream<RS> implements Stream {
         final List<StateBundle> next = new ArrayList<>();
 
         while (count++ < flowElementsRate) {
-          if (resultSet.isClosed() || !resultSet.next()) {
+          if (queryResultSet.isClosed() || !queryResultSet.next()) {
             done = true;
             break;
           }
-          final String id = resultSet.getString(1);
-          final TextState state = delegate.stateFrom(resultSet, id, 1);
+          final String id = queryResultSet.getString(1);
+          final TextState state = delegate.stateFrom(queryResultSet, id, 1);
           final Object object = stateAdapterProvider.fromRaw(state);
           next.add(new StateBundle(state, object));
         }
@@ -152,7 +154,8 @@ public class JDBCStateStoreStream<RS> implements Stream {
       }
 
       try {
-        resultSet.close();
+        queryResource.close();
+        queryResultSet.close();
       } catch (Exception e) {
         logger.error("Failed to close result set because: " + e.getMessage(), e);
       }

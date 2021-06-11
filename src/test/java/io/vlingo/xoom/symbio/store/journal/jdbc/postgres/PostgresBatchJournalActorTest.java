@@ -24,11 +24,15 @@ import io.vlingo.xoom.symbio.store.journal.jdbc.JDBCJournalBatchWriter;
 import io.vlingo.xoom.symbio.store.testcontainers.SharedPostgreSQLContainer;
 
 public class PostgresBatchJournalActorTest extends JDBCJournalActorTest {
-	private SharedPostgreSQLContainer postgresContainer = SharedPostgreSQLContainer.getInstance();
 
 	@Override
-	protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-		return postgresContainer.testConfiguration(format);
+	protected Configuration.TestConfiguration testConfiguration(DataFormat format) {
+		try {
+			SharedPostgreSQLContainer postgresContainer = SharedPostgreSQLContainer.getInstance();
+			return postgresContainer.testConfiguration(format);
+		} catch (Exception e) {
+			throw new RuntimeException("Failed to create PostgreSQL test configuration because: " + e.getMessage(), e);
+		}
 	}
 
 	@Override

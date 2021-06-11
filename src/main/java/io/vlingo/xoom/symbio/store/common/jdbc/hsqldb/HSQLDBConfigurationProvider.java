@@ -28,7 +28,7 @@ public class HSQLDBConfigurationProvider {
 
     }
 
-    @Override public void createDatabase(final Connection initConnection, final String databaseName) {
+    @Override public void createDatabase(final Connection initConnection, final String databaseName, final String username) {
       databaseCount.incrementAndGet();
     }
 

@@ -12,6 +12,8 @@ import com.zaxxer.hikari.HikariDataSource;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
+import java.sql.DriverManager;
+import java.util.Properties;
 
 /**
  * Provider of {@code Connection} instances.
@@ -25,7 +27,7 @@ public class ConnectionProvider {
 
   final String password;
 
-  private final DataSource dataSource;
+  private final HikariDataSource dataSource;
 
   public ConnectionProvider(
           final String driverClassname,
@@ -45,15 +47,19 @@ public class ConnectionProvider {
   }
 
   /**
-   * Answer a new instance of a {@code Connection}.
-   * @return Connection
+   * Close all underlying resources. This method is used on graceful shutdown or unit tests.
    */
-  public Connection connection() {
-    try {
-      return dataSource.getConnection();
-    }  catch (Exception e) {
-      throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because database unavailable or wrong credentials.");
-    }
+  public void close() {
+    dataSource.close();
+  }
+
+  /**
+   * Answer a copy of me but with the given {@code databaseName}.
+   * @param databaseName the String name of the database with which to create the new ConnectionProvider
+   * @return ConnectionProvider
+   */
+  public ConnectionProvider copyReplacing(final String databaseName) {
+    return new ConnectionProvider(driverClassname, url, databaseName, username, password, useSSL);
   }
 
   /**
@@ -66,21 +72,45 @@ public class ConnectionProvider {
   }
 
   /**
-   * Answer a copy of me but with the given {@code databaseName}.
-   * @param databaseName the String name of the database with which to create the new ConnectionProvider
-   * @return ConnectionProvider
+   * Answer a new instance of a {@code Connection}.
+   * @return Connection
    */
-  public ConnectionProvider copyReplacing(final String databaseName) {
-    return new ConnectionProvider(driverClassname, url, databaseName, username, password, useSSL);
+  public Connection newConnection() {
+    try {
+      return dataSource.getConnection();
+    }  catch (Exception e) {
+      throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because database unavailable or wrong credentials.");
+    }
   }
 
-  private DataSource buildDataSource() {
+  protected static Connection connectionWith(
+      final String driverClassname,
+      final String url,
+      final String databaseName,
+      final String username,
+      final String password,
+      final boolean useSSL) {
+    try {
+      Class.forName(driverClassname);
+      final Properties properties = new Properties();
+      properties.setProperty("user", username);
+      properties.setProperty("password", password);
+      properties.setProperty("ssl", Boolean.toString(useSSL));
+      final Connection connection = DriverManager.getConnection(url + databaseName, properties);
+      connection.setAutoCommit(false);
+      return connection;
+    }  catch (Exception e) {
+      throw new IllegalStateException("Cannot connect because database unavailable or wrong credentials.");
+    }
+  }
+
+  private HikariDataSource buildDataSource() {
     HikariConfig config = new HikariConfig();
     config.setDriverClassName(driverClassname);
     config.setUsername(username);
     config.setPassword(password);
     config.setJdbcUrl(url + databaseName);
-    config.setMaximumPoolSize(5);
+    config.setMaximumPoolSize(3);
     config.setAutoCommit(false);
 
     return new HikariDataSource(config);

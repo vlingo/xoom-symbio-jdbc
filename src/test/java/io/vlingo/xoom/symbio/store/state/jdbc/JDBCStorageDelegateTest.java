@@ -56,9 +56,11 @@ public abstract class JDBCStorageDelegateTest {
         delegate.complete();
 
         delegate.beginRead();
-        final PreparedStatement readStatement = delegate.readExpressionFor(entity1StoreName, "123");
-        final ResultSet result = readStatement.executeQuery();
+        final QueryResource queryResource = delegate.createReadExpressionFor(entity1StoreName, "123");
+        final ResultSet result = queryResource.execute();
         final State.TextState readState = delegate.stateFrom(result, "123");
+        result.close();
+        queryResource.close();
         delegate.complete();
 
         assertEquals(writeState, readState);
@@ -79,9 +81,11 @@ public abstract class JDBCStorageDelegateTest {
         delegate.complete();
 
         delegate.beginRead();
-        final PreparedStatement readStatement1 = delegate.readExpressionFor(entity1StoreName, "123");
-        final ResultSet result1 = readStatement1.executeQuery();
+        final QueryResource queryResource1 = delegate.createReadExpressionFor(entity1StoreName, "123");
+        final ResultSet result1 = queryResource1.execute();
         final State.TextState readState1 = delegate.stateFrom(result1, "123");
+        result1.close();
+        queryResource1.close();
         delegate.complete();
 
         assertEquals(writeState1, readState1);
@@ -94,9 +98,11 @@ public abstract class JDBCStorageDelegateTest {
         delegate.complete();
 
         delegate.beginRead();
-        final PreparedStatement readStatement2 = delegate.readExpressionFor(entity1StoreName, "123");
-        final ResultSet result2 = readStatement2.executeQuery();
+        final QueryResource queryResource2 = delegate.createReadExpressionFor(entity1StoreName, "123");
+        final ResultSet result2 = queryResource2.execute();
         final State.TextState readState2 = delegate.stateFrom(result2, "123");
+        result2.close();
+        queryResource2.close();
         delegate.complete();
 
         assertEquals(writeState2, readState2);
@@ -119,9 +125,11 @@ public abstract class JDBCStorageDelegateTest {
         delegate.complete();
 
         delegate.beginRead();
-        final PreparedStatement readStatement = delegate.readExpressionFor(entity1StoreName, "123");
-        final ResultSet result = readStatement.executeQuery();
-        final State.BinaryState readState = delegate.stateFrom(result, "123");
+        final QueryResource queryResource = delegate.createReadExpressionFor(entity1StoreName, "123");
+        final ResultSet resultSet = queryResource.execute();
+        final State.BinaryState readState = delegate.stateFrom(resultSet, "123");
+        resultSet.close();
+        queryResource.close();
         delegate.complete();
 
         assertEquals(writeState, readState);

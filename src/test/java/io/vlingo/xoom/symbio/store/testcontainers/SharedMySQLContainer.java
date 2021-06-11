@@ -12,7 +12,7 @@ import java.sql.SQLException;
 
 public class SharedMySQLContainer extends MySQLContainer<SharedMySQLContainer> {
   private static final String IMAGE_VERSION = "mysql:latest";
-  private static SharedMySQLContainer container;
+  private static SharedMySQLContainer instance;
 
   private SharedMySQLContainer() {
     super(IMAGE_VERSION);
@@ -20,19 +20,19 @@ public class SharedMySQLContainer extends MySQLContainer<SharedMySQLContainer> {
 
   @SuppressWarnings("resource")
   public static SharedMySQLContainer getInstance() {
-    if (container == null) {
+    if (instance == null) {
       String username = "xoom_test";
       String databaseName = "xoom_test";
       String password = "vlingo123";
-      container = new SharedMySQLContainer()
+      instance = new SharedMySQLContainer()
           .withEnv("MYSQL_ROOT_HOST", "%")
           .withDatabaseName(databaseName)
           .withPassword(password);
-      container.start();
-      container.createUser(username, password);
-      container.withUsername(username);
+      instance.start();
+      instance.createUser(username, password);
+      instance.withUsername(username);
     }
-    return container;
+    return instance;
   }
 
   @Override

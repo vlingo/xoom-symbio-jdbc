@@ -115,7 +115,25 @@ public abstract class JDBCQueries {
       final String d_state_metadata,
       final String d_entries)
       throws SQLException {
-    PreparedStatement insertDispatchable = connection.prepareStatement(insertDispatchableQuery());
+    PreparedStatement insertDispatchable = newInsertDispatchableQuery(connection);
+    updateInsertDispatchableQuery(insertDispatchable, d_dispatch_id, d_originator_id, d_state_id, d_state_data, d_state_data_version,
+        d_state_type, d_state_type_version, d_state_metadata, d_entries);
+
+    return Tuple2.from(insertDispatchable, Optional.empty());
+  }
+
+  public void updateInsertDispatchableQuery(
+      final PreparedStatement insertDispatchable,
+      final String d_dispatch_id,
+      final String d_originator_id,
+      final String d_state_id,
+      final String d_state_data,
+      final int d_state_data_version,
+      final String d_state_type,
+      final int d_state_type_version,
+      final String d_state_metadata,
+      final String d_entries)
+      throws SQLException {
     insertDispatchable.clearParameters();
 
     insertDispatchable.setString(1, d_dispatch_id);
@@ -129,11 +147,9 @@ public abstract class JDBCQueries {
     insertDispatchable.setInt(8, d_state_type_version);
     insertDispatchable.setString(9, d_state_metadata);
     insertDispatchable.setString(10, d_entries);
-
-    return Tuple2.from(insertDispatchable, Optional.empty());
   }
 
-  public Tuple2<PreparedStatement, Optional<String>> prepareNewInsertEntryQuery(
+  public Tuple2<PreparedStatement, Optional<String>> prepareInsertEntryQuery(
       final Connection connection,
       final String stream_name,
       final int stream_version,
@@ -142,13 +158,13 @@ public abstract class JDBCQueries {
       final int entry_type_version,
       final String entry_metadata)
       throws SQLException {
-    PreparedStatement insertEntry = newInsertEntryStatement(connection);
-    prepareInsertEntryQuery(insertEntry, stream_name, stream_version, entry_data, entry_type, entry_type_version, entry_metadata);
+    PreparedStatement insertEntry = newInsertEntryStatementQuery(connection);
+    updateInsertEntryQuery(insertEntry, stream_name, stream_version, entry_data, entry_type, entry_type_version, entry_metadata);
 
     return Tuple2.from(insertEntry, Optional.empty());
   }
 
-  public void prepareInsertEntryQuery(
+  public void updateInsertEntryQuery(
       PreparedStatement insertEntry,
       final String stream_name,
       final int stream_version,
@@ -167,6 +183,10 @@ public abstract class JDBCQueries {
     insertEntry.setInt(5, entry_type_version);
 
     insertEntry.setString(6, entry_metadata);
+  }
+
+  public PreparedStatement newInsertDispatchableQuery(final Connection connection) throws SQLException {
+    return connection.prepareStatement(insertDispatchableQuery());
   }
 
   public PreparedStatement prepareInsertOffsetQuery(
@@ -329,7 +349,7 @@ public abstract class JDBCQueries {
     }
   }
 
-  protected PreparedStatement newInsertEntryStatement(final Connection connection) throws SQLException {
+  protected PreparedStatement newInsertEntryStatementQuery(final Connection connection) throws SQLException {
     return connection.prepareStatement(insertEntryQuery(), generatedKeysIndicator());
   }
 

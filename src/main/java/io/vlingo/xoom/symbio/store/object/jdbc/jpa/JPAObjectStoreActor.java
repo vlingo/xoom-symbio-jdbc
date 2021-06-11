@@ -107,10 +107,16 @@ public class JPAObjectStoreActor extends Actor implements JPAObjectStore {
                             checkConfirmationExpirationInterval,
                             confirmationExpiration)));
 
-    try (final Connection connection = connectionProvider.connection()) {
-      this.databaseType = DatabaseType.databaseType(connection);
+    try (final Connection initConnection = connectionProvider.newConnection()) {
+      try {
+        this.databaseType = DatabaseType.databaseType(initConnection);
+        initConnection.commit();
+      } catch (Exception e) {
+        initConnection.rollback();
+        throw new RuntimeException("Failed to instantiate JPAObjectStoreActor because: " + e.getMessage(), e);
+      }
     } catch (SQLException e) {
-      throw new RuntimeException("Failed to instantiate JPAObjectStoreActor because: " + e.getMessage(), e);
+      throw new RuntimeException("Failed to instantiate (connection) JPAObjectStoreActor because: " + e.getMessage(), e);
     }
   }
 

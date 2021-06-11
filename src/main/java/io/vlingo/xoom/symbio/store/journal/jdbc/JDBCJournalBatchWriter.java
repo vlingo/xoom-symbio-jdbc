@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 	private final Configuration configuration;
 	private final ConnectionProvider connectionProvider;
-	// private final Connection connection;
 	private final JDBCQueries queries;
 	private final List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers;
 	private final DispatcherControl dispatcherControl;
@@ -52,16 +51,20 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 									DispatcherControl dispatcherControl, int maxBatchEntries) throws Exception {
 		this.configuration = configuration;
 		this.connectionProvider = configuration.connectionProvider;
-		// this.connection = configuration.connection;
 		this.dispatchers = dispatchers;
 		this.dispatcherControl = dispatcherControl;
 		this.gson = new Gson();
 		this.dispatchablesIdentityGenerator = new IdentityGenerator.RandomIdentityGenerator();
 		this.batchEntries = new BatchEntries(maxBatchEntries);
 
-		// this.connection.setAutoCommit(false);
-		try (Connection initConnection = connectionProvider.connection()) {
-			this.queries = JDBCQueries.queriesFor(initConnection);
+		try (Connection initConnection = connectionProvider.newConnection()) {
+			try {
+				this.queries = JDBCQueries.queriesFor(initConnection);
+				initConnection.commit();
+			} catch (Exception e) {
+				initConnection.rollback();
+				throw new IllegalArgumentException("Failed to initialize JDBCJournalBatchWriter because: " + e.getMessage(), e);
+			}
 		}
 	}
 
@@ -85,12 +88,20 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 
 	@Override
 	public void flush() {
+		List<Dispatchable<Entry<String>, TextState>> dispatchables = null;
+
 		if (batchEntries.size() > 0) {
-			try (Connection connection = connectionProvider.connection()) {
-				insertEntries(connection);
-				insertSnapshots(connection);
-				List<Dispatchable<Entry<String>, TextState>> dispatchables = insertDispatchables(connection);
-				doCommit(connection);
+			try (Connection connection = connectionProvider.newConnection()) {
+				try {
+					insertEntries(connection);
+					insertSnapshots(connection);
+					dispatchables = insertDispatchables(connection);
+					connection.commit();
+				} catch (Exception e) {
+					connection.rollback();
+					logger.error("xoom-symbio-jdbc:journal-" + configuration.databaseType.toString() + ": flush() transaction failed because: " + e.getMessage(), e);
+					return;
+				}
 
 				dispatch(dispatchables);
 				batchEntries.completedWith(Success.of(Result.Success));
@@ -124,9 +135,8 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 		List<Dispatchable<Entry<String>, TextState>> dispatchables = new ArrayList<>();
 		String databaseType = configuration.databaseType.toString();
 		LocalDateTime now = LocalDateTime.now();
-		PreparedStatement insertDispatchable = null;
 
-		try {
+		try (PreparedStatement insertDispatchable = queries.newInsertDispatchableQuery(connection)) {
 			for (AbstractBatchEntry batchEntry : batchEntries.entries) {
 				final String id = buildDispatchId(batchEntry.streamName, batchEntry.streamVersion);
 				final Dispatchable<Entry<String>, TextState> dispatchable = new Dispatchable<>(id, now, batchEntry.snapshotState.orElse(null), batchEntry.entries());
@@ -140,8 +150,8 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 				if (dispatchable.state().isPresent()) {
 					final State<String> state = dispatchable.typedState();
 
-					insertDispatchable = queries.prepareInsertDispatchableQuery(
-							connection,
+					queries.updateInsertDispatchableQuery(
+							insertDispatchable,
 							id,
 							configuration.originatorId,
 							state.id,
@@ -150,10 +160,10 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 							state.type,
 							state.typeVersion,
 							gson.toJson(state.metadata),
-							encodedEntries)._1;
+							encodedEntries);
 				} else {
-					insertDispatchable = queries.prepareInsertDispatchableQuery(
-							connection,
+					queries.updateInsertDispatchableQuery(
+							insertDispatchable,
 							id,
 							configuration.originatorId,
 							null,
@@ -162,14 +172,10 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 							null,
 							0,
 							null,
-							encodedEntries)._1;
+							encodedEntries);
 				}
 
 				insertDispatchable.addBatch();
-			}
-
-			if (insertDispatchable == null) {
-				return new ArrayList<>();
 			}
 
 			final int[] countList = insertDispatchable.executeBatch();
@@ -184,14 +190,6 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 			batchEntries.completedWith(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)));
 			logger.error("xoom-symbio-jdbc:journal-" + databaseType + ": Failed to batch insert dispatchables.", e);
 			throw new IllegalStateException(e);
-		} finally {
-			if (insertDispatchable != null) {
-				try {
-					insertDispatchable.clearBatch();
-				} catch (SQLException e) {
-					errorOccurred(e, "xoom-symbio-jdbc:journal-" + databaseType + ": Failed to clean dispatchables batch.");
-				}
-			}
 		}
 	}
 
@@ -207,10 +205,14 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 		List<InsertEntry> insertEntries = batchEntries.collectEntries();
 		PreparedStatement insertStatement = null;
 
+		if (insertEntries.size() == 0) {
+			return;
+		}
+
 		try {
-			insertStatement = queries.newInsertEntryStatement(connection);
+			insertStatement = queries.newInsertEntryStatementQuery(connection);
 			for (InsertEntry insertEntry : insertEntries) {
-				queries.prepareInsertEntryQuery(
+				queries.updateInsertEntryQuery(
 						insertStatement,
 						insertEntry.streamName,
 						insertEntry.streamVersion,
@@ -220,10 +222,6 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 						gson.toJson(insertEntry.entry.metadata()));
 
 				insertStatement.addBatch();
-			}
-
-			if (insertStatement == null) {
-				return;
 			}
 
 			final int[] countList = insertStatement.executeBatch();

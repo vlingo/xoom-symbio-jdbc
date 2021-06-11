@@ -51,12 +51,16 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
     this.entryAdapterProvider = EntryAdapterProvider.instance(stage().world());
     this.offset = 1L;
 
-    // this.connection.setAutoCommit(true);
-
-    try (Connection initConnection = connectionProvider.connection()) {
-      this.queries = JDBCObjectStoreEntryJournalQueries.using(databaseType);
-      queries.createTextEntryJournalReaderOffsetsTable(initConnection);
-      restoreCurrentOffset(initConnection);
+    try (Connection initConnection = connectionProvider.newConnection()) {
+      try {
+        this.queries = JDBCObjectStoreEntryJournalQueries.using(databaseType);
+        queries.createTextEntryJournalReaderOffsetsTable(initConnection);
+        restoreCurrentOffset(initConnection);
+        initConnection.commit();
+      } catch (Exception e) {
+        initConnection.rollback();
+        throw new IllegalArgumentException("Failed to initialize JDBCObjectStoreEntryReaderActor because: " + e.getMessage(), e);
+      }
     }
   }
 
@@ -80,32 +84,39 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
 
   @Override
   public Completes<Entry<String>> readNext() {
-    try (final Connection connection = connectionProvider.connection();
-         final PreparedStatement entryQuery = queries.statementForEntriesQuery(connection, new String[]{"?", "?"})) {
-      entryQuery.clearParameters();
-      entryQuery.setLong(1, offset);
-      try (final ResultSet result = entryQuery.executeQuery()) {
-        final Entry<String> entry = mapQueriedEntryFrom(result);
-        List<Long> gapIds = reader().detectGaps(entry, offset);
-        if (!gapIds.isEmpty()) {
-          // gaps have been detected
-          List<Entry<String>> entries = entry == null ? new ArrayList<>() : Collections.singletonList(entry);
-          GappedEntries<Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
-          reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
+    try (final Connection connection = connectionProvider.newConnection()) {
+      try (final PreparedStatement entryQuery = queries.statementForEntryQuery(connection)) {
+        entryQuery.clearParameters();
+        entryQuery.setLong(1, offset);
+        try (final ResultSet result = entryQuery.executeQuery()) {
+          final Entry<String> entry = mapQueriedEntryFrom(result);
+          List<Long> gapIds = reader().detectGaps(entry, offset);
+          if (!gapIds.isEmpty()) {
+            // gaps have been detected
+            List<Entry<String>> entries = entry == null ? new ArrayList<>() : Collections.singletonList(entry);
+            GappedEntries<Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+            reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
 
-          ++offset;
-          updateCurrentOffset(connection);
-          return completes();
-        } else {
-          ++offset;
-          updateCurrentOffset(connection);
-          return completes().with(entry);
+            ++offset;
+            updateCurrentOffset(connection);
+            connection.commit();
+            return completes();
+          } else {
+            ++offset;
+            updateCurrentOffset(connection);
+            connection.commit();
+            return completes().with(entry);
+          }
         }
+      } catch (Exception e) {
+        connection.rollback();
+        logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
       }
     } catch (Exception e) {
-      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
-      return completes().with(null);
+      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read (connection) next entry because: " + e.getMessage(), e);
     }
+
+    return completes().with(null);
   }
 
   @Override
@@ -116,32 +127,39 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
 
   @Override
   public Completes<List<Entry<String>>> readNext(final int maximumEntries) {
-    try (final Connection connection = connectionProvider.connection();
-         final PreparedStatement entriesQuery = queries.statementForEntriesQuery(connection, new String[]{"?", "?"})) {
-      entriesQuery.clearParameters();
-      entriesQuery.setLong(1, offset);
-      entriesQuery.setLong(2, offset + maximumEntries - 1L);
-      try (final ResultSet result = entriesQuery.executeQuery()) {
-        final List<Entry<String>> entries = mapQueriedEntriesFrom(result);
-        List<Long> gapIds = reader().detectGaps(entries, offset, maximumEntries);
-        if (!gapIds.isEmpty()) {
-          GappedEntries<Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
-          reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
+    try (final Connection connection = connectionProvider.newConnection()) {
+      try (final PreparedStatement entriesQuery = queries.statementForEntriesQuery(connection, new String[]{"?", "?"})) {
+        entriesQuery.clearParameters();
+        entriesQuery.setLong(1, offset);
+        entriesQuery.setLong(2, offset + maximumEntries - 1L);
+        try (final ResultSet result = entriesQuery.executeQuery()) {
+          final List<Entry<String>> entries = mapQueriedEntriesFrom(result);
+          List<Long> gapIds = reader().detectGaps(entries, offset, maximumEntries);
+          if (!gapIds.isEmpty()) {
+            GappedEntries<Entry<String>> gappedEntries = new GappedEntries<>(entries, gapIds, completesEventually());
+            reader().readGaps(gappedEntries, DefaultGapPreventionRetries, DefaultGapPreventionRetryInterval, this::readIds);
 
-          // Move offset with maximumEntries regardless of filled up gaps
-          offset += maximumEntries;
-          updateCurrentOffset(connection);
-          return completes();
-        } else {
-          offset += maximumEntries;
-          updateCurrentOffset(connection);
-          return completes().with(entries);
+            // Move offset with maximumEntries regardless of filled up gaps
+            offset += maximumEntries;
+            updateCurrentOffset(connection);
+            connection.commit();
+            return completes();
+          } else {
+            offset += maximumEntries;
+            updateCurrentOffset(connection);
+            connection.commit();
+            return completes().with(entries);
+          }
         }
+      } catch (Exception e) {
+        connection.rollback();
+        logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
       }
     } catch (Exception e) {
-      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read next entry because: " + e.getMessage(), e);
-      return completes().with(null);
+      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read (connection) next entry because: " + e.getMessage(), e);
     }
+
+    return completes().with(null);
   }
 
   @Override
@@ -154,51 +172,71 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
   public void rewind() {
     this.offset = 1L;
 
-    try (final Connection connection = connectionProvider.connection()) {
-      updateCurrentOffset(connection);
+    try (final Connection connection = connectionProvider.newConnection()) {
+      try {
+        updateCurrentOffset(connection);
+        connection.commit();
+      } catch (Exception e) {
+        connection.rollback();
+        logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not rewind because: " + e.getMessage(), e);
+      }
     } catch (Exception e) {
-      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not rewind because: " + e.getMessage(), e);
+      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not rewind (connection) because: " + e.getMessage(), e);
     }
   }
 
   @Override
   public Completes<String> seekTo(final String id) {
-    try (final Connection connection = connectionProvider.connection()) {
-      switch (id) {
-        case Beginning:
-          this.offset = 1L;
-          updateCurrentOffset(connection);
-          break;
-        case End:
-          this.offset = retrieveLatestOffset(connection) + 1L;
-          updateCurrentOffset(connection);
-          break;
-        case Query:
-          break;
-        default:
-          this.offset = Long.parseLong(id);
-          updateCurrentOffset(connection);
-          break;
+    try (final Connection connection = connectionProvider.newConnection()) {
+      try {
+        switch (id) {
+          case Beginning:
+            this.offset = 1L;
+            updateCurrentOffset(connection);
+            break;
+          case End:
+            this.offset = retrieveLatestOffset(connection) + 1L;
+            updateCurrentOffset(connection);
+            break;
+          case Query:
+            break;
+          default:
+            this.offset = Long.parseLong(id);
+            updateCurrentOffset(connection);
+            break;
+        }
+
+        connection.commit();
+        return completes().with(String.valueOf(offset));
+      } catch (Exception e) {
+        connection.rollback();
+        logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not seekTo because: " + e.getMessage(), e);
       }
-
-      return completes().with(String.valueOf(offset));
-    } catch (SQLException e) {
-
-      return completes().with(null);
+    } catch (Exception e) {
+      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not seekTo (connection) because: " + e.getMessage(), e);
     }
+
+    return completes().with(null);
   }
 
   @Override
   public Completes<Long> size() {
-    try (final Connection connection = connectionProvider.connection();
-         final PreparedStatement querySize = queries.statementForSizeQuery(connection);
-         final ResultSet result = querySize.executeQuery()) {
-      if (result.next()) {
-        final long size = result.getLong(1);
-        return completes().with(size);
+    try (final Connection connection = connectionProvider.newConnection()) {
+      try (final PreparedStatement querySize = queries.statementForSizeQuery(connection);
+           final ResultSet result = querySize.executeQuery()) {
+        if (result.next()) {
+          final long size = result.getLong(1);
+          connection.commit();
+          return completes().with(size);
+        }
+
+        connection.commit();
+      } catch (Exception e) {
+        connection.rollback();
+        // fall through
       }
     } catch (Exception e) {
-      // fall through
+      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not detect (connection) size because: " + e.getMessage(), e);
     }
 
     logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve size, using -1L.");
@@ -252,14 +290,20 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
   }
 
   private List<Entry<String>> readIds(List<Long> ids) {
-    try (final Connection connection = connectionProvider.connection();
-         final PreparedStatement statement = prepareQueryByIdsStatement(connection, ids);
-         final ResultSet result = statement.executeQuery()) {
-      return mapQueriedEntriesFrom(result);
+    try (final Connection connection = connectionProvider.newConnection()) {
+      try (final PreparedStatement statement = prepareQueryByIdsStatement(connection, ids);
+           final ResultSet result = statement.executeQuery()) {
+        connection.commit();
+        return mapQueriedEntriesFrom(result);
+      } catch (Exception e) {
+        connection.rollback();
+        logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read ids because: " + e.getMessage(), e);
+      }
     } catch (Exception e) {
-      logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read ids because: " + e.getMessage(), e);
-      return new ArrayList<>();
+      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not read (connection) ids because: " + e.getMessage(), e);
     }
+
+    return new ArrayList<>();
   }
 
   private void restoreCurrentOffset(final Connection connection) {
@@ -267,14 +311,21 @@ public class JDBCObjectStoreEntryReaderActor extends Actor implements ObjectStor
   }
 
   private long retrieveLatestOffset(final Connection connection) {
-    try (final PreparedStatement queryLastEntryId = queries.statementForQueryLastEntryId(connection);
-         final ResultSet result = queryLastEntryId.executeQuery()) {
-      if (result.next()) {
-        final long latestId = result.getLong(1);
-        return latestId > 0 ? latestId : 1L;
+    try (final PreparedStatement queryLastEntryId = queries.statementForQueryLastEntryId(connection)) {
+      try (final ResultSet result = queryLastEntryId.executeQuery()) {
+        if (result.next()) {
+          final long latestId = result.getLong(1);
+          connection.commit();
+          return latestId > 0 ? latestId : 1L;
+        }
+
+        connection.commit();
+      } catch (Exception e) {
+        connection.rollback();
+        // fall through
       }
     } catch (Exception e) {
-      // fall through
+      logger().error("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve (connection) latest offset because: " + e.getMessage(), e);
     }
 
     logger().info("xoom-symbio-jdbc: " + getClass().getSimpleName() + " Could not retrieve latest offset, using current.");

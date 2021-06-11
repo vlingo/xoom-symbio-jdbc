@@ -57,25 +57,35 @@ public class JDBCJournalInstantWriter implements JDBCJournalWriter {
     this.gson = new Gson();
     this.dispatchablesIdentityGenerator = new IdentityGenerator.RandomIdentityGenerator();
 
-    // this.connection.setAutoCommit(false);
-    try (Connection initConnection = connectionProvider.connection()) {
-      this.queries = JDBCQueries.queriesFor(initConnection);
+    try (Connection initConnection = connectionProvider.newConnection()) {
+      try {
+        this.queries = JDBCQueries.queriesFor(initConnection);
+        initConnection.commit();
+      } catch (Exception e) {
+        initConnection.rollback();
+        throw new IllegalStateException("Failed to initialize JDBCJournalInstantWriter because: " + e.getMessage(), e);
+      }
     }
   }
 
   @Override
   public void appendEntry(String streamName, int streamVersion, Entry<String> entry, Optional<TextState> snapshotState,
                           Consumer<Outcome<StorageException, Result>> postAppendAction) {
-    try (final Connection connection = connectionProvider.connection()) {
-      insertEntry(connection, streamName, streamVersion, entry, postAppendAction);
-      snapshotState.ifPresent(state -> insertSnapshot(connection, streamName, streamVersion, state, postAppendAction));
-      final Dispatchable<Entry<String>, TextState> dispatchable =
-          insertDispatchable(connection, streamName, streamVersion, Collections.singletonList(entry), snapshotState.orElse(null), postAppendAction);
-      doCommit(connection, postAppendAction);
-      dispatch(dispatchable);
-      postAppendAction.accept(Success.of(Result.Success));
+    try (final Connection connection = connectionProvider.newConnection()) {
+      try {
+        insertEntry(connection, streamName, streamVersion, entry, postAppendAction);
+        snapshotState.ifPresent(state -> insertSnapshot(connection, streamName, streamVersion, state, postAppendAction));
+        final Dispatchable<Entry<String>, TextState> dispatchable =
+            insertDispatchable(connection, streamName, streamVersion, Collections.singletonList(entry), snapshotState.orElse(null), postAppendAction);
+        doCommit(connection, postAppendAction);
+        dispatch(dispatchable);
+        postAppendAction.accept(Success.of(Result.Success));
+      } catch (Exception e) {
+        connection.rollback();
+        logger.error("xoom-symbio-jdbc:journal-" + configuration.databaseType + " error: Could not append entry to stream " + streamName, e);
+      }
     } catch (Exception e) {
-      logger.error("xoom-symbio-jdbc:journal-" + configuration.databaseType + ": Could not append entry to stream " + streamName, e);
+      logger.error("xoom-symbio-jdbc:journal-" + configuration.databaseType + " connection error: Could not append entry to stream " + streamName, e);
     }
   }
 
@@ -84,19 +94,24 @@ public class JDBCJournalInstantWriter implements JDBCJournalWriter {
                             Consumer<Outcome<StorageException, Result>> postAppendAction) {
     int version = fromStreamVersion;
 
-    try (final Connection connection = connectionProvider.connection()) {
-      for (Entry<String> entry : entries) {
-        insertEntry(connection, streamName, version++, entry, postAppendAction);
-      }
+    try (final Connection connection = connectionProvider.newConnection()) {
+      try {
+        for (Entry<String> entry : entries) {
+          insertEntry(connection, streamName, version++, entry, postAppendAction);
+        }
 
-      snapshotState.ifPresent(state -> insertSnapshot(connection, streamName, fromStreamVersion, state, postAppendAction));
-      final Dispatchable<Entry<String>, TextState> dispatchable =
-          insertDispatchable(connection, streamName, fromStreamVersion, entries, snapshotState.orElse(null), postAppendAction);
-      doCommit(connection, postAppendAction);
-      dispatch(dispatchable);
-      postAppendAction.accept(Success.of(Result.Success));
+        snapshotState.ifPresent(state -> insertSnapshot(connection, streamName, fromStreamVersion, state, postAppendAction));
+        final Dispatchable<Entry<String>, TextState> dispatchable =
+            insertDispatchable(connection, streamName, fromStreamVersion, entries, snapshotState.orElse(null), postAppendAction);
+        doCommit(connection, postAppendAction);
+        dispatch(dispatchable);
+        postAppendAction.accept(Success.of(Result.Success));
+      } catch (Exception e) {
+        connection.rollback();
+        logger.error("xoom-symbio-jdbc:journal-" + configuration.databaseType + " error: Could not append entries to stream " + streamName, e);
+      }
     } catch (SQLException e) {
-      logger.error("xoom-symbio-jdbc:journal-" + configuration.databaseType + ": Could not append entries to stream " + streamName, e);
+      logger.error("xoom-symbio-jdbc:journal-" + configuration.databaseType + " connection error: Could not append entries to stream " + streamName, e);
     }
   }
 
@@ -145,9 +160,9 @@ public class JDBCJournalInstantWriter implements JDBCJournalWriter {
     String dbType = configuration.databaseType.toString();
 
     try {
-      final String encodedEntries = dispatchable.hasEntries() ?
-          dispatchable.entries().stream().map(Entry::id).collect(Collectors.joining(JDBCDispatcherControlDelegate.DISPATCHEABLE_ENTRIES_DELIMITER)) :
-          "";
+      final String encodedEntries = dispatchable.hasEntries()
+          ? dispatchable.entries().stream().map(Entry::id).collect(Collectors.joining(JDBCDispatcherControlDelegate.DISPATCHEABLE_ENTRIES_DELIMITER))
+          : "";
 
       final Tuple2<PreparedStatement, Optional<String>> insertDispatchable;
 
@@ -228,7 +243,7 @@ public class JDBCJournalInstantWriter implements JDBCJournalWriter {
 
     try {
       final Tuple2<PreparedStatement, Optional<String>> insertEntry =
-          queries.prepareNewInsertEntryQuery(
+          queries.prepareInsertEntryQuery(
               connection,
               streamName,
               streamVersion,

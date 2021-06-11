@@ -193,8 +193,14 @@ public abstract class JdbiObjectStoreEntryReaderTest {
   public void setUp() throws Exception {
     jdbi = jdbiOnDatabase();
 
-    try (final Connection initConnection = configuration().connectionProvider.connection()) {
-      jdbi.createCommonTables(initConnection);
+    try (final Connection initConnection = configuration().connectionProvider.newConnection()) {
+      try {
+        jdbi.createCommonTables(initConnection);
+        initConnection.commit();
+      } catch (Exception e) {
+        initConnection.rollback();
+        throw new RuntimeException("Failed to create common tables because: " + e.getMessage(), e);
+      }
     } catch (Exception e) {
       throw new RuntimeException("Failed to create common tables because: " + e.getMessage(), e);
     }

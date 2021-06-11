@@ -15,6 +15,7 @@ import static org.junit.Assert.assertNotNull;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
+import io.vlingo.xoom.symbio.store.state.jdbc.QueryResource;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,9 +58,11 @@ public class HSQLDBStorageDelegateTest {
     delegate.complete();
 
     delegate.beginRead();
-    final PreparedStatement readStatement = delegate.readExpressionFor(entity1StoreName, "123");
-    final ResultSet result = readStatement.executeQuery();
-    final TextState readState = delegate.stateFrom(result, "123");
+    final QueryResource queryResource = delegate.createReadExpressionFor(entity1StoreName, "123");
+    final ResultSet resultSet = queryResource.execute();
+    final TextState readState = delegate.stateFrom(resultSet, "123");
+    resultSet.close();
+    queryResource.close();
     delegate.complete();
 
     assertEquals(writeState, readState);
@@ -80,9 +83,11 @@ public class HSQLDBStorageDelegateTest {
     delegate.complete();
 
     delegate.beginRead();
-    final PreparedStatement readStatement1 = delegate.readExpressionFor(entity1StoreName, "123");
-    final ResultSet result1 = readStatement1.executeQuery();
-    final TextState readState1 = delegate.stateFrom(result1, "123");
+    final QueryResource queryResource1 = delegate.createReadExpressionFor(entity1StoreName, "123");
+    final ResultSet resultSet1 = queryResource1.execute();
+    final TextState readState1 = delegate.stateFrom(resultSet1, "123");
+    resultSet1.close();
+    queryResource1.close();
     delegate.complete();
 
     assertEquals(writeState1, readState1);
@@ -95,9 +100,11 @@ public class HSQLDBStorageDelegateTest {
     delegate.complete();
     
     delegate.beginRead();
-    final PreparedStatement readStatement2 = delegate.readExpressionFor(entity1StoreName, "123");
-    final ResultSet result2 = readStatement2.executeQuery();
-    final TextState readState2 = delegate.stateFrom(result2, "123");
+    final QueryResource queryResource2 = delegate.createReadExpressionFor(entity1StoreName, "123");
+    final ResultSet resultSet2 = queryResource2.execute();
+    final TextState readState2 = delegate.stateFrom(resultSet2, "123");
+    resultSet2.close();
+    queryResource2.close();
     delegate.complete();
 
     assertEquals(writeState2, readState2);
@@ -120,9 +127,11 @@ public class HSQLDBStorageDelegateTest {
     delegate.complete();
 
     delegate.beginRead();
-    final PreparedStatement readStatement = delegate.readExpressionFor(entity1StoreName, "123");
-    final ResultSet result = readStatement.executeQuery();
-    final BinaryState readState = delegate.stateFrom(result, "123");
+    final QueryResource queryResource = delegate.createReadExpressionFor(entity1StoreName, "123");
+    final ResultSet resultSet = queryResource.execute();
+    final BinaryState readState = delegate.stateFrom(resultSet, "123");
+    resultSet.close();
+    queryResource.close();
     delegate.complete();
 
     assertEquals(writeState, readState);

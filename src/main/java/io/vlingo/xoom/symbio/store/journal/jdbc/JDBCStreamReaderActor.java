@@ -43,8 +43,14 @@ public class JDBCStreamReaderActor extends Actor implements StreamReader<String>
     this.databaseType = configuration.databaseType;
     this.gson = new Gson();
 
-    try (Connection initConnection = connectionProvider.connection()) {
-      this.queries = JDBCQueries.queriesFor(initConnection);
+    try (Connection initConnection = connectionProvider.newConnection()) {
+      try {
+        this.queries = JDBCQueries.queriesFor(initConnection);
+        initConnection.commit();
+      } catch (Exception e) {
+        initConnection.rollback();
+        throw new IllegalStateException("Failed to initialize JDBCStreamReaderActor because: " + e.getMessage(), e);
+      }
     }
   }
 
@@ -55,14 +61,20 @@ public class JDBCStreamReaderActor extends Actor implements StreamReader<String>
 
   @Override
   public Completes<EntityStream<String>> streamFor(final String streamName, final int fromStreamVersion) {
-    try (Connection connection = connectionProvider.connection()) {
-      final EntityStream<String> steamStream = eventsFromOffset(connection, streamName, fromStreamVersion);
-      connection.commit();
-      return completes().with(steamStream);
+    try (Connection connection = connectionProvider.newConnection()) {
+      try {
+        final EntityStream<String> steamStream = eventsFromOffset(connection, streamName, fromStreamVersion);
+        connection.commit();
+        return completes().with(steamStream);
+      } catch (Exception e) {
+        connection.rollback();
+        logger().error("xoom-symbio-jdbc:journal-stream-reader-" + databaseType + " error: " + e.getMessage(), e);
+      }
     } catch (Exception e) {
-      logger().error("xoom-symbio-jdbc:journal-stream-reader-" + databaseType + ": " + e.getMessage(), e);
-      return completes().with(new EntityStream<>(streamName, 1, emptyList(), TextState.Null));
+      logger().error("xoom-symbio-jdbc:journal-stream-reader-" + databaseType + " connection error: " + e.getMessage(), e);
     }
+
+    return completes().with(new EntityStream<>(streamName, 1, emptyList(), TextState.Null));
   }
 
   @Override

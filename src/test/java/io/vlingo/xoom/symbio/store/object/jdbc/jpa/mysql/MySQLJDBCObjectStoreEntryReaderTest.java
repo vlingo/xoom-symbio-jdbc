@@ -48,18 +48,36 @@ public class MySQLJDBCObjectStoreEntryReaderTest extends JDBCObjectStoreEntryRea
   }
 
   @Override
-  protected JDBCObjectStoreEntryJournalQueries createQueries(Connection connection) {
+  protected JDBCObjectStoreEntryJournalQueries createQueries() {
     return new MySQLObjectStoreEntryJournalQueries();
   }
 
   @Override
   protected void createTestDatabase() throws Exception {
-    MySQLConfigurationProvider.interest.createDatabase(adminConfiguration.connectionProvider.connection(), testDatabaseName);
+    try (final Connection connection = adminConfiguration.connectionProvider.newConnection()) {
+      try {
+        connection.setAutoCommit(true);
+        MySQLConfigurationProvider.interest.createDatabase(connection, testDatabaseName, adminConfiguration.connectionProvider.username);
+        connection.setAutoCommit(false);
+      } catch (Exception e) {
+        connection.setAutoCommit(false);
+        throw e;
+      }
+    }
   }
 
   @Override
   protected void dropTestDatabase() throws Exception {
-    MySQLConfigurationProvider.interest.dropDatabase(adminConfiguration.connectionProvider.connection(), testDatabaseName);
+    try (final Connection connection = adminConfiguration.connectionProvider.newConnection()) {
+      try {
+        connection.setAutoCommit(true);
+        MySQLConfigurationProvider.interest.dropDatabase(connection, testDatabaseName);
+        connection.setAutoCommit(false);
+      } catch (Exception e) {
+        connection.setAutoCommit(false);
+        throw e;
+      }
+    }
   }
 
   @Override
