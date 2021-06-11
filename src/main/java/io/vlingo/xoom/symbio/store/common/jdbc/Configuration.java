@@ -39,6 +39,8 @@ public class Configuration {
    */
   public static final long DefaultTransactionTimeout = 5 * 60 * 1000L; // 5 minutes
 
+  public static final int DefaultMaxConnections = 3;
+
   public final String databaseName; // ownerDatabaseName
   public final String actualDatabaseName;
   public final ConnectionProvider connectionProvider;
@@ -54,7 +56,7 @@ public class Configuration {
     try {
       return new Configuration(other.databaseType, other.interest, other.connectionProvider.driverClassname, other.format,
               other.connectionProvider.url, other.actualDatabaseName, other.connectionProvider.username, other.connectionProvider.password, other.connectionProvider.useSSL,
-              other.originatorId, other.createTables, other.transactionTimeoutMillis, true);
+              other.connectionProvider.maxConnections, other.originatorId, other.createTables, other.transactionTimeoutMillis, true);
     } catch (Exception e) {
       throw new IllegalArgumentException("Cannot clone the configuration for " + other.connectionProvider.url + " because: " + e.getMessage(), e);
     }
@@ -100,6 +102,24 @@ public class Configuration {
   }
 
   public Configuration(
+      final DatabaseType databaseType,
+      final ConfigurationInterest interest,
+      final String driverClassname,
+      final DataFormat format,
+      final String url,
+      final String databaseName,
+      final String username,
+      final String password,
+      final boolean useSSL,
+      final int maxConnections,
+      final String originatorId,
+      final boolean createTables)
+      throws Exception {
+    this(databaseType, interest, driverClassname, format, url, databaseName, username, password,
+        useSSL, maxConnections, originatorId, createTables, DefaultTransactionTimeout, false);
+  }
+
+  public Configuration(
           final DatabaseType databaseType,
           final ConfigurationInterest interest,
           final String driverClassname,
@@ -117,7 +137,7 @@ public class Configuration {
             useSSL, originatorId, createTables, DefaultTransactionTimeout, false);
   }
 
-  private Configuration(
+  public Configuration(
       final DatabaseType databaseType,
       final ConfigurationInterest interest,
       final String driverClassname,
@@ -127,6 +147,26 @@ public class Configuration {
       final String username,
       final String password,
       final boolean useSSL,
+      final String originatorId,
+      final boolean createTables,
+      final long transactionTimeoutMillis,
+      final boolean reuseDatabaseName)
+      throws Exception {
+    this(databaseType, interest, driverClassname, format, url, databaseName, username, password, useSSL, 5,
+        originatorId, createTables, transactionTimeoutMillis, reuseDatabaseName);
+  }
+
+  public Configuration(
+      final DatabaseType databaseType,
+      final ConfigurationInterest interest,
+      final String driverClassname,
+      final DataFormat format,
+      final String url,
+      final String databaseName,
+      final String username,
+      final String password,
+      final boolean useSSL,
+      final int maxConnections,
       final String originatorId,
       final boolean createTables,
       final long transactionTimeoutMillis,
@@ -143,7 +183,7 @@ public class Configuration {
     this.transactionTimeoutMillis = transactionTimeoutMillis;
 
     beforeConnect(); // no Connection is available yet
-    this.connectionProvider = connectionProvider(driverClassname, url, databaseName, actualDatabaseName, username, password, useSSL);
+    this.connectionProvider = connectionProvider(driverClassname, url, databaseName, actualDatabaseName, username, password, useSSL, maxConnections);
 
     try (final Connection connection = connectionProvider.newConnection()) {
       try {
@@ -175,8 +215,9 @@ public class Configuration {
       final String actualDatabaseName,
       final String username,
       final String password,
-      final boolean useSSL) {
-    return new ConnectionProvider(driverClassname, url, actualDatabaseName, username, password, useSSL);
+      final boolean useSSL,
+      final int maxConnections) {
+    return new ConnectionProvider(driverClassname, url, actualDatabaseName, username, password, useSSL, maxConnections);
   }
 
   public interface ConfigurationInterest {
@@ -199,10 +240,11 @@ public class Configuration {
             final String username,
             final String password,
             final boolean useSSL,
+            final int maxConnections,
             final String originatorId,
             final boolean createTables)
     throws Exception {
-      super(databaseType, interest, driverClassname, format, url, databaseName, username, password, useSSL, originatorId, createTables);
+      super(databaseType, interest, driverClassname, format, url, databaseName, username, password, useSSL, maxConnections, originatorId, createTables, DefaultTransactionTimeout, false);
     }
 
     public void cleanUp() {
@@ -239,11 +281,12 @@ public class Configuration {
         String actualDatabaseName,
         String username,
         String password,
-        boolean useSSL) {
+        boolean useSSL,
+        int maxConnections) {
       try (Connection connection = ConnectionProvider.connectionWith(driverClassname, url, databaseName, username, password, useSSL)) {
         interest.createDatabase(connection, actualDatabaseName, username);
         connection.commit();
-        return super.connectionProvider(driverClassname, url, databaseName, actualDatabaseName, username, password, useSSL);
+        return super.connectionProvider(driverClassname, url, databaseName, actualDatabaseName, username, password, useSSL, maxConnections);
       } catch (Exception e) {
         throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because the server or database unavailable, or wrong credentials.", e);
       }

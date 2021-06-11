@@ -67,6 +67,18 @@ public class MySQLConfigurationProvider {
       final String password,
       final String originatorId,
       final boolean createTables) throws Exception {
+    return configuration(format, url, databaseName, username, password, Configuration.DefaultMaxConnections, originatorId, createTables);
+  }
+
+  public static Configuration configuration(
+      final DataFormat format,
+      final String url,
+      final String databaseName,
+      final String username,
+      final String password,
+      final int maxConnections,
+      final String originatorId,
+      final boolean createTables) throws Exception {
     return new Configuration(
         DatabaseType.MySQL,
         interest,
@@ -77,6 +89,7 @@ public class MySQLConfigurationProvider {
         username,
         password,
         false,
+        maxConnections,
         originatorId,
         createTables);
   }

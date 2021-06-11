@@ -44,7 +44,8 @@ public class MySQLJPAObjectStoreIntegrationTest extends JDBCObjectStoreEntryRead
         testDatabaseName,
         mysqlContainer.getUsername(),
         mysqlContainer.getPassword(),
-        false);
+        false,
+        Configuration.DefaultMaxConnections);
   }
 
   @Override

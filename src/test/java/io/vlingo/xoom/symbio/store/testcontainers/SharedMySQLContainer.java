@@ -51,6 +51,7 @@ public class SharedMySQLContainer extends MySQLContainer<SharedMySQLContainer> {
         getUsername(),
         getPassword(),
         false,
+        Configuration.DefaultMaxConnections,
         "TEST",
         true);
   }

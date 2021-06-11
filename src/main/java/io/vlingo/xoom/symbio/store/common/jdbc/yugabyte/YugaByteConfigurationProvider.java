@@ -65,6 +65,18 @@ public class YugaByteConfigurationProvider {
       final String password,
       final String originatorId,
       final boolean createTables) throws Exception {
+    return configuration(format, url, databaseName, username, password, Configuration.DefaultMaxConnections, originatorId, createTables);
+  }
+
+  public static Configuration configuration(
+      final DataFormat format,
+      final String url,
+      final String databaseName,
+      final String username,
+      final String password,
+      final int maxConnections,
+      final String originatorId,
+      final boolean createTables) throws Exception {
     return new Configuration(
         DatabaseType.Postgres,
         interest,
@@ -75,6 +87,7 @@ public class YugaByteConfigurationProvider {
         username,
         password,
         false,
+        maxConnections,
         originatorId,
         createTables);
   }

@@ -7,15 +7,10 @@ import io.vlingo.xoom.symbio.store.common.jdbc.yugabyte.YugaByteConfigurationPro
 import org.testcontainers.containers.JdbcDatabaseContainer;
 import org.testcontainers.utility.DockerImageName;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class SharedYugaByteDbContainer extends JdbcDatabaseContainer<SharedYugaByteDbContainer> {
   public static final Integer YUGABYTE_PORT = 5433;
   private static final String IMAGE_VERSION = "yugabytedb/yugabyte:latest";
   private static SharedYugaByteDbContainer instance;
-
-  private final Map<DataFormat, Configuration.TestConfiguration> configurations = new HashMap<>();
 
   private SharedYugaByteDbContainer() {
     super(DockerImageName.parse(IMAGE_VERSION));
@@ -64,25 +59,6 @@ public class SharedYugaByteDbContainer extends JdbcDatabaseContainer<SharedYugaB
   }
 
   public Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-//    Configuration.TestConfiguration config = configurations.get(format);
-//
-//    if (config == null) {
-//      config = new Configuration.TestConfiguration(
-//          DatabaseType.YugaByte,
-//          YugaByteConfigurationProvider.interest,
-//          "org.postgresql.Driver",
-//          format,
-//          "jdbc:postgresql://" + getHost() + ":" + getMappedPort(YUGABYTE_PORT) + "/",
-//          getDatabaseName(),
-//          getUsername(),
-//          getPassword(),
-//          false,
-//          "TEST",
-//          true);
-//      configurations.put(format, config);
-//    }
-//
-//    return config;
     return new Configuration.TestConfiguration(
         DatabaseType.YugaByte,
         YugaByteConfigurationProvider.interest,
@@ -93,6 +69,7 @@ public class SharedYugaByteDbContainer extends JdbcDatabaseContainer<SharedYugaB
         getUsername(),
         getPassword(),
         false,
+        Configuration.DefaultMaxConnections,
         "TEST",
         true);
   }

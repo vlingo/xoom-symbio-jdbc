@@ -46,7 +46,8 @@ public class YugaByteJPAObjectStoreIntegrationTest extends JDBCObjectStoreEntryR
         testDatabaseName,
         "postgres",
         "postgres",
-        false);
+        false,
+        Configuration.DefaultMaxConnections);
   }
 
   @Override

@@ -24,6 +24,7 @@ public class ConnectionProvider {
   public final String url;
   public final String username;
   public final boolean useSSL;
+  public final int maxConnections;
 
   final String password;
 
@@ -35,13 +36,15 @@ public class ConnectionProvider {
           final String databaseName,
           final String username,
           final String password,
-          final boolean useSSL) {
+          final boolean useSSL,
+          final int maxConnections) {
     this.driverClassname = driverClassname;
     this.url = url;
     this.databaseName = databaseName;
     this.username = username;
     this.password = password;
     this.useSSL = useSSL;
+    this.maxConnections = maxConnections;
 
     dataSource = buildDataSource();
   }
@@ -51,15 +54,6 @@ public class ConnectionProvider {
    */
   public void close() {
     dataSource.close();
-  }
-
-  /**
-   * Answer a copy of me but with the given {@code databaseName}.
-   * @param databaseName the String name of the database with which to create the new ConnectionProvider
-   * @return ConnectionProvider
-   */
-  public ConnectionProvider copyReplacing(final String databaseName) {
-    return new ConnectionProvider(driverClassname, url, databaseName, username, password, useSSL);
   }
 
   /**
@@ -83,6 +77,16 @@ public class ConnectionProvider {
     }
   }
 
+  /**
+   * Answer an individual {@link Connection} which is not handled by connection pool.
+   * @param driverClassname
+   * @param url
+   * @param databaseName
+   * @param username
+   * @param password
+   * @param useSSL
+   * @return
+   */
   protected static Connection connectionWith(
       final String driverClassname,
       final String url,
@@ -110,7 +114,7 @@ public class ConnectionProvider {
     config.setUsername(username);
     config.setPassword(password);
     config.setJdbcUrl(url + databaseName);
-    config.setMaximumPoolSize(3);
+    config.setMaximumPoolSize(maxConnections);
     config.setAutoCommit(false);
 
     return new HikariDataSource(config);

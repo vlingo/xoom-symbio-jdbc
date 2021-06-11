@@ -46,7 +46,8 @@ public class PostgresJDBCObjectStoreEntryReaderTest extends JDBCObjectStoreEntry
         testDatabaseName,
         postgresContainer.getUsername(),
         postgresContainer.getPassword(),
-        false);
+        false,
+        Configuration.DefaultMaxConnections);
   }
 
   @Override

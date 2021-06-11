@@ -6,14 +6,9 @@ import io.vlingo.xoom.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.xoom.symbio.store.common.jdbc.postgres.PostgresConfigurationProvider;
 import org.testcontainers.containers.PostgreSQLContainer;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class SharedPostgreSQLContainer extends PostgreSQLContainer<SharedPostgreSQLContainer> {
   private static final String IMAGE_VERSION = "postgres:latest";
   private static SharedPostgreSQLContainer instance;
-
-  private final Map<DataFormat, Configuration.TestConfiguration> configurations = new HashMap<>();
 
   private SharedPostgreSQLContainer() {
     super(IMAGE_VERSION);
@@ -37,26 +32,6 @@ public class SharedPostgreSQLContainer extends PostgreSQLContainer<SharedPostgre
   }
 
   public Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-//    Configuration.TestConfiguration config = configurations.get(format);
-//
-//    if (config == null) {
-//      config = new Configuration.TestConfiguration(
-//          DatabaseType.Postgres,
-//          PostgresConfigurationProvider.interest,
-//          "org.postgresql.Driver",
-//          format,
-//          "jdbc:postgresql://" + getHost() + ":" + getMappedPort(POSTGRESQL_PORT) + "/",
-//          getDatabaseName(),
-//          getUsername(),
-//          getPassword(),
-//          false,
-//          "TEST",
-//          true);
-//      configurations.put(format, config);
-//    }
-//
-//    return config;
-
     return new Configuration.TestConfiguration(
         DatabaseType.Postgres,
         PostgresConfigurationProvider.interest,
@@ -67,6 +42,7 @@ public class SharedPostgreSQLContainer extends PostgreSQLContainer<SharedPostgre
         getUsername(),
         getPassword(),
         false,
+        Configuration.DefaultMaxConnections,
         "TEST",
         true);
   }

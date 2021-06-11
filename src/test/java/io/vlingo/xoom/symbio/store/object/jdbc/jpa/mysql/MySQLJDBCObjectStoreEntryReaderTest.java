@@ -44,7 +44,8 @@ public class MySQLJDBCObjectStoreEntryReaderTest extends JDBCObjectStoreEntryRea
         testDatabaseName,
         mysqlContainer.getUsername(),
         mysqlContainer.getPassword(),
-        false);
+        false,
+        Configuration.DefaultMaxConnections);
   }
 
   @Override
