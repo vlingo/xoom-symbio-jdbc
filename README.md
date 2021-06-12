@@ -13,13 +13,13 @@ Docs: https://docs.vlingo.io/xoom-symbio
     <dependency>
       <groupId>io.vlingo.xoom</groupId>
       <artifactId>xoom-symbio</artifactId>
-      <version>1.7.7</version>
+      <version>1.8.0</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>io.vlingo.xoom</groupId>
       <artifactId>xoom-symbio-jdbc</artifactId>
-      <version>1.7.7</version>
+      <version>1.8.0</version>
       <scope>compile</scope>
     </dependency>
   </dependencies>
@@ -27,8 +27,8 @@ Docs: https://docs.vlingo.io/xoom-symbio
 
 ```gradle
 dependencies {
-    compile 'io.vlingo.xoom:xoom-symbio:1.7.7'
-    compile 'io.vlingo.xoom:xoom-symbio-jdbc:1.7.7'
+    compile 'io.vlingo.xoom:xoom-symbio:1.8.0'
+    compile 'io.vlingo.xoom:xoom-symbio-jdbc:1.8.0'
 }
 ```
 
