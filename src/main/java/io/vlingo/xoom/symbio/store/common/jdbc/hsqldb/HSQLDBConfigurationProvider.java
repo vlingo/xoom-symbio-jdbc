@@ -28,11 +28,11 @@ public class HSQLDBConfigurationProvider {
 
     }
 
-    @Override public void createDatabase(final Connection connection, final String databaseName) {
+    @Override public void createDatabase(final Connection initConnection, final String databaseName, final String username) {
       databaseCount.incrementAndGet();
     }
 
-    @Override public void dropDatabase(final Connection connection, final String databaseName) {
+    @Override public void dropDatabase(final Connection initConnection, final String databaseName) {
       boolean isDone = databaseCount.decrementAndGet() == 0;
       if (isDone) {
         databaseSever.shutdown();
@@ -49,26 +49,40 @@ public class HSQLDBConfigurationProvider {
   };
 
   public static Configuration configuration(
-          final DataFormat format,
-          final String url,
-          final String databaseName,
-          final String username,
-          final String password,
-          final String originatorId,
-          final boolean createTables)
-  throws Exception {
+      final DataFormat format,
+      final String url,
+      final String databaseName,
+      final String username,
+      final String password,
+      final String originatorId,
+      final boolean createTables)
+      throws Exception {
+    return configuration(format, url, databaseName, username, password, Configuration.DefaultMaxConnections, originatorId, createTables);
+  }
+
+  public static Configuration configuration(
+      final DataFormat format,
+      final String url,
+      final String databaseName,
+      final String username,
+      final String password,
+      final int maxConnections,
+      final String originatorId,
+      final boolean createTables)
+      throws Exception {
     return new Configuration(
-            DatabaseType.HSQLDB,
-            interest,
-            "org.hsqldb.jdbc.JDBCDriver",
-            format,
-            url,
-            databaseName,
-            username,
-            password,
-            false,          // useSSL
-            originatorId,
-            createTables);
+        DatabaseType.HSQLDB,
+        interest,
+        "org.hsqldb.jdbc.JDBCDriver",
+        format,
+        url,
+        databaseName,
+        username,
+        password,
+        false,          // useSSL
+        maxConnections,
+        originatorId,
+        createTables);
   }
 
   public static TestConfiguration testConfiguration(final DataFormat format) throws Exception {
@@ -77,16 +91,17 @@ public class HSQLDBConfigurationProvider {
 
   public static TestConfiguration testConfiguration(final DataFormat format, final String databaseName) throws Exception {
     return new TestConfiguration(
-            DatabaseType.HSQLDB,
-            interest,
-            "org.hsqldb.jdbc.JDBCDriver",
-            format,
-            "jdbc:hsqldb:mem:",
-            databaseName,       // database name
-            "SA",           // username
-            "",             // password
-            false,          // useSSL
-            "TEST",         // originatorId
-            true);          // create tables
+        DatabaseType.HSQLDB,
+        interest,
+        "org.hsqldb.jdbc.JDBCDriver",
+        format,
+        "jdbc:hsqldb:mem:",
+        databaseName,       // database name
+        "SA",           // username
+        "",             // password
+        false,          // useSSL
+        Configuration.DefaultMaxConnections,
+        "TEST",         // originatorId
+        true);          // create tables
   }
 }

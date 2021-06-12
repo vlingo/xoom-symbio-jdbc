@@ -7,7 +7,6 @@
 
 package io.vlingo.xoom.symbio.store.state.jdbc;
 
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.Collection;
 import java.util.Collections;
@@ -120,8 +119,8 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
 
       try {
         delegate.beginRead();
-        final PreparedStatement readStatement = delegate.readExpressionFor(storeName, id);
-        try (final ResultSet result = readStatement.executeQuery()) {
+        final QueryResource queryResource = delegate.createReadExpressionFor(storeName, id);
+        try (final ResultSet result = queryResource.execute()) {
           final TextState raw = delegate.stateFrom(result, id);
           if (!raw.isEmpty()) {
             final Object state = stateAdapterProvider.fromRaw(raw);
@@ -129,20 +128,25 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
           } else {
             interest.readResultedIn(Failure.of(new StorageException(Result.NotFound, "Not found for: " + id)), id, null, -1, null, object);
           }
+
+          queryResource.close();
+          delegate.complete();
+        } catch (Exception e) {
+          queryResource.fail();
+          delegate.fail();
+          throw e;
         }
-        delegate.complete();
-      } catch (final Exception e) {
-        delegate.fail();
+      } catch (Exception e) {
         interest.readResultedIn(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)), id, null, -1, null, object);
         logger().error(
-                getClass().getSimpleName() +
+            getClass().getSimpleName() +
                 " readText() failed because: " + e.getMessage() +
                 " for: " + (id == null ? "unknown id" : id),
-                e);
+            e);
       }
     } else {
       logger().warn(
-              getClass().getSimpleName() +
+          getClass().getSimpleName() +
               " readText() missing ResultInterest for: " +
               (id == null ? "unknown id" : id));
     }
@@ -165,14 +169,11 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
   public Completes<Stream> streamAllOf(final Class<?> type) {
     final String storeName = StateTypeStateStoreMap.storeNameFrom(type);
 
-    PreparedStatement readStatement = null;
-
     try {
       delegate.beginRead();
-      readStatement = delegate.readAllExpressionFor(storeName);
-      final ResultSet resultSet = readStatement.executeQuery();
+      QueryResource queryResource = delegate.createReadAllExpressionFor(storeName);
       delegate.complete();
-      return completes().with(new JDBCStateStoreStream<>(stage(), delegate, stateAdapterProvider, resultSet, logger()));
+      return completes().with(new JDBCStateStoreStream<>(stage(), delegate, stateAdapterProvider, queryResource, logger()));
     } catch (final Exception e) {
       delegate.fail();
       logger().error(
@@ -189,14 +190,11 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
   public Completes<Stream> streamSomeUsing(final QueryExpression query) {
     final String storeName = StateTypeStateStoreMap.storeNameFrom(query.type);
 
-    PreparedStatement readSomeStatement = null;
-
     try {
-      readSomeStatement = delegate.readSomeExpressionFor(storeName, query);
       delegate.beginRead();
-      final ResultSet resultSet = readSomeStatement.executeQuery();
+      QueryResource queryResource = delegate.readSomeExpressionFor(storeName, query);
       delegate.complete();
-      return completes().with(new JDBCStateStoreStream<>(stage(), delegate, stateAdapterProvider, resultSet, logger()));
+      return completes().with(new JDBCStateStoreStream<>(stage(), delegate, stateAdapterProvider, queryResource, logger()));
     } catch (Exception e) {
       delegate.fail();
       logger().error(
@@ -210,7 +208,7 @@ public class JDBCStateStoreActor extends Actor implements StateStore, Scheduled<
   }
 
   @Override
-  public <S,C> void write(final String id, final S state, final int stateVersion, final List<Source<C>> sources, final Metadata metadata,
+  public <S, C> void write(final String id, final S state, final int stateVersion, final List<Source<C>> sources, final Metadata metadata,
           final WriteResultInterest interest, final Object object) {
     if (interest != null) {
       if (state == null) {

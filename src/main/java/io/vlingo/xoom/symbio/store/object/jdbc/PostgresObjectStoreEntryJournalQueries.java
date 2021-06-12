@@ -14,13 +14,6 @@ import java.text.MessageFormat;
  * A {@code JDBCObjectStoreEntryJournalQueries} for Postgres.
  */
 public class PostgresObjectStoreEntryJournalQueries extends JDBCObjectStoreEntryJournalQueries {
-    /**
-     * Construct my state.
-     * @param connection the Connection
-     */
-    public PostgresObjectStoreEntryJournalQueries(final Connection connection) {
-        super(connection);
-    }
 
     /*
      * @see io.vlingo.xoom.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries#upsertCurrentEntryOffsetQuery(java.lang.String[])

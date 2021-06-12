@@ -7,38 +7,31 @@
 
 package io.vlingo.xoom.symbio.store.object.jdbc.jdbi;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Consumer;
-
+import io.vlingo.xoom.actors.World;
+import io.vlingo.xoom.actors.testkit.AccessSafely;
+import io.vlingo.xoom.common.Outcome;
+import io.vlingo.xoom.reactivestreams.Stream;
+import io.vlingo.xoom.reactivestreams.sink.ConsumerSink;
+import io.vlingo.xoom.symbio.*;
+import io.vlingo.xoom.symbio.store.EntryReader;
+import io.vlingo.xoom.symbio.store.Result;
+import io.vlingo.xoom.symbio.store.StorageException;
+import io.vlingo.xoom.symbio.store.common.MockDispatcher;
+import io.vlingo.xoom.symbio.store.common.jdbc.Configuration;
+import io.vlingo.xoom.symbio.store.object.ObjectStore;
+import io.vlingo.xoom.symbio.store.object.StateObjectMapper;
+import io.vlingo.xoom.symbio.store.object.StateSources;
+import io.vlingo.xoom.symbio.store.object.jdbc.jpa.JPAObjectStoreTest;
 import org.jdbi.v3.core.statement.SqlStatement;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import io.vlingo.xoom.actors.World;
-import io.vlingo.xoom.actors.testkit.AccessSafely;
-import io.vlingo.xoom.common.Outcome;
-import io.vlingo.xoom.reactivestreams.Stream;
-import io.vlingo.xoom.reactivestreams.sink.ConsumerSink;
-import io.vlingo.xoom.symbio.BaseEntry;
-import io.vlingo.xoom.symbio.Entry;
-import io.vlingo.xoom.symbio.EntryBundle;
-import io.vlingo.xoom.symbio.Source;
-import io.vlingo.xoom.symbio.State;
-import io.vlingo.xoom.symbio.store.EntryReader;
-import io.vlingo.xoom.symbio.store.Result;
-import io.vlingo.xoom.symbio.store.StorageException;
-import io.vlingo.xoom.symbio.store.common.MockDispatcher;
-import io.vlingo.xoom.symbio.store.object.ObjectStore;
-import io.vlingo.xoom.symbio.store.object.StateObjectMapper;
-import io.vlingo.xoom.symbio.store.object.StateSources;
-import io.vlingo.xoom.symbio.store.object.jdbc.jpa.JPAObjectStoreTest;
+import java.sql.Connection;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
 
@@ -199,7 +192,19 @@ public abstract class JdbiObjectStoreEntryReaderTest {
   @Before
   public void setUp() throws Exception {
     jdbi = jdbiOnDatabase();
-    jdbi.createCommonTables();
+
+    try (final Connection initConnection = configuration().connectionProvider.newConnection()) {
+      try {
+        jdbi.createCommonTables(initConnection);
+        initConnection.commit();
+      } catch (Exception e) {
+        initConnection.rollback();
+        throw new RuntimeException("Failed to create common tables because: " + e.getMessage(), e);
+      }
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create common tables because: " + e.getMessage(), e);
+    }
+
     jdbi.handle().execute("CREATE TABLE PERSON (id BIGINT PRIMARY KEY, name VARCHAR(200), age INTEGER)");
 
     world = World.startWithDefaults("entry-reader-test");
@@ -223,8 +228,12 @@ public abstract class JdbiObjectStoreEntryReaderTest {
   @After
   public void tearDown() {
     objectStore.close();
+    entryReader.close();
+    jdbi.close();
     world.terminate();
   }
 
   protected abstract JdbiOnDatabase jdbiOnDatabase() throws Exception;
+
+  protected abstract Configuration configuration();
 }

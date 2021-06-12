@@ -8,6 +8,7 @@
 package io.vlingo.xoom.symbio.store.object.jdbc.jdbi;
 
 import io.vlingo.xoom.symbio.store.common.jdbc.Configuration;
+import io.vlingo.xoom.symbio.store.common.jdbc.DatabaseType;
 import org.jdbi.v3.core.statement.Update;
 
 import java.text.MessageFormat;
@@ -42,6 +43,6 @@ public class JdbiOnYugaByte extends JdbiOnDatabase {
     }
 
     private JdbiOnYugaByte(final Configuration configuration) {
-        super(configuration);
+        super(configuration, DatabaseType.YugaByte);
     }
 }

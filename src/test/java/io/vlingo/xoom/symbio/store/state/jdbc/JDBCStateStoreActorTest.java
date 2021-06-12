@@ -18,10 +18,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
 import io.vlingo.xoom.actors.Definition;
 import io.vlingo.xoom.actors.World;
@@ -395,7 +392,7 @@ public abstract class JDBCStateStoreActorTest {
 
     final AccessSafely access = AccessSafely.afterCompleting(5);
 
-    access.writingWith("stateCounter", (state) -> { totalStates.incrementAndGet(); });
+    access.writingWith("stateCounter", (state) -> totalStates.incrementAndGet());
     access.readingWith("stateCount", () -> totalStates.get());
 
     all.flowInto(new ConsumerSink<>((state) -> {
@@ -439,10 +436,9 @@ public abstract class JDBCStateStoreActorTest {
 
   @After
   public void tearDown() throws Exception {
-    if (configuration == null) return;
-    world.terminate();
-    configuration.cleanUp();
     delegate.close();
+    configuration.cleanUp();
+    world.terminate();
   }
 
   protected abstract JDBCStorageDelegate<?> delegate() throws Exception;

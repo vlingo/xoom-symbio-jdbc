@@ -16,55 +16,48 @@ import io.vlingo.xoom.symbio.store.DataFormat;
 import io.vlingo.xoom.symbio.store.common.jdbc.CachedStatement;
 
 public abstract class JDBCDispatchableCachedStatements<T> {
-  private final CachedStatement<T> appendDispatchable;
-  private final CachedStatement<T> queryEntry;
-  private final CachedStatement<T> appendEntry;
-  private final CachedStatement<T> appendBatchEntries;
-  private final CachedStatement<T> appendEntryIdentity;
-  private final CachedStatement<T> deleteDispatchable;
-  private final CachedStatement<T> queryAllDispatchables;
+  private final String originatorId;
+  private final DataFormat format;
+  private final T appendDataObject;
+  private final Logger logger;
 
   protected JDBCDispatchableCachedStatements(
           final String originatorId,
-          final Connection connection,
           final DataFormat format,
           final T appendDataObject,
           final Logger logger) {
-    this.queryEntry = createStatement(queryEntryExpression(), appendDataObject, connection, false, logger);
-    this.appendEntry = createStatement(appendEntryExpression(), appendDataObject, connection, false, logger);
-    this.appendBatchEntries = createStatement(appendEntryExpression(), appendDataObject, connection, true, logger);
-    this.appendEntryIdentity = createStatement(appendEntryIdentityExpression(), null, connection, false, logger);
-    this.appendDispatchable = createStatement(appendDispatchableExpression(), appendDataObject, connection, false, logger);
-    this.deleteDispatchable = createStatement(deleteDispatchableExpression(), null, connection, false, logger);
-    this.queryAllDispatchables = prepareQuery(createStatement(selectDispatchableExpression(), null, connection, false, logger), originatorId, logger);
+    this.originatorId = originatorId;
+    this.format = format;
+    this.appendDataObject = appendDataObject;
+    this.logger = logger;
   }
 
-  public final CachedStatement<T> appendDispatchableStatement() {
-    return appendDispatchable;
+  public final CachedStatement<T> appendDispatchableStatement(Connection connection) {
+    return createStatement(appendDispatchableExpression(), appendDataObject, connection, false, logger);
   }
 
-  public final CachedStatement<T> appendEntryStatement() {
-    return appendEntry;
+  public final CachedStatement<T> appendEntryStatement(Connection connection) {
+    return createStatement(appendEntryExpression(), appendDataObject, connection, false, logger);
   }
 
-  public final CachedStatement<T> appendBatchEntriesStatement() {
-    return appendBatchEntries;
+  public final CachedStatement<T> appendBatchEntriesStatement(Connection connection) {
+    return createStatement(appendEntryExpression(), appendDataObject, connection, true, logger);
   }
 
-  public final CachedStatement<T> appendEntryIdentityStatement() {
-    return appendEntryIdentity;
+  public final CachedStatement<T> appendEntryIdentityStatement(Connection connection) {
+    return createStatement(appendEntryIdentityExpression(), null, connection, false, logger);
   }
 
-  public final CachedStatement<T> deleteStatement() {
-    return deleteDispatchable;
+  public final CachedStatement<T> deleteStatement(Connection connection) {
+    return createStatement(deleteDispatchableExpression(), null, connection, false, logger);
   }
 
-  public final CachedStatement<T> queryAllStatement() {
-    return queryAllDispatchables;
+  public final CachedStatement<T> queryAllStatement(Connection connection) {
+    return prepareQuery(createStatement(selectDispatchableExpression(), null, connection, false, logger), originatorId, logger);
   }
   
-  public CachedStatement<T> getQueryEntry() {
-    return queryEntry;
+  public CachedStatement<T> getQueryEntry(Connection connection) {
+    return createStatement(queryEntryExpression(), appendDataObject, connection, false, logger);
   }
 
   protected abstract String appendEntryExpression();

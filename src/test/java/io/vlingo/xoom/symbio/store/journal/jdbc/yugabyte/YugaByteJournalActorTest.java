@@ -27,18 +27,22 @@ import org.junit.Ignore;
 
 @Ignore
 public class YugaByteJournalActorTest extends JDBCJournalActorTest {
-    private SharedYugaByteDbContainer dbContainer = SharedYugaByteDbContainer.getInstance();
 
-    @Override
-    protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        return dbContainer.testConfiguration(format);
+  @Override
+  protected Configuration.TestConfiguration testConfiguration(DataFormat format) {
+    try {
+      SharedYugaByteDbContainer dbContainer = SharedYugaByteDbContainer.getInstance();
+      return dbContainer.testConfiguration(format);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create YugaByte test configuration because: " + e.getMessage(), e);
     }
+  }
 
-    @Override
-    @SuppressWarnings("unchecked")
-    protected Journal<String> journalFrom(World world, Configuration configuration, List<Dispatcher<Dispatchable<Entry<String>, State.TextState>>> dispatchers,
-                                          DispatcherControl dispatcherControl) throws Exception {
-        JDBCJournalWriter journalWriter = new JDBCJournalInstantWriter(configuration, dispatchers, dispatcherControl);
-        return world.stage().actorFor(Journal.class, JDBCJournalActor.class, configuration, journalWriter);
-    }
+  @Override
+  @SuppressWarnings("unchecked")
+  protected Journal<String> journalFrom(World world, Configuration configuration, List<Dispatcher<Dispatchable<Entry<String>, State.TextState>>> dispatchers,
+                                        DispatcherControl dispatcherControl) throws Exception {
+    JDBCJournalWriter journalWriter = new JDBCJournalInstantWriter(configuration, dispatchers, dispatcherControl);
+    return world.stage().actorFor(Journal.class, JDBCJournalActor.class, configuration, journalWriter);
+  }
 }

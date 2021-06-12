@@ -13,10 +13,14 @@ import io.vlingo.xoom.symbio.store.journal.jdbc.JDBCStreamReaderActorTest;
 import io.vlingo.xoom.symbio.store.testcontainers.SharedMySQLContainer;
 
 public class MySQLStreamReaderActorTest extends JDBCStreamReaderActorTest {
-    private SharedMySQLContainer mysqlContainer = SharedMySQLContainer.getInstance();
 
-    @Override
-    protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        return mysqlContainer.testConfiguration(format);
+  @Override
+  protected Configuration.TestConfiguration testConfiguration(DataFormat format) {
+    try {
+      SharedMySQLContainer mysqlContainer = SharedMySQLContainer.getInstance();
+      return mysqlContainer.testConfiguration(format);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create MySQL test configuration because: " + e.getMessage(), e);
     }
+  }
 }

@@ -73,7 +73,7 @@ public abstract class JPAObjectStoreTest {
         connectionProvider = createConnectionProvider();
 
         // queries = new HSQLDBObjectStoreEntryJournalQueries(connectionProvider.connection());
-        queries = createQueries(connectionProvider.connection());
+        queries = createQueries();
 
         objectStore = world.actorFor(JPAObjectStore.class, JPAObjectStoreActor.class, delegate, connectionProvider, dispatcher);
     }
@@ -186,7 +186,7 @@ public abstract class JPAObjectStoreTest {
 
     protected abstract ConnectionProvider createConnectionProvider();
 
-    protected abstract JDBCObjectStoreEntryJournalQueries createQueries(Connection connection);
+    protected abstract JDBCObjectStoreEntryJournalQueries createQueries();
 
     protected abstract void createTestDatabase() throws Exception;
 

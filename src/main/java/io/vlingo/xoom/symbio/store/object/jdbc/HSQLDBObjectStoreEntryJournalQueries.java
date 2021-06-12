@@ -15,14 +15,6 @@ import java.text.MessageFormat;
  */
 public class HSQLDBObjectStoreEntryJournalQueries extends JDBCObjectStoreEntryJournalQueries {
 
-  /**
-   * Construct my state.
-   * @param connection the Connection
-   */
-  public HSQLDBObjectStoreEntryJournalQueries(final Connection connection) {
-    super(connection);
-  }
-
   /*
    * @see io.vlingo.xoom.symbio.store.object.jdbc.JDBCObjectStoreEntryJournalQueries#upsertCurrentEntryOffsetQuery(java.lang.String[])
    */

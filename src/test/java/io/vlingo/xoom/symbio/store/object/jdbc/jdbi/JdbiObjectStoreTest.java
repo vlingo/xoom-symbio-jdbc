@@ -12,6 +12,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -22,10 +23,7 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 
 import io.vlingo.xoom.actors.World;
 import io.vlingo.xoom.actors.testkit.AccessSafely;
@@ -328,8 +326,17 @@ public class JdbiObjectStoreTest {
     jdbi.handle().execute("DROP SCHEMA PUBLIC CASCADE");
     jdbi.handle().execute("CREATE TABLE PERSON (id BIGINT PRIMARY KEY, name VARCHAR(200), age INTEGER)");
 
-    jdbi.createTextEntryJournalTable();
-    jdbi.createDispatchableTable();
+    try (final Connection initConnection = configuration.connectionProvider.newConnection()) {
+      try {
+        initConnection.setAutoCommit(true);
+        jdbi.createTextEntryJournalTable(initConnection);
+        jdbi.createDispatchableTable(initConnection);
+        initConnection.setAutoCommit(false);
+      } catch (Exception e) {
+        initConnection.setAutoCommit(false);
+        throw new RuntimeException("Failed to create common tables because: " + e.getMessage(), e);
+      }
+    }
 
     world = World.startWithDefaults("jdbi-test");
 
@@ -350,6 +357,7 @@ public class JdbiObjectStoreTest {
   @After
   public void tearDown() {
     objectStore.close();
+    jdbi.close();
   }
 
   private static class TestQueryResultInterest implements QueryResultInterest {

@@ -20,6 +20,7 @@ import io.vlingo.xoom.symbio.State.TextState;
 import io.vlingo.xoom.symbio.store.Result;
 import io.vlingo.xoom.symbio.store.StorageException;
 import io.vlingo.xoom.symbio.store.common.jdbc.Configuration;
+import io.vlingo.xoom.symbio.store.common.jdbc.ConnectionProvider;
 import io.vlingo.xoom.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.xoom.symbio.store.dispatch.Dispatchable;
 import io.vlingo.xoom.symbio.store.dispatch.Dispatcher;
@@ -36,7 +37,7 @@ import java.util.stream.Collectors;
 
 public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 	private final Configuration configuration;
-	private final Connection connection;
+	private final ConnectionProvider connectionProvider;
 	private final JDBCQueries queries;
 	private final List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers;
 	private final DispatcherControl dispatcherControl;
@@ -49,15 +50,22 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 	public JDBCJournalBatchWriter(Configuration configuration, List<Dispatcher<Dispatchable<Entry<String>, TextState>>> dispatchers,
 									DispatcherControl dispatcherControl, int maxBatchEntries) throws Exception {
 		this.configuration = configuration;
-		this.connection = configuration.connection;
+		this.connectionProvider = configuration.connectionProvider;
 		this.dispatchers = dispatchers;
 		this.dispatcherControl = dispatcherControl;
 		this.gson = new Gson();
 		this.dispatchablesIdentityGenerator = new IdentityGenerator.RandomIdentityGenerator();
 		this.batchEntries = new BatchEntries(maxBatchEntries);
 
-		this.connection.setAutoCommit(false);
-		this.queries = JDBCQueries.queriesFor(this.connection);
+		try (Connection initConnection = connectionProvider.newConnection()) {
+			try {
+				this.queries = JDBCQueries.queriesFor(initConnection);
+				initConnection.commit();
+			} catch (Exception e) {
+				initConnection.rollback();
+				throw new IllegalArgumentException("Failed to initialize JDBCJournalBatchWriter because: " + e.getMessage(), e);
+			}
+		}
 	}
 
 	@Override
@@ -80,15 +88,27 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 
 	@Override
 	public void flush() {
-		if (batchEntries.size() > 0) {
-			insertEntries();
-			insertSnapshots();
-			List<Dispatchable<Entry<String>, TextState>> dispatchables = insertDispatchables();
-			doCommit();
+		List<Dispatchable<Entry<String>, TextState>> dispatchables = null;
 
-			dispatch(dispatchables);
-			batchEntries.completedWith(Success.of(Result.Success));
-			batchEntries.clear();
+		if (batchEntries.size() > 0) {
+			try (Connection connection = connectionProvider.newConnection()) {
+				try {
+					insertEntries(connection);
+					insertSnapshots(connection);
+					dispatchables = insertDispatchables(connection);
+					connection.commit();
+				} catch (Exception e) {
+					connection.rollback();
+					logger.error("xoom-symbio-jdbc:journal-" + configuration.databaseType.toString() + ": flush() transaction failed because: " + e.getMessage(), e);
+					return;
+				}
+
+				dispatch(dispatchables);
+				batchEntries.completedWith(Success.of(Result.Success));
+				batchEntries.clear();
+			} catch (SQLException e) {
+				logger.error("xoom-symbio-jdbc:journal-" + configuration.databaseType.toString() + ": flush() failed because: " + e.getMessage(), e);
+			}
 		}
 	}
 
@@ -99,12 +119,6 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 
 		if (dispatcherControl != null) {
 			dispatcherControl.stop();
-		}
-
-		try {
-			queries.close();
-		} catch (SQLException e) {
-			// ignore
 		}
 	}
 
@@ -117,13 +131,12 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 		return streamName + ":" + streamVersion + ":" + dispatchablesIdentityGenerator.generate().toString();
 	}
 
-	private List<Dispatchable<Entry<String>, TextState>> insertDispatchables() {
+	private List<Dispatchable<Entry<String>, TextState>> insertDispatchables(final Connection connection) {
 		List<Dispatchable<Entry<String>, TextState>> dispatchables = new ArrayList<>();
 		String databaseType = configuration.databaseType.toString();
 		LocalDateTime now = LocalDateTime.now();
-		PreparedStatement insertDispatchable = null;
 
-		try {
+		try (PreparedStatement insertDispatchable = queries.newInsertDispatchableQuery(connection)) {
 			for (AbstractBatchEntry batchEntry : batchEntries.entries) {
 				final String id = buildDispatchId(batchEntry.streamName, batchEntry.streamVersion);
 				final Dispatchable<Entry<String>, TextState> dispatchable = new Dispatchable<>(id, now, batchEntry.snapshotState.orElse(null), batchEntry.entries());
@@ -137,34 +150,32 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 				if (dispatchable.state().isPresent()) {
 					final State<String> state = dispatchable.typedState();
 
-					insertDispatchable = queries.prepareInsertDispatchableQuery(
-									id,
-									configuration.originatorId,
-									state.id,
-									state.data,
-									state.dataVersion,
-									state.type,
-									state.typeVersion,
-									gson.toJson(state.metadata),
-									encodedEntries)._1;
+					queries.updateInsertDispatchableQuery(
+							insertDispatchable,
+							id,
+							configuration.originatorId,
+							state.id,
+							state.data,
+							state.dataVersion,
+							state.type,
+							state.typeVersion,
+							gson.toJson(state.metadata),
+							encodedEntries);
 				} else {
-					insertDispatchable = queries.prepareInsertDispatchableQuery(
-									id,
-									configuration.originatorId,
-									null,
-									null,
-									0,
-									null,
-									0,
-									null,
-									encodedEntries)._1;
+					queries.updateInsertDispatchableQuery(
+							insertDispatchable,
+							id,
+							configuration.originatorId,
+							null,
+							null,
+							0,
+							null,
+							0,
+							null,
+							encodedEntries);
 				}
 
 				insertDispatchable.addBatch();
-			}
-
-			if (insertDispatchable == null) {
-				return new ArrayList<>();
 			}
 
 			final int[] countList = insertDispatchable.executeBatch();
@@ -179,14 +190,6 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 			batchEntries.completedWith(Failure.of(new StorageException(Result.Failure, e.getMessage(), e)));
 			logger.error("xoom-symbio-jdbc:journal-" + databaseType + ": Failed to batch insert dispatchables.", e);
 			throw new IllegalStateException(e);
-		} finally {
-			if (insertDispatchable != null) {
-				try {
-					insertDispatchable.clearBatch();
-				} catch (SQLException e) {
-					errorOccurred(e, "xoom-symbio-jdbc:journal-" + databaseType + ": Failed to clean dispatchables batch.");
-				}
-			}
 		}
 	}
 
@@ -197,26 +200,28 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 		}
 	}
 
-	private void insertEntries() {
+	private void insertEntries(final Connection connection) {
 		final DatabaseType databaseType = configuration.databaseType;
 		List<InsertEntry> insertEntries = batchEntries.collectEntries();
 		PreparedStatement insertStatement = null;
 
+		if (insertEntries.size() == 0) {
+			return;
+		}
+
 		try {
+			insertStatement = queries.newInsertEntryStatementQuery(connection);
 			for (InsertEntry insertEntry : insertEntries) {
-				insertStatement = queries.prepareInsertEntryQuery(
+				queries.updateInsertEntryQuery(
+						insertStatement,
 						insertEntry.streamName,
 						insertEntry.streamVersion,
 						insertEntry.entry.entryData(),
 						insertEntry.entry.typeName(),
 						insertEntry.entry.typeVersion(),
-						gson.toJson(insertEntry.entry.metadata()))._1;
+						gson.toJson(insertEntry.entry.metadata()));
 
 				insertStatement.addBatch();
-			}
-
-			if (insertStatement == null) {
-				return;
 			}
 
 			final int[] countList = insertStatement.executeBatch();
@@ -246,7 +251,7 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 		}
 	}
 
-	private void insertSnapshots() {
+	private void insertSnapshots(final Connection connection) {
 		DatabaseType databaseType = configuration.databaseType;
 		PreparedStatement insertStatement = null;
 
@@ -254,6 +259,7 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 			for (AbstractBatchEntry batchEntry : batchEntries.entries) {
 				if (batchEntry.snapshotState.isPresent()) {
 					insertStatement = queries.prepareInsertSnapshotQuery(
+							connection,
 							batchEntry.streamName,
 							batchEntry.streamVersion,
 							batchEntry.snapshotState.get().data,
@@ -288,9 +294,9 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 		}
 	}
 
-	private void doCommit() {
+	private void doCommit(final Connection connection) {
 		try {
-			configuration.connection.commit();
+			connection.commit();
 		} catch (final SQLException e) {
 			errorOccurred(e, "xoom-symbio-jdbc:journal-" + configuration.databaseType + ": Could not complete transaction");
 		}

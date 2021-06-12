@@ -31,8 +31,7 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
   private final Configuration configuration;
 
   public HSQLDBStorageDelegate(final Configuration configuration, final Logger logger) {
-
-    super(configuration.connection,
+    super(configuration.connectionProvider,
           configuration.format,
           configuration.originatorId,
           configuration.createTables,
@@ -224,7 +223,7 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
             final DataFormat format,
             final Logger logger) {
 
-      super(originatorId, connection, format, blobIfBinary(connection, format, logger), logger);
+      super(originatorId, format, blobIfBinary(connection, format, logger), logger);
     }
 
     @Override

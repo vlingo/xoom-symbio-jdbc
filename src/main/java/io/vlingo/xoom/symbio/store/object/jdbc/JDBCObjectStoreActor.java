@@ -7,6 +7,7 @@
 
 package io.vlingo.xoom.symbio.store.object.jdbc;
 
+import java.sql.Connection;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -114,7 +115,7 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
   public Completes<EntryReader<? extends Entry<?>>> entryReader(final String name) {
     ObjectStoreEntryReader<? extends Entry<?>> entryReader = entryReaders.get(name);
     if (entryReader == null) {
-      final Configuration clonedConfiguration = Configuration.cloneOf(delegate.configuration);
+      final Configuration clonedConfiguration = Configuration.cloneOf(delegate.configuration); // is clone still necessary?
       final Address address = stage().world().addressFactory().uniquePrefixedWith("objectStoreEntryReader-" + name);
       final Class<? extends Actor> actorType;
       ActorInstantiator<?> instantiator = null;
@@ -127,7 +128,24 @@ public class JDBCObjectStoreActor extends Actor implements ObjectStore, Schedule
       case JDBC:
       case JPA:
         actorType = JDBCObjectStoreEntryReaderActor.class;
-        instantiator = new JDBCObjectStoreEntryReaderInstantiator(DatabaseType.databaseType(clonedConfiguration.connection), clonedConfiguration.connection, name);
+        try (final Connection connection = clonedConfiguration.connectionProvider.newConnection()) {
+          try {
+            instantiator = new JDBCObjectStoreEntryReaderInstantiator(
+                DatabaseType.databaseType(connection), clonedConfiguration.connectionProvider, name);
+            connection.commit();
+          } catch (Exception e) {
+            connection.rollback();
+
+            String message = "Failed to get entryReader because: " + e.getMessage();
+            logger.error(message, e);
+            throw new IllegalArgumentException(message);
+          }
+        } catch (Exception e) {
+          String message = "Failed (connection) to get entryReader because: " + e.getMessage();
+          logger.error(message, e);
+          throw new IllegalStateException(message);
+        }
+
         break;
       default:
         throw new IllegalStateException(getClass().getSimpleName() + ": Cannot create entry reader '" + name + "' due to unknown type: " + delegate.type());

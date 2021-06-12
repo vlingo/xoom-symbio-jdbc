@@ -15,10 +15,14 @@ import org.junit.Ignore;
 
 @Ignore
 public class YugaByteStreamReaderActorTest extends JDBCStreamReaderActorTest {
-    private SharedYugaByteDbContainer dbContainer = SharedYugaByteDbContainer.getInstance();
 
-    @Override
-    protected Configuration.TestConfiguration testConfiguration(DataFormat format) throws Exception {
-        return dbContainer.testConfiguration(format);
+  @Override
+  protected Configuration.TestConfiguration testConfiguration(DataFormat format) {
+    try {
+      SharedYugaByteDbContainer dbContainer = SharedYugaByteDbContainer.getInstance();
+      return dbContainer.testConfiguration(format);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create YugaByte test configuration because: " + e.getMessage(), e);
     }
+  }
 }

@@ -8,7 +8,6 @@
 package io.vlingo.xoom.symbio.store.common.jdbc;
 
 import java.sql.Connection;
-import java.sql.Statement;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.vlingo.xoom.symbio.store.DataFormat;
@@ -40,8 +39,10 @@ public class Configuration {
    */
   public static final long DefaultTransactionTimeout = 5 * 60 * 1000L; // 5 minutes
 
+  public static final int DefaultMaxConnections = 3;
+
+  public final String databaseName; // ownerDatabaseName
   public final String actualDatabaseName;
-  public final Connection connection;
   public final ConnectionProvider connectionProvider;
   public final DatabaseType databaseType;
   public final DataFormat format;
@@ -55,7 +56,7 @@ public class Configuration {
     try {
       return new Configuration(other.databaseType, other.interest, other.connectionProvider.driverClassname, other.format,
               other.connectionProvider.url, other.actualDatabaseName, other.connectionProvider.username, other.connectionProvider.password, other.connectionProvider.useSSL,
-              other.originatorId, other.createTables, other.transactionTimeoutMillis, true);
+              other.connectionProvider.maxConnections, other.originatorId, other.createTables, other.transactionTimeoutMillis, true);
     } catch (Exception e) {
       throw new IllegalArgumentException("Cannot clone the configuration for " + other.connectionProvider.url + " because: " + e.getMessage(), e);
     }
@@ -101,6 +102,24 @@ public class Configuration {
   }
 
   public Configuration(
+      final DatabaseType databaseType,
+      final ConfigurationInterest interest,
+      final String driverClassname,
+      final DataFormat format,
+      final String url,
+      final String databaseName,
+      final String username,
+      final String password,
+      final boolean useSSL,
+      final int maxConnections,
+      final String originatorId,
+      final boolean createTables)
+      throws Exception {
+    this(databaseType, interest, driverClassname, format, url, databaseName, username, password,
+        useSSL, maxConnections, originatorId, createTables, DefaultTransactionTimeout, false);
+  }
+
+  public Configuration(
           final DatabaseType databaseType,
           final ConfigurationInterest interest,
           final String driverClassname,
@@ -118,40 +137,70 @@ public class Configuration {
             useSSL, originatorId, createTables, DefaultTransactionTimeout, false);
   }
 
-  private Configuration(
-          final DatabaseType databaseType,
-          final ConfigurationInterest interest,
-          final String driverClassname,
-          final DataFormat format,
-          final String url,
-          final String databaseName,
-          final String username,
-          final String password,
-          final boolean useSSL,
-          final String originatorId,
-          final boolean createTables,
-          final long transactionTimeoutMillis,
-          final boolean reuseDatabaseName)
-    throws Exception {
+  public Configuration(
+      final DatabaseType databaseType,
+      final ConfigurationInterest interest,
+      final String driverClassname,
+      final DataFormat format,
+      final String url,
+      final String databaseName,
+      final String username,
+      final String password,
+      final boolean useSSL,
+      final String originatorId,
+      final boolean createTables,
+      final long transactionTimeoutMillis,
+      final boolean reuseDatabaseName)
+      throws Exception {
+    this(databaseType, interest, driverClassname, format, url, databaseName, username, password, useSSL, 5,
+        originatorId, createTables, transactionTimeoutMillis, reuseDatabaseName);
+  }
 
+  public Configuration(
+      final DatabaseType databaseType,
+      final ConfigurationInterest interest,
+      final String driverClassname,
+      final DataFormat format,
+      final String url,
+      final String databaseName,
+      final String username,
+      final String password,
+      final boolean useSSL,
+      final int maxConnections,
+      final String originatorId,
+      final boolean createTables,
+      final long transactionTimeoutMillis,
+      final boolean reuseDatabaseName)
+      throws Exception {
+
+    this.format = format;
+    this.databaseName = databaseName;
+    this.actualDatabaseName = reuseDatabaseName ? databaseName : actualDatabaseName(databaseName);
     this.databaseType = databaseType;
     this.interest = interest;
-    this.format = format;
-    this.connectionProvider = new ConnectionProvider(driverClassname, url, databaseName, username, password, useSSL);
-    this.actualDatabaseName = reuseDatabaseName ? databaseName : actualDatabaseName(databaseName);
     this.originatorId = originatorId;
     this.createTables = createTables;
     this.transactionTimeoutMillis = transactionTimeoutMillis;
-    beforeConnect();
-    this.connection = connect();
-    afterConnect();
+
+    beforeConnect(); // no Connection is available yet
+    this.connectionProvider = connectionProvider(driverClassname, url, databaseName, actualDatabaseName, username, password, useSSL, maxConnections);
+
+    try (final Connection connection = connectionProvider.newConnection()) {
+      try {
+        afterConnect(connection);
+        connection.commit();
+      } catch (Exception e) {
+        connection.rollback();
+        throw new IllegalStateException("Failed to initialize Configuration because: " + e.getMessage(), e);
+      }
+    }
   }
 
   protected String actualDatabaseName(final String databaseName) {
-    return connectionProvider.databaseName;
+    return databaseName;
   }
 
-  protected void afterConnect() throws Exception {
+  protected void afterConnect(Connection connection) throws Exception {
     interest.afterConnect(connection);
   }
 
@@ -159,15 +208,23 @@ public class Configuration {
     interest.beforeConnect(this);
   }
 
-  protected Connection connect() {
-    return connectionProvider.connection();
+  protected ConnectionProvider connectionProvider(
+      final String driverClassname,
+      final String url,
+      final String databaseName,
+      final String actualDatabaseName,
+      final String username,
+      final String password,
+      final boolean useSSL,
+      final int maxConnections) {
+    return new ConnectionProvider(driverClassname, url, actualDatabaseName, username, password, useSSL, maxConnections);
   }
 
   public interface ConfigurationInterest {
     void afterConnect(final Connection connection) throws Exception;
     void beforeConnect(final Configuration configuration) throws Exception;
-    void createDatabase(final Connection connection, final String databaseName) throws Exception;
-    void dropDatabase(final Connection connection, final String databaseName) throws Exception;
+    void createDatabase(final Connection initConnection, final String databaseName, final String username) throws Exception;
+    void dropDatabase(final Connection initConnection, final String databaseName) throws Exception;
   }
 
   public static class TestConfiguration extends Configuration {
@@ -183,22 +240,26 @@ public class Configuration {
             final String username,
             final String password,
             final boolean useSSL,
+            final int maxConnections,
             final String originatorId,
             final boolean createTables)
     throws Exception {
-      super(databaseType, interest, driverClassname, format, url, databaseName, username, password, useSSL, originatorId, createTables);
+      super(databaseType, interest, driverClassname, format, url, databaseName, username, password, useSSL, maxConnections, originatorId, createTables, DefaultTransactionTimeout, false);
     }
 
     public void cleanUp() {
-      try (final Connection ownerConnection = swapConnections()) {
-        try (final Statement statement = ownerConnection.createStatement()) {
-          ownerConnection.setAutoCommit(true);
-          interest.dropDatabase(ownerConnection, actualDatabaseName);
-        }  catch (Exception e) {
+      try (final Connection ownerConnection = ConnectionProvider.connectionWith(connectionProvider.driverClassname, connectionProvider.url, databaseName,
+          connectionProvider.username, connectionProvider.password, connectionProvider.useSSL)) {
+        try {
+          connectionProvider.close(); // close all Connections before deleting the database
+          interest.dropDatabase(ownerConnection, this.actualDatabaseName);
+          ownerConnection.commit();
+        } catch (Exception e) {
+          ownerConnection.rollback();
           e.printStackTrace();
           // ignore
         }
-      }  catch (Exception e) {
+      } catch (Exception e) {
         e.printStackTrace();
         // ignore
       }
@@ -213,25 +274,21 @@ public class Configuration {
     }
 
     @Override
-    protected Connection connect() {
-      final Connection connection = super.connect();
-
-      try (final Statement statement = connection.createStatement()) {
-        interest.createDatabase(connection, actualDatabaseName);
-        connection.close();
-        final ConnectionProvider copy = connectionProvider.copyReplacing(actualDatabaseName);
-        return copy.connection();
-      }  catch (Exception e) {
-        throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because the server or database unavilable, or wrong credentials.", e);
-      }
-    }
-
-    private Connection swapConnections() {
-      try {
-        connection.close();
-        return connectionProvider.connection();
+    protected ConnectionProvider connectionProvider(
+        String driverClassname,
+        String url,
+        String databaseName,
+        String actualDatabaseName,
+        String username,
+        String password,
+        boolean useSSL,
+        int maxConnections) {
+      try (Connection connection = ConnectionProvider.connectionWith(driverClassname, url, databaseName, username, password, useSSL)) {
+        interest.createDatabase(connection, actualDatabaseName, username);
+        connection.commit();
+        return super.connectionProvider(driverClassname, url, databaseName, actualDatabaseName, username, password, useSSL, maxConnections);
       } catch (Exception e) {
-        throw new IllegalStateException(getClass().getSimpleName() + ": Cannot swap database to owner's because: " + e.getMessage(), e);
+        throw new IllegalStateException(getClass().getSimpleName() + ": Cannot connect because the server or database unavailable, or wrong credentials.", e);
       }
     }
   }

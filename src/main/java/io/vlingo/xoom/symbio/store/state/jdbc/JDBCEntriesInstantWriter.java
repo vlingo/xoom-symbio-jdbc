@@ -46,9 +46,9 @@ public class JDBCEntriesInstantWriter implements JDBCEntriesWriter {
 	@Override
 	public void appendEntries(String storeName, List<Entry<?>> entries, State.TextState rawState, Consumer<Outcome<StorageException, Result>> postAppendAction) {
 		try {
+			delegate.beginWrite();
 			appendEntries(entries);
 
-			delegate.beginWrite();
 			final PreparedStatement writeStatement = delegate.writeExpressionFor(storeName, rawState);
 			writeStatement.execute();
 			final String dispatchId = storeName + ":" + rawState.id;
