@@ -7,6 +7,14 @@
 
 package io.vlingo.xoom.symbio.store.object.jdbc.jdbi;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import org.jdbi.v3.core.mapper.RowMapper;
+
 import io.vlingo.xoom.actors.Actor;
 import io.vlingo.xoom.actors.ActorInstantiator;
 import io.vlingo.xoom.common.Completes;
@@ -20,10 +28,6 @@ import io.vlingo.xoom.symbio.store.gap.GapRetryReader;
 import io.vlingo.xoom.symbio.store.gap.GappedEntries;
 import io.vlingo.xoom.symbio.store.object.ObjectStoreEntryReader;
 import io.vlingo.xoom.symbio.store.object.StateObjectMapper;
-import org.jdbi.v3.core.mapper.RowMapper;
-
-import java.sql.SQLException;
-import java.util.*;
 
 /**
  * An {@code ObjectStoreEntryReader} for Jdbi.

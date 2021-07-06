@@ -7,17 +7,18 @@
 
 package io.vlingo.xoom.symbio.store.common.jdbc.yugabyte;
 
-import io.vlingo.xoom.symbio.store.DataFormat;
-import io.vlingo.xoom.symbio.store.common.jdbc.Configuration;
-import io.vlingo.xoom.symbio.store.common.jdbc.DatabaseType;
-
 import java.sql.Connection;
 import java.sql.Statement;
 import java.util.Arrays;
 import java.util.List;
 
+import io.vlingo.xoom.symbio.store.DataFormat;
+import io.vlingo.xoom.symbio.store.common.jdbc.Configuration;
+import io.vlingo.xoom.symbio.store.common.jdbc.DatabaseType;
+
 public class YugaByteConfigurationProvider {
   public static final Configuration.ConfigurationInterest interest = new Configuration.ConfigurationInterest() {
+    @SuppressWarnings("unused")
     private Configuration configuration;
 
     @Override

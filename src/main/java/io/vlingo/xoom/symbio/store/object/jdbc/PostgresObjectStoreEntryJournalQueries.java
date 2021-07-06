@@ -7,7 +7,6 @@
 
 package io.vlingo.xoom.symbio.store.object.jdbc;
 
-import java.sql.Connection;
 import java.text.MessageFormat;
 
 /**

@@ -7,7 +7,21 @@
 
 package io.vlingo.xoom.symbio.store.journal.jdbc;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.stream.Collectors;
+
 import com.google.gson.Gson;
+
 import io.vlingo.xoom.actors.Logger;
 import io.vlingo.xoom.common.Failure;
 import io.vlingo.xoom.common.Outcome;
@@ -25,15 +39,6 @@ import io.vlingo.xoom.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.xoom.symbio.store.dispatch.Dispatchable;
 import io.vlingo.xoom.symbio.store.dispatch.Dispatcher;
 import io.vlingo.xoom.symbio.store.dispatch.DispatcherControl;
-
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 	private final Configuration configuration;
@@ -294,7 +299,8 @@ public class JDBCJournalBatchWriter implements JDBCJournalWriter {
 		}
 	}
 
-	private void doCommit(final Connection connection) {
+	@SuppressWarnings("unused")
+  private void doCommit(final Connection connection) {
 		try {
 			connection.commit();
 		} catch (final SQLException e) {

@@ -7,8 +7,6 @@
 
 package io.vlingo.xoom.symbio.store.journal.jdbc.mysql;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 import java.sql.Statement;
 
 import io.vlingo.xoom.symbio.store.journal.jdbc.JDBCQueries;

@@ -19,6 +19,7 @@ import io.vlingo.xoom.symbio.store.common.jdbc.DatabaseType;
 
 public class PostgresConfigurationProvider {
   public static final ConfigurationInterest interest = new ConfigurationInterest() {
+    @SuppressWarnings("unused")
     private Configuration configuration;
 
     @Override

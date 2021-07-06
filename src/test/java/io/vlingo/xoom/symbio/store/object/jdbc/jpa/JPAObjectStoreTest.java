@@ -6,6 +6,14 @@
 // one at https://mozilla.org/MPL/2.0/.
 package io.vlingo.xoom.symbio.store.object.jdbc.jpa;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.junit.After;
+import org.junit.Before;
+
 import io.vlingo.xoom.actors.Logger;
 import io.vlingo.xoom.actors.World;
 import io.vlingo.xoom.actors.testkit.AccessSafely;
@@ -28,14 +36,6 @@ import io.vlingo.xoom.symbio.store.object.jdbc.jpa.PersonEntryAdapters.PersonAdd
 import io.vlingo.xoom.symbio.store.object.jdbc.jpa.PersonEntryAdapters.PersonRenamedAdapter;
 import io.vlingo.xoom.symbio.store.object.jdbc.jpa.PersonEvents.PersonAdded;
 import io.vlingo.xoom.symbio.store.object.jdbc.jpa.PersonEvents.PersonRenamed;
-import org.junit.After;
-import org.junit.Before;
-
-import java.sql.Connection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class JPAObjectStoreTest {
     protected Configuration adminConfiguration;

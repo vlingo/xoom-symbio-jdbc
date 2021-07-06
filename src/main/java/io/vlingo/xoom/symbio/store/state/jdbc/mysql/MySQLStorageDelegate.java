@@ -7,7 +7,6 @@
 
 package io.vlingo.xoom.symbio.store.state.jdbc.mysql;
 
-import java.sql.Connection;
 import java.sql.ResultSet;
 import java.text.MessageFormat;
 

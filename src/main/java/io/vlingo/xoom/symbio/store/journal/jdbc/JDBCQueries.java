@@ -7,17 +7,21 @@
 
 package io.vlingo.xoom.symbio.store.journal.jdbc;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.text.MessageFormat;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
 import io.vlingo.xoom.common.Tuple2;
 import io.vlingo.xoom.symbio.store.common.jdbc.DatabaseType;
 import io.vlingo.xoom.symbio.store.journal.jdbc.mysql.MySQLQueries;
 import io.vlingo.xoom.symbio.store.journal.jdbc.postgres.PostgresQueries;
 import io.vlingo.xoom.symbio.store.journal.jdbc.postgres.yugabyte.YugaByteQueries;
-
-import java.sql.*;
-import java.text.MessageFormat;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
 
 public abstract class JDBCQueries {
 
@@ -341,6 +345,7 @@ public abstract class JDBCQueries {
     return upsertOffset;
   }
 
+  @SuppressWarnings("unused")
   private void close(final PreparedStatement statement) {
     try {
       statement.close();

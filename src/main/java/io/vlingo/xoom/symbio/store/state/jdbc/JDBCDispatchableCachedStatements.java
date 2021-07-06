@@ -17,6 +17,7 @@ import io.vlingo.xoom.symbio.store.common.jdbc.CachedStatement;
 
 public abstract class JDBCDispatchableCachedStatements<T> {
   private final String originatorId;
+  @SuppressWarnings("unused")
   private final DataFormat format;
   private final T appendDataObject;
   private final Logger logger;
@@ -55,7 +56,7 @@ public abstract class JDBCDispatchableCachedStatements<T> {
   public final CachedStatement<T> queryAllStatement(Connection connection) {
     return prepareQuery(createStatement(selectDispatchableExpression(), null, connection, false, logger), originatorId, logger);
   }
-  
+
   public CachedStatement<T> getQueryEntry(Connection connection) {
     return createStatement(queryEntryExpression(), appendDataObject, connection, false, logger);
   }
