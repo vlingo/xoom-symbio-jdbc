@@ -13,25 +13,19 @@ import io.vlingo.xoom.symbio.store.common.jdbc.hsqldb.HSQLDBConfigurationProvide
 
 public class HSQLDBJdbiEntryReaderTest extends JdbiObjectStoreEntryReaderTest {
 
-  private final Configuration configuration;
-
-  public HSQLDBJdbiEntryReaderTest() {
-    try {
-      this.configuration = HSQLDBConfigurationProvider.testConfiguration(DataFormat.Text);
-    } catch (Exception e) {
-      throw new RuntimeException("Failed to create test configuration because: " + e.getMessage(), e);
-    }
-  }
-
   @Override
-  protected JdbiOnDatabase jdbiOnDatabase() throws Exception {
+  protected JdbiOnDatabase jdbiOnDatabase(Configuration configuration) throws Exception {
     final JdbiOnDatabase jdbi = JdbiOnHSQLDB.openUsing(configuration);
     jdbi.handle().execute("DROP SCHEMA PUBLIC CASCADE");
     return jdbi;
   }
 
   @Override
-  protected Configuration configuration() {
-    return configuration;
+  protected Configuration.TestConfiguration configuration() {
+    try {
+      return HSQLDBConfigurationProvider.testConfiguration(DataFormat.Text, "testdb", 5);
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create test configuration because: " + e.getMessage(), e);
+    }
   }
 }

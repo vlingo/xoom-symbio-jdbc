@@ -36,6 +36,7 @@ import java.util.function.Consumer;
 import static org.junit.Assert.*;
 
 public abstract class JdbiObjectStoreEntryReaderTest {
+  protected Configuration.TestConfiguration configuration;
   protected MockDispatcher<BaseEntry.TextEntry, State.TextState> dispatcher;
   protected EntryReader<Entry<String>> entryReader;
   protected JdbiOnDatabase jdbi;
@@ -191,9 +192,10 @@ public abstract class JdbiObjectStoreEntryReaderTest {
 
   @Before
   public void setUp() throws Exception {
-    jdbi = jdbiOnDatabase();
+    this.configuration = configuration();
+    jdbi = jdbiOnDatabase(configuration);
 
-    try (final Connection initConnection = configuration().connectionProvider.newConnection()) {
+    try (final Connection initConnection = configuration.connectionProvider.newConnection()) {
       try {
         jdbi.createCommonTables(initConnection);
         initConnection.commit();
@@ -230,10 +232,11 @@ public abstract class JdbiObjectStoreEntryReaderTest {
     objectStore.close();
     entryReader.close();
     jdbi.close();
+    configuration.cleanUp();
     world.terminate();
   }
 
-  protected abstract JdbiOnDatabase jdbiOnDatabase() throws Exception;
+  protected abstract JdbiOnDatabase jdbiOnDatabase(Configuration configuration) throws Exception;
 
-  protected abstract Configuration configuration();
+  protected abstract Configuration.TestConfiguration configuration();
 }

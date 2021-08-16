@@ -90,6 +90,10 @@ public class HSQLDBConfigurationProvider {
   }
 
   public static TestConfiguration testConfiguration(final DataFormat format, final String databaseName) throws Exception {
+    return testConfiguration(format, databaseName, Configuration.DefaultMaxConnections);
+  }
+
+  public static TestConfiguration testConfiguration(final DataFormat format, final String databaseName, final int maxConnections) throws Exception {
     return new TestConfiguration(
         DatabaseType.HSQLDB,
         interest,
@@ -100,7 +104,7 @@ public class HSQLDBConfigurationProvider {
         "SA",           // username
         "",             // password
         false,          // useSSL
-        Configuration.DefaultMaxConnections,
+        maxConnections,
         "TEST",         // originatorId
         true);          // create tables
   }
