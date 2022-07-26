@@ -88,6 +88,11 @@ public class HSQLDBStorageDelegate extends JDBCStorageDelegate<Blob> implements 
   }
 
   @Override
+  protected String catalogName() {
+    return null; // HSQLDB not compatible with database name
+  }
+
+  @Override
   protected JDBCDispatchableCachedStatements<Blob> dispatchableCachedStatements() {
     return new HSQLDBDispatchableCachedStatements(originatorId, connection, format, logger);
   }
