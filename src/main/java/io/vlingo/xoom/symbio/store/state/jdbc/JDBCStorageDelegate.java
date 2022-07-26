@@ -512,6 +512,17 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
     return MessageFormat.format(expression, this.tableNameFor(storeName));
   }
 
+  /**
+   * Answer the {@code catalogName} of the database, which by default is the {@code databaseName}.
+   * 
+   * <p>NOTE: Override for subclass specialized implementation
+   *
+   * @return String
+   */
+  protected String catalogName() {
+    return connectionProvider.databaseName;
+  }
+
   protected void setStatementArguments(final PreparedStatement statement, final List<?> arguments) throws SQLException {
     final int count = arguments.size();
 
@@ -535,6 +546,24 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
       } else if (argumentType == Float.class) {
         statement.setFloat(idx + 1, (Float) argument);
       }
+    }
+  }
+
+  /**
+   * Answer whether the table with {@code tableName} exists.
+   * Uses {@code catalogName()} to for the JDBC {@code getTables()} call.
+   * Override {@code catalogName()} to change the default behavior.
+   * 
+   * <p>NOTE: Override for subclass specialized implementation
+   * 
+   * @param tableName the String name of the table to check for existence
+   * @return boolean
+   * @throws Exception
+   */
+  protected boolean tableExists(final String tableName) throws Exception {
+    final DatabaseMetaData metadata = connection.getMetaData();
+    try (final ResultSet resultSet = metadata.getTables(catalogName(), null, tableName, null)) {
+      return resultSet.next();
     }
   }
 
@@ -672,12 +701,5 @@ public abstract class JDBCStorageDelegate<T> implements StorageDelegate,
       return Tuple2.from(JsonSerialization.serialized(object), object.getClass().getName());
     }
     return Tuple2.from(null, null);
-  }
-
-  private boolean tableExists(final String tableName) throws Exception {
-    final DatabaseMetaData metadata = connection.getMetaData();
-    try (final ResultSet resultSet = metadata.getTables(null, null, tableName, null)) {
-      return resultSet.next();
-    }
   }
 }
