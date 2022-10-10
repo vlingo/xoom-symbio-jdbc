@@ -126,7 +126,7 @@
       <artifactId>hsqldb</artifactId>
       <!-- Required vulnerability patch in 2.7.1 is not available -->
       <!-- See: https://github.com/advisories/GHSA-77xx-rxvh-q682 -->
-      <version>2.5.2</version>
+      <version>2.7.0</version>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>
@@ -191,6 +191,29 @@
   </dependencies>
 
   <repositories>
+    <repository>
+      <!--
+      HSQLDB no longer publishes jars for jdk8 to Maven Central. Jars are still available for download.
+      To update the HSQLDB jar in the local repository, run the following command (remember to tweak the version):
+
+       mvn install:install-file \
+         -DlocalRepositoryPath=.local-m2/repository \
+         -DcreateChecksum=true \
+         -Dpackaging=jar \
+         -DgroupId=org.hsqldb \
+         -DartifactId=hsqldb \
+         -Dfile=hsqldb-2.7.0-jdk8.jar \
+         -Dversion=2.7.0
+      -->
+      <id>local-repository</id>
+      <releases>
+        <enabled>true</enabled>
+      </releases>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+      <url>file://${project.basedir}/.local-m2/repository</url>
+    </repository>
     <repository>
       <id>ossrh-snapshots</id>
       <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
