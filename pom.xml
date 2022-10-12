@@ -127,6 +127,7 @@
       <!-- Required vulnerability patch in 2.7.1 is not available -->
       <!-- See: https://github.com/advisories/GHSA-77xx-rxvh-q682 -->
       <version>2.7.0</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.postgresql</groupId>
